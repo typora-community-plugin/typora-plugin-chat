@@ -1,109 +1,123 @@
-import { app, WorkspaceView } from "@typora-community-plugin/core"
-import { getAIResponse } from "./ai-proxy"
+import { app, WorkspaceView } from '@typora-community-plugin/core'
+import { mount, unmount } from 'svelte'
+import App from './ui/App.svelte'
+import { chatStore } from './store/chat-store'
+import { settingsManager } from './config/settings'
+import { abortAgentLoop, executeAgentLoop, resetAgentHistory } from './agent/loop'
+import { getSelection } from './adapter/editor'
+import type { PluginSettings } from './config/types'
 
+
+/**
+ * Svelte 5's DOM client caches `Node.prototype.firstChild/nextSibling`
+ * descriptors on first mount. A few Typora renderer variants expose a
+ * `Node` constructor whose prototype lacks these own accessor properties,
+ * which makes `mount()` throw `Cannot read properties of undefined ('get')`.
+ * Define the descriptors if they are missing before the first mount.
+ */
+function ensureSvelteDomShims() {
+  const w = window as unknown as Record<string, unknown>
+  if (!w.Node && w.Element) w.Node = w.Element
+  const nodeCtor = w.Node as { prototype?: object } | undefined
+  const proto = nodeCtor?.prototype as { childNodes?: unknown; parentNode?: unknown } | undefined
+  if (!proto) return
+
+  if (!Object.getOwnPropertyDescriptor(proto, 'firstChild')) {
+    Object.defineProperty(proto, 'firstChild', {
+      configurable: true,
+      get(this: { childNodes?: ArrayLike<ChildNode> | null }) {
+        return this.childNodes?.[0] ?? null
+      },
+    })
+  }
+
+  if (!Object.getOwnPropertyDescriptor(proto, 'nextSibling')) {
+    Object.defineProperty(proto, 'nextSibling', {
+      configurable: true,
+      get(this: { parentNode?: { childNodes: ArrayLike<ChildNode> } | null }) {
+        const siblings = this.parentNode?.childNodes
+        if (!siblings) return null
+        const index = Array.prototype.indexOf.call(siblings, this)
+        return index >= 0 && index < siblings.length - 1 ? siblings[index + 1] : null
+      },
+    })
+  }
+}
 
 export class ChatView extends WorkspaceView {
 
-  containerEl = $(`<div class="typ-chatview">
-<div class="header">
-    <div class="title">AI Copilot</div>
-</div>
-
-<div class="chat-container" id="chatContainer">
-    <div class="typing-indicator" id="typingIndicator">
-        <span class="typing-dot"></span>
-        <span class="typing-dot"></span>
-        <span class="typing-dot"></span>
-    </div>
-</div>
-
-<div class="input-container">
-    <textarea class="input-box" id="messageInput" placeholder="输入消息..." rows="1"></textarea>
-    <select class="model-selector" id="modelSelector">
-        <option value="qwen3.6-35b-a3b">Qwen 3.6 35B A3B</option>
-    </select>
-    <button class="send-button" id="sendButton">发送</button>
-</div>
-</div>`)[0]
-
   static type = 'typora-plugin.chat'
 
+  /** WorkspaceView does not create its own element; the subclass must. */
+  containerEl = document.createElement('div')
+
+  private svelteComponent: Record<string, unknown> | null = null
+
   onOpen() {
-    setTimeout(() => {
-      const chatContainer = document.getElementById('chatContainer')!
-      const messageInput = document.getElementById('messageInput')! as HTMLInputElement
-      const sendButton = document.getElementById('sendButton')!
-      const modelSelector = document.getElementById('modelSelector')! as HTMLSelectElement
-      const typingIndicator = document.getElementById('typingIndicator')!
+    ensureSvelteDomShims()
+    this.containerEl.classList.add('typ-chat-view')
+    this.svelteComponent = mount(App, {
+      target: this.containerEl,
+      props: {
+        app,
+        onSend: (text: string) => this.handleSend(text),
+        onStop: () => abortAgentLoop(),
+        onClear: () => {
+          resetAgentHistory()
+          chatStore.clearMessages()
+        },
+        onSaveSettings: (next: PluginSettings) => settingsManager.save(next),
+      },
+    }) as unknown as Record<string, unknown>
+  }
 
-      // 自动调整输入框高度
-      messageInput.addEventListener('input', function () {
-        this.style.height = 'auto'
-        this.style.height = (this.scrollHeight) + 'px'
-      })
+  onClose() {
+    if (this.svelteComponent) {
+      unmount(this.svelteComponent as Parameters<typeof unmount>[0])
+      this.svelteComponent = null
+    }
+  }
 
-      // 发送消息
-      function sendMessage() {
-        const message = messageInput.value.trim()
-        if (message === '') return
+  clearConversation() {
+    resetAgentHistory()
+    chatStore.clearMessages()
+  }
 
-        // 添加用户消息
-        addMessage('user', message)
-        messageInput.value = ''
-        messageInput.style.height = 'auto'
+  async handleSend(text: string) {
+    const selection = chatStore.getSelection()
+    let userMessage = text
+    if (selection) {
+      const origin = selection.filePath ?? 'the active document'
+      userMessage =
+        `[Selection scope: Work only within this selection from ${origin}.]\n` +
+        `Selected text:\n> ${selection.text}\n\nUser message: ${text}`
+    }
 
-        // 显示AI正在输入
-        typingIndicator.style.display = 'block'
-        chatContainer.scrollTop = chatContainer.scrollHeight
+    chatStore.addUserMessage(text, selection)
+    chatStore.setInputEnabled(false)
 
-        // 模拟AI回复
-        setTimeout(() => {
-          const el = addMessage('ai')
-          let md = ''
-          el.style.display = 'none'
-          const options = {
-            model: modelSelector.value,
-            callback: (chunck: string) => {
-              typingIndicator.style.display = 'none'
-              el.style.display = 'block'
-              md += chunck
-              app.features.markdownRenderer.renderTo(md, el)
-            },
-          }
-          getAIResponse(message, options)
-        }, 1500)
-      }
-
-      // 添加消息到聊天界面
-      function addMessage(sender: string, content = '') {
-        const messageDiv = document.createElement('div')
-        messageDiv.className = `message ${sender}-message`
-
-        const contentDiv = document.createElement('div')
-        contentDiv.className = 'message-content'
-        if (content) contentDiv.textContent = content
-
-        messageDiv.appendChild(contentDiv)
-        chatContainer.insertBefore(messageDiv, typingIndicator)
-
-        // 滚动到底部
-        chatContainer.scrollTop = chatContainer.scrollHeight
-        return contentDiv
-      }
-
-      // 点击发送按钮
-      sendButton.addEventListener('click', sendMessage)
-
-      // 按Enter键发送消息 (Shift+Enter换行)
-      messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault()
-          sendMessage()
-        }
-      })
-
-      // 初始欢迎消息
-      addMessage('ai', '您好！我是AI助手，请问有什么可以帮您的吗？')
-    })
+    try {
+      await executeAgentLoop(
+        userMessage,
+        {
+          onText: (t) => chatStore.addAssistantMessage(t),
+          onToolCall: (name, input) => chatStore.addToolCall(name, input),
+          onToolResult: (id, _name, result) => chatStore.updateToolResult(id, result, result.isError),
+          onError: (msg) => chatStore.addError(msg),
+          onAskUser: (question) => {
+            chatStore.setInputEnabled(true)
+            return chatStore.showAskUser(question)
+          },
+          onThinkingChange: (isThinking) => {
+            if (isThinking) chatStore.showThinking()
+            else chatStore.hideThinking()
+          },
+        },
+        settingsManager.get().maxIterations,
+      )
+    } finally {
+      chatStore.setInputEnabled(true)
+      chatStore.hideThinking()
+    }
   }
 }

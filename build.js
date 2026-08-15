@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises'
 import * as esbuild from 'esbuild'
 import typoraPlugin, { installDevPlugin, closeTypora } from 'esbuild-plugin-typora'
 import { sassPlugin } from 'esbuild-sass-plugin'
+import { esbuildSveltePlugin } from './svelte-build-plugin.js'
 
 
 const args = process.argv.slice(2)
@@ -22,6 +23,7 @@ await esbuild.build({
     typoraPlugin({
       mode: IS_PROD ? 'production' : 'development'
     }),
+    esbuildSveltePlugin({ dev: IS_DEV }),
     sassPlugin(),
   ],
 })

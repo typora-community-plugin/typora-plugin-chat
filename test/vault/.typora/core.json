@@ -1,12 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "settings": {
     "displayLang": "en",
     "githubProxy": "github",
     "showNotSupportedFile": false,
     "showSearchResultFullPath": false,
     "showRibbon": true,
-    "showFileTabs": true,
     "openLinkInCurrentWin": true,
     "quickOpenInCurrentWin": true,
     "ignoreFile": true,
@@ -25,6 +24,8 @@
         "order": 2
       }
     },
-    "useWorkspace": true
+    "internalPlugin.enabledPlugins": {
+      "internal.workspace": true
+    }
   }
 }

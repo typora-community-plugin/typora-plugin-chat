@@ -9,6 +9,7 @@ import terser from '@rollup/plugin-terser'
 import typescript from '@rollup/plugin-typescript'
 import virtual from '@rollup/plugin-virtual'
 import { virtualModules } from 'rollup-plugin-typora'
+import { rollupSveltePlugin } from './svelte-build-plugin.js'
 
 
 const { compilerOptions } = JSON.parse(await fs.readFile('./tsconfig.json', 'utf8'))
@@ -40,6 +41,7 @@ export default defineConfig({
     virtual(virtualModules),
     nodeResolve(),
     commonjs(),
+    rollupSveltePlugin(),
     typescript({
       compilerOptions: {
         ...compilerOptions,
@@ -48,6 +50,7 @@ export default defineConfig({
     }),
     babel({
       babelHelpers: 'bundled',
+      extensions: ['.js', '.jsx', '.es6', '.es', '.mjs', '.svelte'],
       presets: [["@babel/preset-env", { "useBuiltIns": "entry", "corejs": 3 }]],
       exclude: [
         /\bcore-js\b/,
