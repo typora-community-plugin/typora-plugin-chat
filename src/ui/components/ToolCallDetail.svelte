@@ -1,6 +1,7 @@
 <script>
   import { summarizeToolInput } from '../../tools/summary'
   import { truncate } from '../../utils/helpers'
+  import { t } from '../../i18n'
 
   let { message } = $props()
 
@@ -26,11 +27,11 @@
     </summary>
 
     <div class="typ-tool-call__body">
-      <div><strong>Parameters</strong></div>
+      <div><strong>{t.chat.parameters}</strong></div>
       <pre>{paramsJson}</pre>
 
       {#if !isCall}
-        <div><strong>{status === 'error' ? 'Error' : 'Result'}</strong></div>
+        <div><strong>{status === 'error' ? t.chat.error : t.chat.result}</strong></div>
         <pre>{resultText}</pre>
       {/if}
     </div>

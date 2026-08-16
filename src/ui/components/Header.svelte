@@ -1,13 +1,15 @@
 <script>
+  import { t } from '../../i18n'
+
   let {
     onClear,
   } = $props()
 </script>
 
 <div class="typ-chat-header">
-  <span class="typ-chat-header__title">Chat</span>
+  <span class="typ-chat-header__title">{t.chat.title}</span>
   <div class="typ-chat-header__actions">
-    <button class="typ-chat-btn typ-chat-btn--danger" onclick={onClear} title="Clear conversation">Clear</button>
+    <button class="typ-chat-btn typ-chat-btn--danger" onclick={onClear} title={t.chat.clearConversationTitle}>{t.chat.clear}</button>
   </div>
 </div>
 

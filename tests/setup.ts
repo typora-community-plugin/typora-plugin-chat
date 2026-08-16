@@ -21,6 +21,7 @@ const mockFs = {
 
 const mockApp = {
   vault: { path: '/vault', configDir: '/vault/.typora', dataDir: '/vault/.typora' },
+  i18n: { locale: 'en' },
   workspace: {
     activeFile: 'notes/active.md',
     activeEditor: {
@@ -51,6 +52,20 @@ vi.mock('@typora-community-plugin/core', () => ({
     relative: (from: string, to: string) => to,
   },
   WorkspaceView: class {},
+  I18n: class {
+    locale: string
+    t: Record<string, unknown>
+    constructor(options: { resources?: Record<string, Record<string, unknown>>; userLang?: string; defaultLang?: string } = {}) {
+      const { resources = {}, userLang, defaultLang = 'en' } = options
+      this.locale = userLang ?? defaultLang
+      this.t = resources[this.locale] ?? resources.en ?? {}
+    }
+  },
+  format: (template: string, params: Record<string, unknown>) =>
+    template.replace(/\{([^}]+)\}/g, (_, name: string) => {
+      const value = params[name]
+      return value === undefined || value === null ? _ : String(value)
+    }),
   Plugin: class {},
   PluginSettings: class {},
   Component: class {},

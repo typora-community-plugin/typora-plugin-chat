@@ -1,6 +1,7 @@
 import { get } from 'svelte/store'
 import type { ChatMessage } from '../config/types'
 import { messages } from '../store/chat-store'
+import { format, t } from '../i18n'
 
 
 export function formatChatMarkdown(list: ChatMessage[]): string {
@@ -8,22 +9,22 @@ export function formatChatMarkdown(list: ChatMessage[]): string {
   for (const msg of list) {
     switch (msg.type) {
       case 'user':
-        blocks.push(`### Q:\n\n${msg.text ?? ''}`)
+        blocks.push(`### ${t.transcript.question}:\n\n${msg.text ?? ''}`)
         break
       case 'assistant':
-        blocks.push(`### A:\n\n${msg.text ?? ''}`)
+        blocks.push(`### ${t.transcript.answer}:\n\n${msg.text ?? ''}`)
         break
       case 'thinking':
-        blocks.push(`### Thinking:\n\n${msg.text ?? ''}`)
+        blocks.push(`### ${t.transcript.thinking}:\n\n${msg.text ?? ''}`)
         break
       case 'tool_call':
-        blocks.push(`### Tool call: ${msg.toolName}\n\n\`\`\`json\n${JSON.stringify(msg.toolInput ?? {}, null, 2)}\n\`\`\``)
+        blocks.push(`### ${format(t.transcript.toolCall, { name: msg.toolName })}\n\n\`\`\`json\n${JSON.stringify(msg.toolInput ?? {}, null, 2)}\n\`\`\``)
         break
       case 'tool_result':
-        blocks.push(`### Tool result: ${msg.toolName}\n\n${msg.toolResult?.content ?? ''}`)
+        blocks.push(`### ${format(t.transcript.toolResult, { name: msg.toolName })}\n\n${msg.toolResult?.content ?? ''}`)
         break
       case 'error':
-        blocks.push(`### Error:\n\n${msg.text ?? ''}`)
+        blocks.push(`### ${t.transcript.error}:\n\n${msg.text ?? ''}`)
         break
       default:
         break

@@ -1,5 +1,6 @@
 <script>
   import MessageBubble from './MessageBubble.svelte'
+  import { t } from '../../i18n'
 
   let {
     messages = [],
@@ -24,7 +25,7 @@
   {/each}
 
   {#if thinking}
-    <div class="typ-thinking" aria-label="AI is thinking">
+    <div class="typ-thinking" aria-label={t.chat.thinking}>
       <span></span>
       <span></span>
       <span></span>

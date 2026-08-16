@@ -1,5 +1,6 @@
 import { get, writable } from 'svelte/store'
 import type { ChatMessage, SelectionScope, ToolResult } from '../config/types'
+import { t } from '../i18n'
 
 
 const HISTORY_KEY = 'typora-plugin-chat.history'
@@ -20,7 +21,7 @@ function trimMessages(msgs: ChatMessage[]): ChatMessage[] {
   const summary: ChatMessage = {
     id: createId(),
     type: 'assistant',
-    text: '*(Earlier conversation was compressed to keep the context window manageable.)*',
+    text: t.chat.compressedHistory,
     timestamp: Date.now(),
   }
   return [summary, ...kept]
@@ -42,7 +43,7 @@ export const thinking = writable<boolean>(false)
 export const inputEnabled = writable<boolean>(true)
 export const selection = writable<SelectionScope | null>(null)
 export const askUserQuestion = writable<string | null>(null)
-export const inputPlaceholder = writable<string>('输入消息...')
+export const inputPlaceholder = writable<string>('')
 
 let askUserResolver: ((answer: string) => void) | null = null
 
@@ -121,7 +122,7 @@ export const chatStore = {
     messages.set([])
     askUserQuestion.set(null)
     askUserResolver = null
-    inputPlaceholder.set('输入消息...')
+    inputPlaceholder.set(t.chat.inputPlaceholder)
     try {
       localStorage.removeItem(HISTORY_KEY)
     } catch {
@@ -131,7 +132,7 @@ export const chatStore = {
 
   showAskUser(question: string): Promise<string> {
     askUserQuestion.set(question)
-    inputPlaceholder.set('Type your answer...')
+    inputPlaceholder.set(t.chat.typeYourAnswer)
     return new Promise(resolve => {
       askUserResolver = resolve
     })
@@ -141,7 +142,7 @@ export const chatStore = {
     const resolve = askUserResolver
     askUserResolver = null
     askUserQuestion.set(null)
-    inputPlaceholder.set('输入消息...')
+    inputPlaceholder.set(t.chat.inputPlaceholder)
     if (resolve) resolve(answer)
   },
 

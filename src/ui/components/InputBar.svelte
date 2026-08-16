@@ -1,8 +1,10 @@
 <script>
+  import { t } from '../../i18n'
+
   let {
     onSend,
     onStop,
-    placeholder = '输入消息...',
+    placeholder = t.chat.inputPlaceholder,
     enabled = true,
     textAreaEl = null,
     model = '',
@@ -74,11 +76,11 @@
         value={model}
         onchange={handleModelChange}
         onclick={handleModelClick}
-        title="Select model"
+        title={t.chat.selectModelTitle}
         disabled={!enabled}
       >
         {#if !model}
-          <option value="" disabled>Select model</option>
+          <option value="" disabled>{t.chat.selectModel}</option>
         {/if}
         {#if model && !models.includes(model)}
           <option value={model}>{model}</option>
@@ -93,10 +95,10 @@
           class="typ-send-btn"
           onclick={submit}
           disabled={!value.trim()}
-          title="Send (Enter)"
+          title={t.chat.send}
         >➤</button>
       {:else}
-        <button class="typ-stop-btn" onclick={onStop} title="Stop">■</button>
+        <button class="typ-stop-btn" onclick={onStop} title={t.chat.stop}>■</button>
       {/if}
     </div>
   </div>

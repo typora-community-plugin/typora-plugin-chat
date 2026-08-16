@@ -1,0 +1,70 @@
+{
+  "command": {
+    "chatWithAI": "与 AI 对话",
+    "chatAboutNote": "关于当前笔记提问",
+    "sendSelectionToChat": "发送选中内容到 Chat",
+    "copyTranscript": "复制聊天记录",
+    "clearConversation": "清空对话"
+  },
+  "chat": {
+    "title": "Chat",
+    "inputPlaceholder": "输入消息...",
+    "typeYourAnswer": "输入你的回答...",
+    "compressedHistory": "*(为控制上下文长度，较早的对话已被压缩。)*",
+    "summarizeNote": "总结这篇笔记：{file}",
+    "clear": "清空",
+    "clearConversationTitle": "清空对话",
+    "selectModel": "选择模型",
+    "selectModelTitle": "选择模型",
+    "send": "发送 (Enter)",
+    "stop": "停止",
+    "thinking": "AI 正在思考",
+    "thinkingLabel": "思考中",
+    "parameters": "参数",
+    "result": "结果",
+    "error": "错误",
+    "selectionFrom": "来自 {fileName} 的选中内容",
+    "selectionFromEditor": "来自编辑器的选中内容",
+    "editor": "编辑器",
+    "clearSelection": "清除选中内容"
+  },
+  "settings": {
+    "title": "Chat",
+    "provider": "提供商",
+    "providerDesc": "聊天插件使用的 API 提供商。",
+    "providers": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI",
+      "ollama": "Ollama / OpenAI 兼容",
+      "custom": "自定义"
+    },
+    "openaiApiMode": "OpenAI API 模式",
+    "openaiApiModeDesc": "仅用于兼容 OpenAI 的提供商。",
+    "openaiApiModeResponses": "Responses API（首选）",
+    "openaiApiModeChat": "Chat Completions（备用）",
+    "baseUrl": "接口地址",
+    "baseUrlDesc": "OpenAI 兼容 / Ollama 接口地址。",
+    "baseUrlPlaceholder": "https://api.example.com/v1",
+    "apiKey": "API 密钥",
+    "apiKeyDesc": "以混淆形式存储在笔记库配置目录 / localStorage。",
+    "apiKeyPlaceholder": "sk-...",
+    "model": "模型",
+    "modelDesc": "用于聊天补全的模型 ID。",
+    "refreshModels": "刷新模型列表",
+    "maxIterations": "最大工具迭代次数",
+    "maxIterationsDesc": "单次 Agent 循环中工具调用的最大轮数。"
+  },
+  "models": {
+    "loading": "正在加载模型...",
+    "loaded": "已加载 {count} 个模型",
+    "failed": "获取模型失败：{message}"
+  },
+  "transcript": {
+    "question": "问题",
+    "answer": "回答",
+    "thinking": "思考",
+    "toolCall": "工具调用：{name}",
+    "toolResult": "工具结果：{name}",
+    "error": "错误"
+  }
+}

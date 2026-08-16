@@ -3,14 +3,17 @@ import type { App, Plugin } from '@typora-community-plugin/core'
 import { settingsManager } from '../../config/settings'
 import { availableModels, modelRefreshMessage, refreshModels } from '../../store/models-store'
 import type { ApiProvider, PluginSettings } from '../../config/types'
+import { t } from '../../i18n'
 
 
-const PROVIDERS: Array<{ value: ApiProvider; label: string }> = [
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'ollama', label: 'Ollama / OpenAI-compatible' },
-  { value: 'custom', label: 'Custom' },
-]
+function getProviders(): Array<{ value: ApiProvider; label: string }> {
+  return [
+    { value: 'anthropic', label: t.settings.providers.anthropic },
+    { value: 'openai', label: t.settings.providers.openai },
+    { value: 'ollama', label: t.settings.providers.ollama },
+    { value: 'custom', label: t.settings.providers.custom },
+  ]
+}
 
 
 export class ChatSettingTab extends SettingTab {
@@ -23,17 +26,17 @@ export class ChatSettingTab extends SettingTab {
   }
 
   get name(): string {
-    return this.plugin.manifest.name
+    return t.settings.title
   }
 
   private render() {
-    this.addSettingTitle('Chat')
+    this.addSettingTitle(t.settings.title)
 
     this.addSetting((setting) => {
-      setting.addName('Provider')
-      setting.addDescription('API provider used by the chat plugin.')
+      setting.addName(t.settings.provider)
+      setting.addDescription(t.settings.providerDesc)
       setting.addSelect((select) => {
-        for (const { value, label } of PROVIDERS) {
+        for (const { value, label } of getProviders()) {
           select.append(new Option(label, value))
         }
         select.value = settingsManager.get().provider
@@ -44,11 +47,11 @@ export class ChatSettingTab extends SettingTab {
     })
 
     this.addSetting((setting) => {
-      setting.addName('OpenAI API mode')
-      setting.addDescription('Only used for OpenAI-compatible providers.')
+      setting.addName(t.settings.openaiApiMode)
+      setting.addDescription(t.settings.openaiApiModeDesc)
       setting.addSelect((select) => {
-        select.append(new Option('Responses API (primary)', 'responses'))
-        select.append(new Option('Chat Completions (fallback)', 'chat'))
+        select.append(new Option(t.settings.openaiApiModeResponses, 'responses'))
+        select.append(new Option(t.settings.openaiApiModeChat, 'chat'))
         select.value = settingsManager.get().openaiApiMode ?? 'responses'
         select.onchange = () => {
           void settingsManager.save({
@@ -59,10 +62,10 @@ export class ChatSettingTab extends SettingTab {
     })
 
     this.addSetting((setting) => {
-      setting.addName('Base URL')
-      setting.addDescription('OpenAI-compatible / Ollama endpoint.')
+      setting.addName(t.settings.baseUrl)
+      setting.addDescription(t.settings.baseUrlDesc)
       setting.addText((input) => {
-        input.placeholder = 'https://api.example.com/v1'
+        input.placeholder = t.settings.baseUrlPlaceholder
         input.value = settingsManager.get().baseUrl
         input.onchange = () => {
           void settingsManager.save({ baseUrl: input.value.trim() })
@@ -71,10 +74,10 @@ export class ChatSettingTab extends SettingTab {
     })
 
     this.addSetting((setting) => {
-      setting.addName('API Key')
-      setting.addDescription('Stored obfuscated in the vault config file / localStorage.')
+      setting.addName(t.settings.apiKey)
+      setting.addDescription(t.settings.apiKeyDesc)
       setting.addInput('password', (input) => {
-        input.placeholder = 'sk-...'
+        input.placeholder = t.settings.apiKeyPlaceholder
         input.value = settingsManager.get().apiKey
         input.onchange = () => {
           void settingsManager.save({ apiKey: input.value.trim() })
@@ -83,8 +86,8 @@ export class ChatSettingTab extends SettingTab {
     })
 
     this.addSetting((setting) => {
-      setting.addName('Model')
-      setting.addDescription('Model id used for chat completions.')
+      setting.addName(t.settings.model)
+      setting.addDescription(t.settings.modelDesc)
 
       const listId = 'typora-plugin-chat-model-list'
       let statusEl: HTMLElement | null = null
@@ -120,7 +123,7 @@ export class ChatSettingTab extends SettingTab {
       })
 
       setting.addButton((button) => {
-        button.textContent = 'Refresh models'
+        button.textContent = t.settings.refreshModels
         button.onclick = () => {
           void refreshModels()
         }
@@ -128,8 +131,8 @@ export class ChatSettingTab extends SettingTab {
     })
 
     this.addSetting((setting) => {
-      setting.addName('Max tool iterations')
-      setting.addDescription('Maximum number of tool-call rounds in one agent loop.')
+      setting.addName(t.settings.maxIterations)
+      setting.addDescription(t.settings.maxIterationsDesc)
       setting.addInput('number', (input) => {
         input.min = '1'
         input.max = '100'

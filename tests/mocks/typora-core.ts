@@ -10,6 +10,23 @@ export const app = {}
 export const fs = {}
 export const path = {}
 
+export class I18n {
+  locale: string
+  t: Record<string, unknown>
+
+  constructor(options: { resources?: Record<string, Record<string, unknown>>; userLang?: string; defaultLang?: string } = {}) {
+    const { resources = {}, userLang, defaultLang = 'en' } = options
+    this.locale = userLang ?? defaultLang
+    this.t = resources[this.locale] ?? resources.en ?? {}
+  }
+}
+
+export const format = (template: string, params: Record<string, unknown>): string =>
+  template.replace(/\{([^}]+)\}/g, (_, name: string) => {
+    const value = params[name]
+    return value === undefined || value === null ? _ : String(value)
+  })
+
 export class WorkspaceView {}
 export class Plugin {}
 export class PluginSettings {}

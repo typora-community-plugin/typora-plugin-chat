@@ -1,6 +1,7 @@
 <script>
   import { markdown } from '../global'
   import ToolCallDetail from './ToolCallDetail.svelte'
+  import { t } from '../../i18n'
 
   let { message } = $props()
 </script>
@@ -24,7 +25,7 @@
     <details>
       <summary>
         <span class="typ-tool-status typ-tool-status--thinking"></span>
-        <strong>Thinking</strong>
+        <strong>{t.chat.thinkingLabel}</strong>
       </summary>
       <div class="typ-tool-call__body" use:markdown={message.text}></div>
     </details>

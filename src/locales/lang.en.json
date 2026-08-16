@@ -1,0 +1,70 @@
+{
+  "command": {
+    "chatWithAI": "Chat with AI",
+    "chatAboutNote": "Chat about this note",
+    "sendSelectionToChat": "Send selection to Chat",
+    "copyTranscript": "Copy chat transcript",
+    "clearConversation": "Clear conversation"
+  },
+  "chat": {
+    "title": "Chat",
+    "inputPlaceholder": "Type a message...",
+    "typeYourAnswer": "Type your answer...",
+    "compressedHistory": "*(Earlier conversation was compressed to keep the context window manageable.)*",
+    "summarizeNote": "Summarize this note: {file}",
+    "clear": "Clear",
+    "clearConversationTitle": "Clear conversation",
+    "selectModel": "Select model",
+    "selectModelTitle": "Select model",
+    "send": "Send (Enter)",
+    "stop": "Stop",
+    "thinking": "AI is thinking",
+    "thinkingLabel": "Thinking",
+    "parameters": "Parameters",
+    "result": "Result",
+    "error": "Error",
+    "selectionFrom": "Selection from {fileName}",
+    "selectionFromEditor": "Selection from editor",
+    "editor": "editor",
+    "clearSelection": "Clear selection"
+  },
+  "settings": {
+    "title": "Chat",
+    "provider": "Provider",
+    "providerDesc": "API provider used by the chat plugin.",
+    "providers": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI",
+      "ollama": "Ollama / OpenAI-compatible",
+      "custom": "Custom"
+    },
+    "openaiApiMode": "OpenAI API mode",
+    "openaiApiModeDesc": "Only used for OpenAI-compatible providers.",
+    "openaiApiModeResponses": "Responses API (primary)",
+    "openaiApiModeChat": "Chat Completions (fallback)",
+    "baseUrl": "Base URL",
+    "baseUrlDesc": "OpenAI-compatible / Ollama endpoint.",
+    "baseUrlPlaceholder": "https://api.example.com/v1",
+    "apiKey": "API Key",
+    "apiKeyDesc": "Stored obfuscated in the vault config file / localStorage.",
+    "apiKeyPlaceholder": "sk-...",
+    "model": "Model",
+    "modelDesc": "Model id used for chat completions.",
+    "refreshModels": "Refresh models",
+    "maxIterations": "Max tool iterations",
+    "maxIterationsDesc": "Maximum number of tool-call rounds in one agent loop."
+  },
+  "models": {
+    "loading": "Loading models...",
+    "loaded": "Loaded {count} models",
+    "failed": "Failed to fetch models: {message}"
+  },
+  "transcript": {
+    "question": "Q",
+    "answer": "A",
+    "thinking": "Thinking",
+    "toolCall": "Tool call: {name}",
+    "toolResult": "Tool result: {name}",
+    "error": "Error"
+  }
+}

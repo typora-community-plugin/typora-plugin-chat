@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store'
 import { settings, settingsManager } from '../config/settings'
 import type { ApiProvider } from '../config/types'
+import { format, t } from '../i18n'
 
 
 export interface ModelRefreshResult {
@@ -63,7 +64,7 @@ export async function refreshModels(): Promise<ModelRefreshResult> {
   const endpoint = `${baseUrl}/models`
 
   modelRefreshLoading.set(true)
-  modelRefreshMessage.set('Loading models...')
+  modelRefreshMessage.set(t.models.loading)
 
   const headers: Record<string, string> = {}
   if (provider === 'anthropic') {
@@ -83,12 +84,12 @@ export async function refreshModels(): Promise<ModelRefreshResult> {
     const filtered = filterModels(rawList, provider).slice(0, 100)
 
     availableModels.set(filtered)
-    const message = `Loaded ${filtered.length} models`
+    const message = format(t.models.loaded, { count: filtered.length })
     modelRefreshMessage.set(message)
     return { models: filtered, message, ok: true }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
-    const status = `Failed to fetch models: ${message}`
+    const status = format(t.models.failed, { message })
 
     availableModels.set([])
     modelRefreshMessage.set(status)
