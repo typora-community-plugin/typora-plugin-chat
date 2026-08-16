@@ -1,37 +1,40 @@
 import type { ToolResult } from '../config/types'
-import type { ExecutorContext } from './implements/ask-user'
-import { executeReadDocument, readDocumentSchema } from './implements/read-document'
-import { executeReadFile, readFileSchema } from './implements/read-file'
-import { executeEditDocument, editDocumentSchema } from './implements/edit-document'
-import { executeSearchVault, searchVaultSchema } from './implements/search-vault'
-import { executeListFiles, listFilesSchema } from './implements/list-files'
-import { executeCreateFile, createFileSchema } from './implements/create-file'
-import { executeDeleteFile, deleteFileSchema } from './implements/delete-file'
-import { executeRenameFile, renameFileSchema } from './implements/rename-file'
-import { executeGetProperties, getPropertiesSchema } from './implements/get-properties'
-import { executeSetProperties, setPropertiesSchema } from './implements/set-properties'
-import { executeGetBacklinks, getBacklinksSchema } from './implements/get-backlinks'
-import { executeOpenDocument, openDocumentSchema } from './implements/open-document'
-import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './implements/get-current-datetime'
-import { executeAskUser, askUserSchema } from './implements/ask-user'
+import type { ExecutorContext } from './system/ask-user'
+import { executeReadDocument, readDocumentSchema } from './editor/read-document'
+import { executeEditDocument, editDocumentSchema } from './editor/edit-document'
+import { executeGetProperties, getPropertiesSchema } from './editor/get-properties'
+import { executeSetProperties, setPropertiesSchema } from './editor/set-properties'
+import { executeOpenDocument, openDocumentSchema } from './editor/open-document'
+import { executeReadFile, readFileSchema } from './vault/read-file'
+import { executeSearchVault, searchVaultSchema } from './vault/search-vault'
+import { executeListFiles, listFilesSchema } from './vault/list-files'
+import { executeCreateFile, createFileSchema } from './vault/create-file'
+import { executeDeleteFile, deleteFileSchema } from './vault/delete-file'
+import { executeRenameFile, renameFileSchema } from './vault/rename-file'
+import { executeGetBacklinks, getBacklinksSchema } from './vault/get-backlinks'
+import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './system/get-current-datetime'
+import { executeAskUser, askUserSchema } from './system/ask-user'
 
 
 export type { ExecutorContext }
 
 /** All 14 tool schemas — re-exported for registry.ts */
 export const allToolSchemas = [
+  // Editor tools
   readDocumentSchema,
-  readFileSchema,
   editDocumentSchema,
+  getPropertiesSchema,
+  setPropertiesSchema,
+  openDocumentSchema,
+  // Vault tools
+  readFileSchema,
   searchVaultSchema,
   listFilesSchema,
   createFileSchema,
-  renameFileSchema,
   deleteFileSchema,
-  getPropertiesSchema,
-  setPropertiesSchema,
+  renameFileSchema,
   getBacklinksSchema,
-  openDocumentSchema,
+  // System tools
   getCurrentDatetimeSchema,
   askUserSchema,
 ] as const
@@ -46,18 +49,21 @@ export async function executeTool(
   context: ExecutorContext = {},
 ): Promise<ToolResult> {
   switch (name) {
+    // Editor tools
     case 'read_document': return executeReadDocument(input)
-    case 'read_file': return executeReadFile(input)
     case 'edit_document': return executeEditDocument(input)
+    case 'get_properties': return executeGetProperties(input)
+    case 'set_properties': return executeSetProperties(input)
+    case 'open_document': return executeOpenDocument(input)
+    // Vault tools
+    case 'read_file': return executeReadFile(input)
     case 'search_vault': return executeSearchVault(input)
     case 'list_files': return executeListFiles(input)
     case 'create_file': return executeCreateFile(input)
-    case 'rename_file': return executeRenameFile(input)
     case 'delete_file': return executeDeleteFile(input)
-    case 'get_properties': return executeGetProperties(input)
-    case 'set_properties': return executeSetProperties(input)
+    case 'rename_file': return executeRenameFile(input)
     case 'get_backlinks': return executeGetBacklinks(input)
-    case 'open_document': return executeOpenDocument(input)
+    // System tools
     case 'get_current_datetime': return executeGetCurrentDatetime()
     case 'ask_user': return executeAskUser(input, context)
     default:
