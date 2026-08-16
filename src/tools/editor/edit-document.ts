@@ -1,5 +1,5 @@
 import { app } from '@typora-community-plugin/core'
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 import { findReplace, getActiveDocumentContent, insertText, readFile, writeFile } from '../../adapter/vault'
 
 
@@ -45,6 +45,12 @@ async function writeTarget(path: string | undefined, content: string): Promise<v
 
 function findInText(text: string, find: string): string | null {
   return text.includes(find) ? text.replace(find, '') : null
+}
+
+export const summarizeEditDocument: ToolSummary = (input) => {
+  const parts: string[] = []
+  if (typeof input.path === 'string' && input.path) parts.push(input.path)
+  return parts.length ? parts.join(', ') : '(no parameters)'
 }
 
 export async function executeEditDocument(input: Record<string, unknown>): Promise<ToolResult> {

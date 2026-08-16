@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 import { listFiles } from '../../adapter/vault'
 
 
@@ -13,6 +13,12 @@ export const listFilesSchema: ToolDefinition = {
     },
     required: [],
   },
+}
+
+export const summarizeListFiles: ToolSummary = (input) => {
+  const parts: string[] = []
+  if (typeof input.folder === 'string' && input.folder) parts.push(input.folder)
+  return parts.length ? parts.join(', ') : '(root)'
 }
 
 export async function executeListFiles(input: Record<string, unknown>): Promise<ToolResult> {

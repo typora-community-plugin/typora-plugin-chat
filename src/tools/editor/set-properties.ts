@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 import { readDocument, writeDocument } from '../../adapter/vault'
 import { parseFrontmatter, stringifyYamlScalar } from '../../utils/helpers'
 
@@ -38,6 +38,12 @@ function mergeFrontmatter(markdown: string, properties: Record<string, unknown>)
     if (end !== -1) return `${yaml}${markdown.slice(end + 4)}`
   }
   return `${yaml}\n${markdown}`
+}
+
+export const summarizeSetProperties: ToolSummary = (input) => {
+  const parts: string[] = []
+  if (typeof input.path === 'string' && input.path) parts.push(input.path)
+  return parts.length ? parts.join(', ') : '(no parameters)'
 }
 
 export async function executeSetProperties(input: Record<string, unknown>): Promise<ToolResult> {

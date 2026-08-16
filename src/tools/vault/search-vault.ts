@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 import { searchFiles } from '../../adapter/vault'
 
 
@@ -22,6 +22,13 @@ export const searchVaultSchema: ToolDefinition = {
     },
     required: ['query'],
   },
+}
+
+export const summarizeSearchVault: ToolSummary = (input) => {
+  const parts: string[] = []
+  if (typeof input.query === 'string' && input.query) parts.push(input.query)
+  if (typeof input.limit === 'number' && input.limit !== 20) parts.push(`[limit=${input.limit}]`)
+  return parts.length ? parts.join(' ') : '(no parameters)'
 }
 
 export async function executeSearchVault(input: Record<string, unknown>): Promise<ToolResult> {

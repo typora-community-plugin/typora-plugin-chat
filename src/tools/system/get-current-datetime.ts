@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 
 
 export const getCurrentDatetimeSchema: ToolDefinition = {
@@ -10,6 +10,8 @@ export const getCurrentDatetimeSchema: ToolDefinition = {
     required: [],
   },
 }
+
+export const summarizeGetCurrentDatetime: ToolSummary = () => '(no parameters)'
 
 export async function executeGetCurrentDatetime(): Promise<ToolResult> {
   const now = new Date()

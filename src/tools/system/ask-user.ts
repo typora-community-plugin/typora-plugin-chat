@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 
 
 export interface ExecutorContext {
@@ -15,6 +15,11 @@ export const askUserSchema: ToolDefinition = {
     },
     required: ['question'],
   },
+}
+
+export const summarizeAskUser: ToolSummary = (input) => {
+  const question = input.question
+  return typeof question === 'string' && question ? question : '(no question)'
 }
 
 export async function executeAskUser(input: Record<string, unknown>, context: ExecutorContext): Promise<ToolResult> {

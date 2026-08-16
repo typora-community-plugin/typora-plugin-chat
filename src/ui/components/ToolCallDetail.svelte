@@ -1,4 +1,5 @@
 <script>
+  import { summarizeToolInput } from '../../tools/summary'
   import { truncate } from '../../utils/helpers'
 
   let { message } = $props()
@@ -7,7 +8,9 @@
   const status = $derived(
     isCall ? 'loading' : (message.toolResult?.isError || message.isError ? 'error' : 'success')
   )
-  const statusLabel = $derived(isCall ? 'running' : (status === 'error' ? 'failed' : 'done'))
+  const summary = $derived(
+    message.toolName ? summarizeToolInput(message.toolName, message.toolInput ?? {}) : ''
+  )
   const paramsJson = $derived(JSON.stringify(message.toolInput ?? {}, null, 2))
   const resultText = $derived(truncate(message.toolResult?.content ?? '', 2000))
 </script>
@@ -17,7 +20,9 @@
     <summary>
       <span class="typ-tool-status typ-tool-status--{status}"></span>
       <strong>{message.toolName}</strong>
-      <span>({statusLabel})</span>
+      {#if summary}
+        <span class="typ-tool-call__summary" title={summary}>{summary}</span>
+      {/if}
     </summary>
 
     <div class="typ-tool-call__body">

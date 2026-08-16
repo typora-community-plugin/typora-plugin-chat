@@ -1,5 +1,5 @@
 import { app } from '@typora-community-plugin/core'
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 import { resolveVaultPath } from '../../adapter/vault'
 
 
@@ -13,6 +13,11 @@ export const openDocumentSchema: ToolDefinition = {
     },
     required: ['path'],
   },
+}
+
+export const summarizeOpenDocument: ToolSummary = (input) => {
+  const path = input.path
+  return typeof path === 'string' && path ? path : '(no path)'
 }
 
 export async function executeOpenDocument(input: Record<string, unknown>): Promise<ToolResult> {

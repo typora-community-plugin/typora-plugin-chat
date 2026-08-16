@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 import { readDocument } from '../../adapter/vault'
 import { parseFrontmatter } from '../../utils/helpers'
 
@@ -13,6 +13,11 @@ export const getPropertiesSchema: ToolDefinition = {
     },
     required: [],
   },
+}
+
+export const summarizeGetProperties: ToolSummary = (input) => {
+  const path = input.path
+  return typeof path === 'string' && path ? path : '(active document)'
 }
 
 export async function executeGetProperties(input: Record<string, unknown>): Promise<ToolResult> {

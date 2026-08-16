@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
 import { renameFile } from '../../adapter/vault'
 
 
@@ -13,6 +13,15 @@ export const renameFileSchema: ToolDefinition = {
     },
     required: ['path', 'new_path'],
   },
+}
+
+export const summarizeRenameFile: ToolSummary = (input) => {
+  const path = input.path
+  const newPath = input.new_path
+  const parts: string[] = []
+  if (typeof path === 'string' && path) parts.push(path)
+  if (typeof newPath === 'string' && newPath) parts.push(newPath)
+  return parts.length ? parts.join(' → ') : '(no parameters)'
 }
 
 export async function executeRenameFile(input: Record<string, unknown>): Promise<ToolResult> {

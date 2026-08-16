@@ -161,6 +161,16 @@
     &::-webkit-details-marker {
       display: none;
     }
+
+    .typ-tool-call__summary {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-color, rgb(var(--typ-text-color)));
+      opacity: 0.75;
+    }
   }
 
   &__body {
