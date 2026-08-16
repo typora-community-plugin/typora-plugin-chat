@@ -8,6 +8,35 @@ export function truncate(text: string, max = 2000): string {
   return `${text.slice(0, max)}…`
 }
 
+/**
+ * Extract chain-of-thought text from an OpenAI-compatible chat message.
+ * Covers the shapes used by reasoning models:
+ * - `reasoning_content` (string) — DeepSeek, Qwen, GLM, Kimi…
+ * - `reasoning` (string) — some OpenAI-compatible endpoints
+ * - `reasoning` (array of `{ type, text }`) — OpenAI o-series chat completions
+ */
+export function extractReasoningContent(message: Record<string, unknown>): string {
+  const parts: string[] = []
+
+  const reasoningContent = message.reasoning_content
+  if (typeof reasoningContent === 'string' && reasoningContent.trim()) {
+    parts.push(reasoningContent.trim())
+  }
+
+  const reasoning = message.reasoning
+  if (typeof reasoning === 'string') {
+    if (reasoning.trim()) parts.push(reasoning.trim())
+  } else if (Array.isArray(reasoning)) {
+    for (const item of reasoning) {
+      if (!item || typeof item !== 'object') continue
+      const text = (item as Record<string, unknown>).text
+      if (typeof text === 'string' && text.trim()) parts.push(text.trim())
+    }
+  }
+
+  return parts.join('\n\n')
+}
+
 export function truncateMiddle(text: string, max = 80): string {
   if (!text || text.length <= max) return text || ''
   const half = Math.floor((max - 1) / 2)

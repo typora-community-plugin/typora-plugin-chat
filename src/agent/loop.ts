@@ -77,8 +77,15 @@ export async function executeAgentLoop(
     const assistantBlocks: ContentBlock[] = []
     const toolUses: ContentBlock[] = []
     let responseText = ''
+    let thinkingText = ''
 
     for (const block of response.content) {
+      if (block.type === 'thinking') {
+        // Reasoning is shown to the user but never echoed back to the API.
+        const text = (block.text ?? '').trim()
+        if (text) thinkingText += (thinkingText ? '\n\n' : '') + text
+        continue
+      }
       if (block.type === 'text') {
         responseText += block.text ?? ''
         assistantBlocks.push(block)
@@ -86,6 +93,10 @@ export async function executeAgentLoop(
         toolUses.push(block)
         assistantBlocks.push(block)
       }
+    }
+
+    if (thinkingText) {
+      callbacks.onThinking?.(thinkingText)
     }
 
     if (responseText.trim()) {

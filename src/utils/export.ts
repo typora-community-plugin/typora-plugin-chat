@@ -13,6 +13,9 @@ export function formatChatMarkdown(list: ChatMessage[]): string {
       case 'assistant':
         blocks.push(`### A:\n\n${msg.text ?? ''}`)
         break
+      case 'thinking':
+        blocks.push(`### Thinking:\n\n${msg.text ?? ''}`)
+        break
       case 'tool_call':
         blocks.push(`### Tool call: ${msg.toolName}\n\n\`\`\`json\n${JSON.stringify(msg.toolInput ?? {}, null, 2)}\n\`\`\``)
         break

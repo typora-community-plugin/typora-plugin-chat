@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { UnifiedResponse } from '../../src/config/types'
+import type { ApiMessage, ContentBlock, UnifiedResponse } from '../../src/config/types'
 
 vi.mock('../../src/api/client', () => ({
   sendMessage: vi.fn(),
@@ -7,6 +7,7 @@ vi.mock('../../src/api/client', () => ({
 
 vi.mock('../../src/tools/executor', () => ({
   executeTool: vi.fn(),
+  allToolSchemas: [],
 }))
 
 vi.mock('../../src/config/settings', () => ({
@@ -100,5 +101,35 @@ describe('agent loop', () => {
 
     expect(result.aborted).toBe(true)
     expect(result.iterations).toBeLessThanOrEqual(2)
+  })
+
+  it('surfaces thinking via onThinking without echoing it into history', async () => {
+    vi.mocked(sendMessage)
+      .mockResolvedValueOnce({
+        content: [
+          { type: 'thinking', text: 'Let me think.' },
+          { type: 'tool_use', id: 'toolu_1', name: 'read_document', input: {} },
+        ],
+        stopReason: 'tool_use',
+        usage: { inputTokens: 2, outputTokens: 1 },
+      })
+      .mockResolvedValueOnce(textResponse('Done.'))
+    const onThinking = vi.fn()
+    const onToolCall = vi.fn(() => 'id-1')
+    const onToolResult = vi.fn()
+
+    const result = await executeAgentLoop('think', { onThinking, onToolCall, onToolResult }, 5)
+
+    expect(onThinking).toHaveBeenCalledWith('Let me think.')
+    expect(result.text).toBe('Done.')
+
+    // The assistant history sent to the API must not include the thinking block.
+    const secondCall = vi.mocked(sendMessage).mock.calls[1]
+    const history = secondCall[1] as ApiMessage[]
+    const assistantMsg = history.find(m => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    const blocks = assistantMsg!.content as ContentBlock[]
+    expect(blocks.some(b => b.type === 'thinking')).toBe(false)
+    expect(blocks.some(b => b.type === 'tool_use')).toBe(true)
   })
 })

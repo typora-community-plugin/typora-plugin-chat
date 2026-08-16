@@ -98,9 +98,11 @@ export async function sendAnthropic(
     } else if (block.type === 'tool_use') {
       content.push({ type: 'tool_use', id: block.id, name: block.name, input: block.input ?? {} })
     } else if (block.type === 'thinking') {
-      // Adaptive thinking is not displayed in the chat stream but keeps the
-      // loop going; reasoning tokens are counted in usage below.
-      continue
+      // Surface the model's chain of thought to the UI. Reasoning tokens are
+      // already counted in usage below. `redacted_thinking` blocks carry no
+      // readable text and are skipped.
+      const thinkingText = block.thinking ?? ''
+      if (thinkingText.trim()) content.push({ type: 'thinking', text: thinkingText })
     }
   }
 

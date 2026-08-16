@@ -71,4 +71,47 @@ describe('anthropic adapter', () => {
     expect(response.stopReason).toBe('end_turn')
     expect(response.content).toEqual([{ type: 'text', text: 'Done.' }])
   })
+
+  it('surfaces thinking blocks as thinking content', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        content: [
+          { type: 'thinking', thinking: 'Let me reason about this.', signature: 'sig_1' },
+          { type: 'text', text: 'Answer.' },
+        ],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 5, output_tokens: 3 },
+      }),
+    }))
+
+    const response = await sendAnthropic(settings, messages)
+
+    expect(response.content).toEqual([
+      { type: 'thinking', text: 'Let me reason about this.' },
+      { type: 'text', text: 'Answer.' },
+    ])
+  })
+
+  it('drops redacted_thinking blocks', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        content: [
+          { type: 'redacted_thinking', data: 'encrypted', signature: 'sig_2' },
+          { type: 'text', text: 'Ok.' },
+        ],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 5, output_tokens: 3 },
+      }),
+    }))
+
+    const response = await sendAnthropic(settings, messages)
+
+    expect(response.content).toEqual([{ type: 'text', text: 'Ok.' }])
+  })
 })

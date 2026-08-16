@@ -44,7 +44,7 @@ export interface ToolDefinition {
 
 /** Unified content block returned by every provider adapter */
 export interface ContentBlock {
-  type: 'text' | 'tool_use' | 'tool_result'
+  type: 'text' | 'thinking' | 'tool_use' | 'tool_result'
   text?: string
   id?: string
   name?: string
@@ -95,6 +95,8 @@ export interface AgentResult {
 
 export interface AgentCallbacks {
   onText?: (text: string) => void
+  /** reasoning / chain-of-thought text produced by the model */
+  onThinking?: (text: string) => void
   onToolCall?: (name: string, input: Record<string, unknown>) => string | void
   onToolResult?: (toolCallId: string, name: string, result: ToolResult) => void
   onError?: (message: string) => void

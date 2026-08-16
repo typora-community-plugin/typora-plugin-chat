@@ -5,7 +5,7 @@ import type {
   ToolDefinition,
   UnifiedResponse,
 } from '../config/types'
-import { httpError } from '../utils/helpers'
+import { extractReasoningContent, httpError } from '../utils/helpers'
 
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -115,6 +115,12 @@ export async function sendOllama(
   const data = await response.json()
   const message = data.choices?.[0]?.message ?? {}
   const content: ContentBlock[] = []
+
+  // Reasoning models (qwen3, deepseek-r1, …) stream chain-of-thought through
+  // `reasoning_content`; surface it to the UI, never back to the API.
+  const reasoning = extractReasoningContent(message)
+  if (reasoning) content.push({ type: 'thinking', text: reasoning })
+
   if (message.content) content.push({ type: 'text', text: message.content })
   content.push(...parseToolCalls(message.tool_calls))
 

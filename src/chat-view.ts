@@ -98,6 +98,7 @@ export class ChatView extends WorkspaceView {
         userMessage,
         {
           onText: (t) => chatStore.addAssistantMessage(t),
+          onThinking: (t) => chatStore.addThinkingMessage(t),
           onToolCall: (name, input) => chatStore.addToolCall(name, input),
           onToolResult: (id, _name, result) => chatStore.updateToolResult(id, result, result.isError),
           onError: (msg) => chatStore.addError(msg),

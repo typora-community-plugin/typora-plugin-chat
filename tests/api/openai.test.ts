@@ -75,4 +75,79 @@ describe('openai adapter', () => {
     expect(response.stopReason).toBe('tool_use')
     expect(response.content[0]).toMatchObject({ type: 'tool_use', name: 'read_document', input: { path: 'b.md' } })
   })
+
+  it('captures reasoning_content from chat completions (DeepSeek style)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        choices: [{
+          finish_reason: 'stop',
+          message: {
+            content: 'Final answer.',
+            reasoning_content: 'First I need to check the file.',
+          },
+        }],
+        usage: { prompt_tokens: 9, completion_tokens: 4 },
+      }),
+    }))
+
+    const response = await sendOpenAIChat(settings, messages)
+
+    expect(response.content).toEqual([
+      { type: 'thinking', text: 'First I need to check the file.' },
+      { type: 'text', text: 'Final answer.' },
+    ])
+  })
+
+  it('captures reasoning arrays from chat completions (o-series style)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        choices: [{
+          finish_reason: 'stop',
+          message: {
+            content: 'Summary.',
+            reasoning: [
+              { type: 'text', text: 'Step one.' },
+              { type: 'text', text: 'Step two.' },
+            ],
+          },
+        }],
+        usage: { prompt_tokens: 9, completion_tokens: 4 },
+      }),
+    }))
+
+    const response = await sendOpenAIChat(settings, messages)
+
+    expect(response.content).toEqual([
+      { type: 'thinking', text: 'Step one.\n\nStep two.' },
+      { type: 'text', text: 'Summary.' },
+    ])
+  })
+
+  it('captures reasoning items from the Responses API', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        output: [
+          { type: 'reasoning', summary: [{ type: 'summary_text', text: 'Reasoning summary.' }], content: [] },
+          { type: 'message', content: [{ type: 'output_text', text: 'Answer.' }] },
+        ],
+        usage: { input_tokens: 12, output_tokens: 7 },
+      }),
+    }))
+
+    const response = await sendOpenAIResponses(settings, messages)
+
+    expect(response.content).toEqual([
+      { type: 'thinking', text: 'Reasoning summary.' },
+      { type: 'text', text: 'Answer.' },
+    ])
+  })
 })

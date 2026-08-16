@@ -19,13 +19,17 @@
 {:else if message.type === 'tool_call' || message.type === 'tool_result'}
   <ToolCallDetail {message} />
 
+{:else if message.type === 'thinking'}
+  <div class="typ-tool-call">
+    <details>
+      <summary>
+        <span class="typ-tool-status typ-tool-status--thinking"></span>
+        <strong>Thinking</strong>
+      </summary>
+      <div class="typ-tool-call__body" use:markdown={message.text}></div>
+    </details>
+  </div>
+
 {:else if message.type === 'error'}
   <div class="typ-error-msg">{message.text}</div>
-
-{:else if message.type === 'thinking'}
-  <div class="typ-thinking" aria-label="AI is thinking">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
 {/if}

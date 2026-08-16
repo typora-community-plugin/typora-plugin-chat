@@ -6,7 +6,7 @@ import type {
   ToolDefinition,
   UnifiedResponse,
 } from '../config/types'
-import { httpError } from '../utils/helpers'
+import { extractReasoningContent, httpError } from '../utils/helpers'
 
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -144,6 +144,19 @@ export async function sendOpenAIResponses(
       for (const part of item.content ?? []) {
         if (part.type === 'output_text') content.push({ type: 'text', text: part.text ?? '' })
       }
+    } else if (item.type === 'reasoning') {
+      // Reasoning item: the user-visible chain of thought lives in `summary`
+      // (and possibly plain-text `content` parts on compatible providers).
+      const parts: string[] = []
+      for (const part of item.summary ?? []) {
+        if (part.type === 'summary_text' && part.text) parts.push(part.text)
+      }
+      for (const part of item.content ?? []) {
+        if ((part.type === 'output_text' || part.type === 'summary_text') && part.text) {
+          parts.push(part.text)
+        }
+      }
+      if (parts.length) content.push({ type: 'thinking', text: parts.join('\n\n') })
     } else if (item.type === 'function_call') {
       let input: Record<string, unknown> = {}
       try {
@@ -196,6 +209,12 @@ export async function sendOpenAIChat(
   const data = await response.json()
   const message = data.choices?.[0]?.message ?? {}
   const content: ContentBlock[] = []
+
+  // Reasoning-capable models (DeepSeek, Qwen, o-series…) expose their chain of
+  // thought here. It is rendered for the user but never sent back to the API.
+  const reasoning = extractReasoningContent(message)
+  if (reasoning) content.push({ type: 'thinking', text: reasoning })
+
   if (message.content) content.push({ type: 'text', text: message.content })
   content.push(...parseToolCalls(message.tool_calls))
 

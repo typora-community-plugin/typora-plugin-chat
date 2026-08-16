@@ -75,6 +75,13 @@ export const chatStore = {
     persist()
   },
 
+  /** Reasoning / chain-of-thought text shown as a collapsible block. */
+  addThinkingMessage(content: string) {
+    const msg: ChatMessage = { id: createId(), type: 'thinking', text: content, timestamp: Date.now() }
+    messages.update(msgs => trimMessages([...msgs, msg]))
+    persist()
+  },
+
   addToolCall(name: string, input: Record<string, unknown>): string {
     const id = createId()
     const msg: ChatMessage = { id, type: 'tool_call', toolName: name, toolInput: input, timestamp: Date.now() }

@@ -58,6 +58,10 @@ describe('api client dispatcher', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(rateLimited))
 
     const promise = sendMessage(settings, messages)
-    await expect(vi.runAllTimersAsync().then(() => promise)).rejects.toThrow()
+    // Attach the assertion up front so the rejection is never "unhandled"
+    // while fake timers advance the backoff sleeps.
+    const assertion = expect(promise).rejects.toThrow()
+    await vi.runAllTimersAsync()
+    await assertion
   })
 })
