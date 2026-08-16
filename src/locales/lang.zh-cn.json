@@ -26,7 +26,12 @@
     "selectionFrom": "来自 {fileName} 的选中内容",
     "selectionFromEditor": "来自编辑器的选中内容",
     "editor": "编辑器",
-    "clearSelection": "清除选中内容"
+    "clearSelection": "清除选中内容",
+    "metaModel": "模型",
+    "metaDuration": "回复时长",
+    "metaSpeed": "回复速度",
+    "speedTokensPerSecond": "tok/s",
+    "speedCharsPerSecond": "字符/秒"
   },
   "settings": {
     "title": "Chat",

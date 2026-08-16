@@ -5,6 +5,7 @@ import { chatStore } from './store/chat-store'
 import { settingsManager } from './config/settings'
 import { abortAgentLoop, executeAgentLoop, resetAgentHistory } from './agent/loop'
 import { getSelection } from './adapter/editor'
+import type { AssistantMeta } from './config/types'
 
 
 /**
@@ -93,14 +94,19 @@ export class ChatView extends WorkspaceView {
     chatStore.addUserMessage(text, selection)
     chatStore.setInputEnabled(false)
 
+    const startedAt = performance.now()
+    const assistantIds: string[] = []
+
     try {
-      await executeAgentLoop(
+      const result = await executeAgentLoop(
         userMessage,
         {
-          onText: (t) => chatStore.addAssistantMessage(t),
+          onText: (t) => {
+            assistantIds.push(chatStore.addAssistantMessage(t))
+          },
           onThinking: (t) => chatStore.addThinkingMessage(t),
           onToolCall: (name, input) => chatStore.addToolCall(name, input),
-          onToolResult: (id, _name, result) => chatStore.updateToolResult(id, result, result.isError),
+          onToolResult: (id, _name, toolResult) => chatStore.updateToolResult(id, toolResult, toolResult.isError),
           onError: (msg) => chatStore.addError(msg),
           onAskUser: (question) => {
             chatStore.setInputEnabled(true)
@@ -113,6 +119,30 @@ export class ChatView extends WorkspaceView {
         },
         settingsManager.get().maxIterations,
       )
+
+      if (assistantIds.length && !result.aborted) {
+        const durationMs = performance.now() - startedAt
+        const generationMs = result.apiDurationMs && result.apiDurationMs > 0 ? result.apiDurationMs : durationMs
+        const outputTokens = result.usage?.outputTokens ?? 0
+        const chars = result.text.length
+        const seconds = Math.max(generationMs, 1) / 1000
+        const meta: AssistantMeta = {
+          model: result.model ?? settingsManager.get().model,
+          durationMs: Math.round(durationMs),
+          outputTokens,
+          chars,
+        }
+
+        if (outputTokens > 0) {
+          meta.speed = outputTokens / seconds
+          meta.speedUnit = 'tokens'
+        } else if (chars > 0) {
+          meta.speed = chars / seconds
+          meta.speedUnit = 'chars'
+        }
+
+        chatStore.setAssistantMeta(assistantIds, meta)
+      }
     } finally {
       chatStore.setInputEnabled(true)
       chatStore.hideThinking()

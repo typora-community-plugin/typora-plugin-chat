@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store'
-import type { ChatMessage, SelectionScope, ToolResult } from '../config/types'
+import type { AssistantMeta, ChatMessage, SelectionScope, ToolResult } from '../config/types'
 import { t } from '../i18n'
 
 
@@ -70,9 +70,24 @@ export const chatStore = {
     persist()
   },
 
-  addAssistantMessage(content: string) {
-    const msg: ChatMessage = { id: createId(), type: 'assistant', text: content, timestamp: Date.now() }
+  addAssistantMessage(content: string, meta?: AssistantMeta): string {
+    const msg: ChatMessage = {
+      id: createId(),
+      type: 'assistant',
+      text: content,
+      timestamp: Date.now(),
+      ...(meta ? { meta } : {}),
+    }
     messages.update(msgs => trimMessages([...msgs, msg]))
+    persist()
+    return msg.id
+  },
+
+  /** Attach completion metadata to assistant messages after a reply finishes. */
+  setAssistantMeta(ids: string[], meta: AssistantMeta) {
+    if (!ids.length) return
+    const idSet = new Set(ids)
+    messages.update(msgs => msgs.map(m => idSet.has(m.id) ? { ...m, meta } : m))
     persist()
   },
 

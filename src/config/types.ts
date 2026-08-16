@@ -7,6 +7,21 @@ export type ApiProvider = 'anthropic' | 'openai' | 'ollama' | 'custom'
 
 export type ChatMessageType = 'user' | 'assistant' | 'tool_call' | 'tool_result' | 'error' | 'thinking'
 
+export type ReplySpeedUnit = 'tokens' | 'chars'
+
+/** Metadata shown below an assistant reply after it finishes. */
+export interface AssistantMeta {
+  /** Model id that produced the reply. */
+  model: string
+  /** Wall-clock time spent on the whole reply, including tool iterations. */
+  durationMs: number
+  /** Reply speed. Uses tokens/s when token usage is available, else chars/s. */
+  speed?: number
+  speedUnit?: ReplySpeedUnit
+  outputTokens?: number
+  chars?: number
+}
+
 export interface ChatMessage {
   id: string
   type: ChatMessageType
@@ -22,6 +37,8 @@ export interface ChatMessage {
   toolCallId?: string
   isError?: boolean
   timestamp: number
+  /** Completion metadata for assistant messages. */
+  meta?: AssistantMeta
 }
 
 export interface ToolResult {
@@ -94,6 +111,10 @@ export interface AgentResult {
   iterations: number
   aborted: boolean
   usage?: { inputTokens: number; outputTokens: number }
+  /** Model id used for this agent run. */
+  model?: string
+  /** Total time spent waiting on model API responses, excluding tool execution. */
+  apiDurationMs?: number
 }
 
 export interface AgentCallbacks {

@@ -26,7 +26,12 @@
     "selectionFrom": "Auswahl aus {fileName}",
     "selectionFromEditor": "Auswahl aus dem Editor",
     "editor": "Editor",
-    "clearSelection": "Auswahl aufheben"
+    "clearSelection": "Auswahl aufheben",
+    "metaModel": "Modell",
+    "metaDuration": "Antwortzeit",
+    "metaSpeed": "Antwortgeschwindigkeit",
+    "speedTokensPerSecond": "Tok./s",
+    "speedCharsPerSecond": "Zeichen/s"
   },
   "settings": {
     "title": "Chat",

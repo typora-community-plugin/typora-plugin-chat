@@ -52,6 +52,7 @@ export async function executeAgentLoop(
 
   let finalText = ''
   const totalUsage = { inputTokens: 0, outputTokens: 0 }
+  let apiDurationMs = 0
   let iterations = 0
 
   while (iterations < maxIterations) {
@@ -60,8 +61,10 @@ export async function executeAgentLoop(
 
     callbacks.onThinkingChange?.(true)
     let response: UnifiedResponse
+    const requestStartedAt = performance.now()
     try {
       response = await sendMessage(settings, [systemMessage, contextMessage, ...conversation], toolDefinitions)
+      apiDurationMs += performance.now() - requestStartedAt
     } catch (error) {
       callbacks.onThinkingChange?.(false)
       callbacks.onError?.(error instanceof Error ? error.message : String(error))
@@ -134,5 +137,5 @@ export async function executeAgentLoop(
   }
 
   history = trimHistory(conversation)
-  return { text: finalText, iterations, aborted, usage: totalUsage }
+  return { text: finalText, iterations, aborted, usage: totalUsage, model: settings.model, apiDurationMs }
 }
