@@ -5,6 +5,7 @@
     placeholder = '输入消息...',
     enabled = true,
     textAreaEl = null,
+    model = '',
   } = $props()
 
   let value = $state('')
@@ -56,15 +57,21 @@
       onkeydown={handleKeydown}
     ></textarea>
 
-    {#if enabled}
-      <button
-        class="typ-send-btn"
-        onclick={submit}
-        disabled={!value.trim()}
-        title="Send (Enter)"
-      >➤</button>
-    {:else}
-      <button class="typ-stop-btn" onclick={onStop} title="Stop">■</button>
-    {/if}
+    <div class="typ-input-actions">
+      {#if model}
+        <span class="typ-input-model" title={model}>{model}</span>
+      {/if}
+
+      {#if enabled}
+        <button
+          class="typ-send-btn"
+          onclick={submit}
+          disabled={!value.trim()}
+          title="Send (Enter)"
+        >➤</button>
+      {:else}
+        <button class="typ-stop-btn" onclick={onStop} title="Stop">■</button>
+      {/if}
+    </div>
   </div>
 </div>

@@ -36,16 +36,6 @@
     color: var(--text-color, rgb(var(--typ-text-color)));
   }
 
-  &__model {
-    flex: 1;
-    text-align: center;
-    font-size: 12px;
-    color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   &__actions {
     display: flex;
     gap: 0.5rem;
@@ -294,20 +284,27 @@
   background-color: var(--bg-color, #fff);
 
   .typ-input-wrap {
-    position: relative;
     flex: 1;
     display: flex;
-  }
-
-  textarea {
-    flex: 1;
-    width: 100%;
-    min-height: 42px;
-    max-height: 300px;
-    padding: 10px 52px 10px 16px;
+    flex-direction: column;
     border: 1px solid rgb(var(--typ-border-color));
     border-radius: var(--typ-radius-m);
     background-color: var(--bg-color, #fff);
+
+    &:focus-within {
+      border-color: var(--primary-color, rgb(30, 136, 229));
+    }
+  }
+
+  textarea {
+    flex: none;
+    width: 100%;
+    min-height: 42px;
+    max-height: 300px;
+    padding: 10px 14px 2px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
     color: var(--text-color, rgb(var(--typ-text-color)));
     font-size: 14px;
     font-family: inherit;
@@ -316,21 +313,36 @@
     outline: none;
     overflow-y: hidden;
 
-    &:focus {
-      border-color: var(--primary-color, rgb(30, 136, 229));
-    }
-
     &::placeholder {
       color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
     }
   }
 }
 
+.typ-input-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 2px 10px 8px;
+}
+
+.typ-input-model {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background-color: rgb(var(--typ-color-gray-1));
+  color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
+  font-size: 12px;
+  line-height: 1.4;
+  user-select: none;
+}
+
 .typ-send-btn,
 .typ-stop-btn {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
   flex: 0 0 auto;
   width: 34px;
   height: 34px;

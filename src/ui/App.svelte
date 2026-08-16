@@ -36,7 +36,6 @@
 
 <div class="typ-chat-view">
   <Header
-    model={$settings.model || 'No model'}
     onToggleSettings={() => (showSettings = !showSettings)}
     onClear={onClear}
   />
@@ -65,6 +64,7 @@
   <InputBar
     placeholder={$inputPlaceholder}
     enabled={$inputEnabled}
+    model={$settings.model || 'No model'}
     onSend={handleMainSend}
     onStop={onStop}
   />
