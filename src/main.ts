@@ -82,7 +82,10 @@ export default class extends Plugin {
   }
 
   private getChatView(): ChatView | undefined {
-    return this.app.workspace.getViewByType(ChatView)
+    const leaf = this.app.workspace.rootSplit.findLeaf(
+      (leaf) => leaf.viewType === ChatView.type
+    )
+    return leaf?.view instanceof ChatView ? leaf.view : undefined
   }
 
   private async chatAboutNote(filePath: string) {
