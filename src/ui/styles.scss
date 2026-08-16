@@ -328,17 +328,27 @@
 }
 
 .typ-input-model {
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 2px 8px;
+  max-width: 150px;
+  padding: 2px 6px 2px 8px;
+  border: 1px solid rgb(var(--typ-border-color));
   border-radius: 6px;
   background-color: rgb(var(--typ-color-gray-1));
   color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
   font-size: 12px;
   line-height: 1.4;
+  cursor: pointer;
+  outline: none;
   user-select: none;
+
+  &:hover,
+  &:focus {
+    border-color: var(--primary-color, rgb(30, 136, 229));
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .typ-send-btn,

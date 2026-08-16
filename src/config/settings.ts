@@ -8,7 +8,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   apiKey: '',
   model: 'qwen3.6-35b-a3b',
   maxIterations: 20,
-  baseUrl: 'http://192.168.137.1:11431/v1',
+  baseUrl: 'http://localhost:11431/v1',
   openaiApiMode: 'responses',
 }
 

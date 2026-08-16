@@ -12,7 +12,8 @@
     askUserQuestion,
     inputPlaceholder,
   } from '../store/chat-store'
-  import { settings } from '../config/settings'
+  import { settings, settingsManager } from '../config/settings'
+  import { availableModels, refreshModels } from '../store/models-store'
 
   let {
     onSend,
@@ -47,7 +48,10 @@
   <InputBar
     placeholder={$inputPlaceholder}
     enabled={$inputEnabled}
-    model={$settings.model || 'No model'}
+    model={$settings.model}
+    models={$availableModels}
+    onModelChange={(model) => settingsManager.save({ model })}
+    onModelRefresh={() => refreshModels()}
     onSend={handleMainSend}
     onStop={onStop}
   />

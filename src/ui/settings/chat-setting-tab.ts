@@ -1,6 +1,7 @@
 import { SettingTab } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
 import { settingsManager } from '../../config/settings'
+import { availableModels, modelRefreshMessage, refreshModels } from '../../store/models-store'
 import type { ApiProvider, PluginSettings } from '../../config/types'
 
 
@@ -10,13 +11,6 @@ const PROVIDERS: Array<{ value: ApiProvider; label: string }> = [
   { value: 'ollama', label: 'Ollama / OpenAI-compatible' },
   { value: 'custom', label: 'Custom' },
 ]
-
-const FALLBACK_MODELS: Record<ApiProvider, string[]> = {
-  anthropic: ['claude-sonnet-4-6', 'claude-opus-4-1', 'claude-haiku-4-5'],
-  openai: ['gpt-5.3-codex', 'gpt-5.2', 'gpt-4.1-mini'],
-  ollama: ['qwen3.6-35b-a3b', 'llama3.1', 'deepseek-r1'],
-  custom: ['deepseek-chat', 'deepseek-reasoner'],
-}
 
 
 export class ChatSettingTab extends SettingTab {
@@ -111,10 +105,24 @@ export class ChatSettingTab extends SettingTab {
       datalist.id = listId
       setting.controls.append(datalist)
 
+      const renderOptions = (models: string[]) => {
+        datalist.innerHTML = ''
+        for (const id of models) {
+          const option = document.createElement('option')
+          option.value = id
+          datalist.append(option)
+        }
+      }
+
+      availableModels.subscribe(renderOptions)
+      modelRefreshMessage.subscribe((message) => {
+        if (statusEl) statusEl.textContent = message
+      })
+
       setting.addButton((button) => {
         button.textContent = 'Refresh models'
         button.onclick = () => {
-          void this.refreshModels(datalist, statusEl)
+          void refreshModels()
         }
       })
     })
@@ -134,69 +142,5 @@ export class ChatSettingTab extends SettingTab {
         }
       })
     })
-  }
-
-  private async refreshModels(
-    list: HTMLDataListElement,
-    statusEl: HTMLElement | null,
-  ) {
-    const current = settingsManager.get()
-    const provider = current.provider
-    const baseUrl = (current.baseUrl || '').replace(/\/+$/, '')
-    const endpoint = `${baseUrl}/models`
-
-    if (statusEl) statusEl.textContent = 'Loading models...'
-
-    const headers: Record<string, string> = {}
-    if (provider === 'anthropic') {
-      headers['x-api-key'] = current.apiKey
-      headers['anthropic-version'] = '2023-06-01'
-    } else if (current.apiKey) {
-      headers['Authorization'] = `Bearer ${current.apiKey}`
-    }
-
-    try {
-      const response = await fetch(endpoint, { headers })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const data: unknown = await response.json()
-      const rawList: unknown[] = Array.isArray(data)
-        ? data
-        : ((data as { data?: unknown[] }).data ?? [])
-      const filtered = rawList
-        .map((m): string | null => {
-          if (typeof m === 'string') return m
-          if (m && typeof m === 'object') {
-            const item = m as { id?: unknown; name?: unknown }
-            const value = typeof item.id === 'string' ? item.id : typeof item.name === 'string' ? item.name : ''
-            return value || null
-          }
-          return null
-        })
-        .filter((id): id is string => Boolean(id))
-        .filter(id => {
-          if (provider !== 'openai') return true
-          return /(chat|gpt|o1|o3|codex)/i.test(id)
-            && !/(realtime|audio|transcri|search|embedding|moderation)/i.test(id)
-        })
-
-      list.innerHTML = ''
-      for (const id of filtered.slice(0, 100)) {
-        const option = document.createElement('option')
-        option.value = id
-        list.append(option)
-      }
-
-      if (statusEl) statusEl.textContent = `Loaded ${Math.min(filtered.length, 100)} models`
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e)
-      if (statusEl) statusEl.textContent = `Failed to fetch models: ${message}`
-
-      list.innerHTML = ''
-      for (const id of FALLBACK_MODELS[provider] ?? []) {
-        const option = document.createElement('option')
-        option.value = id
-        list.append(option)
-      }
-    }
   }
 }

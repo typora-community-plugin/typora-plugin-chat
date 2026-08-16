@@ -6,6 +6,9 @@
     enabled = true,
     textAreaEl = null,
     model = '',
+    models = [],
+    onModelChange = null,
+    onModelRefresh = null,
   } = $props()
 
   let value = $state('')
@@ -44,6 +47,14 @@
     requestAnimationFrame(autoResize)
     onSend(text)
   }
+
+  function handleModelChange(e) {
+    onModelChange?.(e.currentTarget.value)
+  }
+
+  function handleModelClick() {
+    onModelRefresh?.()
+  }
 </script>
 
 <div class="typ-chat-inputbar">
@@ -58,9 +69,24 @@
     ></textarea>
 
     <div class="typ-input-actions">
-      {#if model}
-        <span class="typ-input-model" title={model}>{model}</span>
-      {/if}
+      <select
+        class="typ-input-model"
+        value={model}
+        onchange={handleModelChange}
+        onclick={handleModelClick}
+        title="Select model"
+        disabled={!enabled}
+      >
+        {#if !model}
+          <option value="" disabled>Select model</option>
+        {/if}
+        {#if model && !models.includes(model)}
+          <option value={model}>{model}</option>
+        {/if}
+        {#each models as m (m)}
+          <option value={m}>{m}</option>
+        {/each}
+      </select>
 
       {#if enabled}
         <button
