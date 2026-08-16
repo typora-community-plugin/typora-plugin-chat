@@ -1,12 +1,20 @@
 import { readFile } from 'node:fs/promises'
-import { compile } from 'svelte/compiler'
+import { compile, preprocess } from 'svelte/compiler'
+import { sveltePreprocess } from 'svelte-preprocess'
 
 
 /**
  * Compile a single .svelte source file to ESM JavaScript.
  */
-function compileSvelte(source, filename, dev = false) {
-  const { js } = compile(source, {
+async function compileSvelte(source, filename, dev = false) {
+  const preprocessed = await preprocess(
+    source,
+    sveltePreprocess({
+      scss: {},
+    }),
+    { filename },
+  )
+  const { js } = compile(preprocessed.code, {
     filename,
     generate: 'dom',
     css: 'injected',
@@ -27,7 +35,7 @@ export function esbuildSveltePlugin(options = {}) {
     setup(build) {
       build.onLoad({ filter: /\.svelte$/ }, async (args) => {
         const source = await readFile(args.path, 'utf8')
-        const result = compileSvelte(source, args.path, dev)
+        const result = await compileSvelte(source, args.path, dev)
         return { contents: result.code, loader: 'js' }
       })
     },
@@ -40,9 +48,9 @@ export function esbuildSveltePlugin(options = {}) {
 export function rollupSveltePlugin() {
   return {
     name: 'svelte',
-    transform(code, id) {
+    async transform(code, id) {
       if (!id.endsWith('.svelte')) return null
-      const result = compileSvelte(code, id, false)
+      const result = await compileSvelte(code, id, false)
       return { code: result.code, map: result.map }
     },
   }

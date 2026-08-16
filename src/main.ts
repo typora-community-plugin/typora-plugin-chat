@@ -1,5 +1,5 @@
 import { Plugin } from '@typora-community-plugin/core'
-import './ui/styles.scss'
+import './ui/variables.scss'
 import { ChatView } from './chat-view'
 import { ChatSettingTab } from './ui/settings/chat-setting-tab'
 import { chatStore } from './store/chat-store'

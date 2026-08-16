@@ -101,3 +101,120 @@
     </div>
   </div>
 </div>
+
+<style lang="scss">
+  :global {
+    .typ-chat-inputbar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-end;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid rgb(var(--typ-border-color));
+      background-color: var(--bg-color, #fff);
+
+      .typ-input-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgb(var(--typ-border-color));
+        border-radius: var(--typ-radius-m);
+        background-color: var(--bg-color, #fff);
+
+        &:focus-within {
+          border-color: var(--primary-color, rgb(30, 136, 229));
+        }
+      }
+
+      textarea {
+        flex: none;
+        width: 100%;
+        min-height: 42px;
+        max-height: 300px;
+        padding: 10px 14px 2px;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        color: var(--text-color, rgb(var(--typ-text-color)));
+        font-size: 14px;
+        font-family: inherit;
+        line-height: 1.4;
+        resize: none;
+        outline: none;
+        overflow-y: hidden;
+
+        &::placeholder {
+          color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
+        }
+      }
+    }
+
+    .typ-input-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 2px 10px 8px;
+    }
+
+    .typ-input-model {
+      max-width: 150px;
+      padding: 2px 6px 2px 8px;
+      border: 1px solid rgb(var(--typ-border-color));
+      border-radius: 6px;
+      background-color: rgb(var(--typ-color-gray-1));
+      color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
+      font-size: 12px;
+      line-height: 1.4;
+      cursor: pointer;
+      outline: none;
+      user-select: none;
+
+      &:hover,
+      &:focus {
+        border-color: var(--primary-color, rgb(30, 136, 229));
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .typ-send-btn,
+    .typ-stop-btn {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .typ-send-btn {
+      background-color: var(--primary-color, rgb(30, 136, 229));
+      color: var(--primary-btn-text-color, #fff);
+
+      &:hover {
+        opacity: 0.9;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .typ-stop-btn {
+      background-color: rgb(var(--typ-color-red-3));
+      color: #fff;
+
+      &:hover {
+        background-color: rgb(var(--typ-color-red-4));
+      }
+    }
+  }
+</style>
