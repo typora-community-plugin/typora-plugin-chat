@@ -1,7 +1,25 @@
-import type { ToolResult } from '../config/types'
-import { readDocument, writeDocument } from '../adapter/vault'
-import { parseFrontmatter, stringifyYamlScalar } from '../utils/helpers'
+import type { ToolDefinition, ToolResult } from '../../config/types'
+import { readDocument, writeDocument } from '../../adapter/vault'
+import { parseFrontmatter, stringifyYamlScalar } from '../../utils/helpers'
 
+
+export const setPropertiesSchema: ToolDefinition = {
+  name: 'set_properties',
+  description:
+    'Set/update YAML frontmatter properties of a markdown document. Properties are merged into ' +
+    'existing ones; a null value removes that property. Omit `path` for the active document.',
+  parameters: {
+    type: 'object',
+    properties: {
+      path: { type: 'string', description: 'Optional vault-relative path to the markdown file.' },
+      properties: {
+        type: 'object',
+        description: 'Map of frontmatter properties to set (use null value to delete a key).',
+      },
+    },
+    required: ['properties'],
+  },
+}
 
 function mergeFrontmatter(markdown: string, properties: Record<string, unknown>): string {
   const existing = parseFrontmatter(markdown) ?? {}
@@ -20,18 +38,6 @@ function mergeFrontmatter(markdown: string, properties: Record<string, unknown>)
     if (end !== -1) return `${yaml}${markdown.slice(end + 4)}`
   }
   return `${yaml}\n${markdown}`
-}
-
-export async function executeGetProperties(input: Record<string, unknown>): Promise<ToolResult> {
-  const targetPath = typeof input.path === 'string' ? input.path : undefined
-  try {
-    const markdown = await readDocument(targetPath)
-    const properties = parseFrontmatter(markdown)
-    if (!properties) return { content: 'No frontmatter found.' }
-    return { content: JSON.stringify(properties, null, 2) }
-  } catch (error) {
-    return { content: `get_properties failed: ${error.message || error}`, isError: true }
-  }
 }
 
 export async function executeSetProperties(input: Record<string, unknown>): Promise<ToolResult> {

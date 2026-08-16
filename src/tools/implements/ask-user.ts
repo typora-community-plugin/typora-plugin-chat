@@ -1,6 +1,21 @@
-import type { ToolResult } from '../config/types'
-import type { ExecutorContext } from './executor'
+import type { ToolDefinition, ToolResult } from '../../config/types'
 
+
+export interface ExecutorContext {
+  askUser?: (question: string) => Promise<string>
+}
+
+export const askUserSchema: ToolDefinition = {
+  name: 'ask_user',
+  description: 'Pause the agent loop and ask the user a question. Use only when a decision truly needs human input.',
+  parameters: {
+    type: 'object',
+    properties: {
+      question: { type: 'string', description: 'The question to show the user.' },
+    },
+    required: ['question'],
+  },
+}
 
 export async function executeAskUser(input: Record<string, unknown>, context: ExecutorContext): Promise<ToolResult> {
   const question = input.question as string

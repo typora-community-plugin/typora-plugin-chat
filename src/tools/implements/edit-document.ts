@@ -1,7 +1,34 @@
 import { app } from '@typora-community-plugin/core'
-import type { ToolResult } from '../config/types'
-import { findReplace, getActiveDocumentContent, insertText, readFile, writeFile } from '../adapter/vault'
+import type { ToolDefinition, ToolResult } from '../../config/types'
+import { findReplace, getActiveDocumentContent, insertText, readFile, writeFile } from '../../adapter/vault'
 
+
+export const editDocumentSchema: ToolDefinition = {
+  name: 'edit_document',
+  description:
+    'Edit a markdown document atomically. Use `replace_all` to overwrite the whole file, ' +
+    '`find_replace` for surgical edits (preferred), or `insert` to add content at beginning/end/after_frontmatter. ' +
+    'Omit `path` to edit the currently active document.',
+  parameters: {
+    type: 'object',
+    properties: {
+      path: { type: 'string', description: 'Optional vault-relative path. Defaults to active document.' },
+      operation: {
+        type: 'string',
+        enum: ['replace_all', 'find_replace', 'insert'],
+        description: 'The edit operation to perform.',
+      },
+      content: { type: 'string', description: 'New content (replace_all), replacement text (find_replace), or text to insert (insert).' },
+      find: { type: 'string', description: 'Exact text to find, required for find_replace.' },
+      position: {
+        type: 'string',
+        enum: ['beginning', 'end', 'after_frontmatter'],
+        description: 'Insert position, required for insert.',
+      },
+    },
+    required: ['operation'],
+  },
+}
 
 async function readTarget(path?: string): Promise<string> {
   return path ? readFile(path) : getActiveDocumentContent()

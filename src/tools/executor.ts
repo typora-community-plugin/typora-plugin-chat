@@ -1,16 +1,40 @@
 import type { ToolResult } from '../config/types'
-import { executeReadDocument, executeReadFile } from './read-executor'
-import { executeEditDocument } from './edit-executor'
-import { executeListFiles, executeSearchVault } from './search-executor'
-import { executeCreateFile, executeDeleteFile, executeRenameFile } from './ops-executor'
-import { executeGetProperties, executeSetProperties } from './fm-executor'
-import { executeGetBacklinks, executeGetCurrentDatetime, executeOpenDocument } from './supply-executor'
-import { executeAskUser } from './interaction-executor'
+import type { ExecutorContext } from './implements/ask-user'
+import { executeReadDocument, readDocumentSchema } from './implements/read-document'
+import { executeReadFile, readFileSchema } from './implements/read-file'
+import { executeEditDocument, editDocumentSchema } from './implements/edit-document'
+import { executeSearchVault, searchVaultSchema } from './implements/search-vault'
+import { executeListFiles, listFilesSchema } from './implements/list-files'
+import { executeCreateFile, createFileSchema } from './implements/create-file'
+import { executeDeleteFile, deleteFileSchema } from './implements/delete-file'
+import { executeRenameFile, renameFileSchema } from './implements/rename-file'
+import { executeGetProperties, getPropertiesSchema } from './implements/get-properties'
+import { executeSetProperties, setPropertiesSchema } from './implements/set-properties'
+import { executeGetBacklinks, getBacklinksSchema } from './implements/get-backlinks'
+import { executeOpenDocument, openDocumentSchema } from './implements/open-document'
+import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './implements/get-current-datetime'
+import { executeAskUser, askUserSchema } from './implements/ask-user'
 
 
-export interface ExecutorContext {
-  askUser?: (question: string) => Promise<string>
-}
+export type { ExecutorContext }
+
+/** All 14 tool schemas — re-exported for registry.ts */
+export const allToolSchemas = [
+  readDocumentSchema,
+  readFileSchema,
+  editDocumentSchema,
+  searchVaultSchema,
+  listFilesSchema,
+  createFileSchema,
+  renameFileSchema,
+  deleteFileSchema,
+  getPropertiesSchema,
+  setPropertiesSchema,
+  getBacklinksSchema,
+  openDocumentSchema,
+  getCurrentDatetimeSchema,
+  askUserSchema,
+] as const
 
 /**
  * Execute a tool by name against Typora's vault/editor APIs.

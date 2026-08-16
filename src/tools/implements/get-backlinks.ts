@@ -1,8 +1,24 @@
 import { app } from '@typora-community-plugin/core'
-import type { ToolResult } from '../config/types'
-import { listFiles, readFile, resolveVaultPath } from '../adapter/vault'
-import { basename } from '../utils/helpers'
+import type { ToolDefinition, ToolResult } from '../../config/types'
+import { listFiles, readFile, resolveVaultPath } from '../../adapter/vault'
+import { basename } from '../../utils/helpers'
 
+
+export const getBacklinksSchema: ToolDefinition = {
+  name: 'get_backlinks',
+  description: 'Find notes that link to the given document. Omit `path` for the active document.',
+  parameters: {
+    type: 'object',
+    properties: {
+      path: { type: 'string', description: 'Optional vault-relative path to the markdown file.' },
+    },
+    required: [],
+  },
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 export async function executeGetBacklinks(input: Record<string, unknown>): Promise<ToolResult> {
   const targetPath = typeof input.path === 'string' ? input.path : app.workspace.activeFile
@@ -28,24 +44,4 @@ export async function executeGetBacklinks(input: Record<string, unknown>): Promi
   } catch (error) {
     return { content: `get_backlinks failed: ${error.message || error}`, isError: true }
   }
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-export async function executeOpenDocument(input: Record<string, unknown>): Promise<ToolResult> {
-  const targetPath = input.path as string
-  if (!targetPath) return { content: 'open_document failed: path is required', isError: true }
-  try {
-    app.workspace.activeEditor.openFile(resolveVaultPath(targetPath))
-    return { content: `Opened ${targetPath}.` }
-  } catch (error) {
-    return { content: `open_document failed: ${error.message || error}`, isError: true }
-  }
-}
-
-export async function executeGetCurrentDatetime(): Promise<ToolResult> {
-  const now = new Date()
-  return { content: now.toString() }
 }
