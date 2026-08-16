@@ -1,11 +1,10 @@
-import { app, WorkspaceView } from '@typora-community-plugin/core'
+import { WorkspaceView } from '@typora-community-plugin/core'
 import { mount, unmount } from 'svelte'
 import App from './ui/App.svelte'
 import { chatStore } from './store/chat-store'
 import { settingsManager } from './config/settings'
 import { abortAgentLoop, executeAgentLoop, resetAgentHistory } from './agent/loop'
 import { getSelection } from './adapter/editor'
-import type { PluginSettings } from './config/types'
 
 
 /**
@@ -59,14 +58,12 @@ export class ChatView extends WorkspaceView {
     this.svelteComponent = mount(App, {
       target: this.containerEl,
       props: {
-        app,
         onSend: (text: string) => this.handleSend(text),
         onStop: () => abortAgentLoop(),
         onClear: () => {
           resetAgentHistory()
           chatStore.clearMessages()
         },
-        onSaveSettings: (next: PluginSettings) => settingsManager.save(next),
       },
     }) as unknown as Record<string, unknown>
   }

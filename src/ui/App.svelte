@@ -3,7 +3,6 @@
   import Messages from './components/Messages.svelte'
   import SelectionPill from './components/SelectionPill.svelte'
   import InputBar from './components/InputBar.svelte'
-  import SettingsPanel from './components/SettingsPanel.svelte'
   import {
     chatStore,
     messages,
@@ -16,14 +15,10 @@
   import { settings } from '../config/settings'
 
   let {
-    app,
     onSend,
     onStop,
     onClear,
-    onSaveSettings,
   } = $props()
-
-  let showSettings = $state(false)
 
   function handleMainSend(text) {
     if ($askUserQuestion) {
@@ -35,19 +30,7 @@
 </script>
 
 <div class="typ-chat-view">
-  <Header
-    onToggleSettings={() => (showSettings = !showSettings)}
-    onClear={onClear}
-  />
-
-  {#if showSettings}
-    <SettingsPanel
-      app={app}
-      settings={$settings}
-      onSave={(next) => onSaveSettings(next)}
-      onClose={() => (showSettings = false)}
-    />
-  {/if}
+  <Header onClear={onClear} />
 
   <Messages messages={$messages} thinking={$thinking} />
 

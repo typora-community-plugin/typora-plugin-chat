@@ -1,6 +1,7 @@
 import { Plugin } from '@typora-community-plugin/core'
 import './ui/styles.scss'
 import { ChatView } from './chat-view'
+import { ChatSettingTab } from './ui/settings/chat-setting-tab'
 import { chatStore } from './store/chat-store'
 import { getSelection } from './adapter/editor'
 import { getCurrentFilePath } from './adapter/vault'
@@ -12,6 +13,8 @@ export default class extends Plugin {
 
   onload() {
     const { app } = this
+
+    this.registerSettingTab(new ChatSettingTab(this.app, this))
 
     this.register(
       app.viewManager.registerView(ChatView.type, (leaf) => new ChatView(leaf))
