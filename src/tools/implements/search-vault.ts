@@ -33,7 +33,7 @@ export async function executeSearchVault(input: Record<string, unknown>): Promis
     const results = await searchFiles(query, searchContent, limit)
     if (!results.length) return { content: `No files found for "${query}".` }
     return { content: `Found ${results.length} file(s):\n${results.map(f => `- ${f}`).join('\n')}` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `search_vault failed: ${error.message || error}`, isError: true }
   }
 }

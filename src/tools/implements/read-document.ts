@@ -19,7 +19,7 @@ export async function executeReadDocument(input: Record<string, unknown>): Promi
   try {
     const content = targetPath ? await readFile(targetPath) : await getActiveDocumentContent()
     return { content }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `read_document failed: ${error.message || error}`, isError: true }
   }
 }

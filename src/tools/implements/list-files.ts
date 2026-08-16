@@ -22,7 +22,7 @@ export async function executeListFiles(input: Record<string, unknown>): Promise<
     const results = await listFiles(folder, extension)
     if (!results.length) return { content: 'No files found.' }
     return { content: `${results.length} file(s):\n${results.map(f => `- ${f}`).join('\n')}` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `list_files failed: ${error.message || error}`, isError: true }
   }
 }

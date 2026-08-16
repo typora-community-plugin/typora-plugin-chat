@@ -24,7 +24,7 @@ export async function executeAskUser(input: Record<string, unknown>, context: Ex
   try {
     const answer = await context.askUser(question)
     return { content: `User answered: ${answer}` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `ask_user cancelled: ${error.message || error}`, isError: true }
   }
 }

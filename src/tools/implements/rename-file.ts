@@ -24,7 +24,7 @@ export async function executeRenameFile(input: Record<string, unknown>): Promise
   try {
     await renameFile(targetPath, newPath)
     return { content: `Renamed ${targetPath} → ${newPath}.` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `rename_file failed: ${error.message || error}`, isError: true }
   }
 }

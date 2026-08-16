@@ -107,7 +107,7 @@ export async function executeEditDocument(input: Record<string, unknown>): Promi
     }
 
     return { content: `edit_document failed: unknown operation "${operation}"`, isError: true }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `edit_document failed: ${error.message || error}`, isError: true }
   }
 }

@@ -21,7 +21,7 @@ export async function executeOpenDocument(input: Record<string, unknown>): Promi
   try {
     app.workspace.activeEditor.openFile(resolveVaultPath(targetPath))
     return { content: `Opened ${targetPath}.` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `open_document failed: ${error.message || error}`, isError: true }
   }
 }

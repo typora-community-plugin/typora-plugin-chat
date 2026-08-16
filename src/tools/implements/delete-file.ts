@@ -20,7 +20,7 @@ export async function executeDeleteFile(input: Record<string, unknown>): Promise
   try {
     await deleteFile(targetPath)
     return { content: `Deleted ${targetPath}.` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `delete_file failed: ${error.message || error}`, isError: true }
   }
 }

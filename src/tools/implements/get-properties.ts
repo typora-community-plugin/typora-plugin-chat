@@ -22,7 +22,7 @@ export async function executeGetProperties(input: Record<string, unknown>): Prom
     const properties = parseFrontmatter(markdown)
     if (!properties) return { content: 'No frontmatter found.' }
     return { content: JSON.stringify(properties, null, 2) }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `get_properties failed: ${error.message || error}`, isError: true }
   }
 }

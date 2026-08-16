@@ -22,7 +22,7 @@ export async function executeCreateFile(input: Record<string, unknown>): Promise
   try {
     await createFile(targetPath, content)
     return { content: `Created ${targetPath}.` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `create_file failed: ${error.message || error}`, isError: true }
   }
 }

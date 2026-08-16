@@ -41,7 +41,7 @@ export async function executeGetBacklinks(input: Record<string, unknown>): Promi
     }
     if (!backlinks.length) return { content: 'No backlinks found.' }
     return { content: `${backlinks.length} backlink(s):\n${backlinks.map(f => `- ${f}`).join('\n')}` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `get_backlinks failed: ${error.message || error}`, isError: true }
   }
 }

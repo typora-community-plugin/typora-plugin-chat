@@ -20,7 +20,7 @@ export async function executeReadFile(input: Record<string, unknown>): Promise<T
   try {
     const content = await readFile(targetPath)
     return { content }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `read_file failed: ${error.message || error}`, isError: true }
   }
 }

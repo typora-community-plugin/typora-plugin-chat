@@ -51,7 +51,7 @@ export async function executeSetProperties(input: Record<string, unknown>): Prom
     const updated = mergeFrontmatter(markdown, properties)
     await writeDocument(targetPath, updated)
     return { content: `Updated frontmatter${targetPath ? ` of ${targetPath}` : ''}.` }
-  } catch (error) {
+  } catch (error: any) {
     return { content: `set_properties failed: ${error.message || error}`, isError: true }
   }
 }
