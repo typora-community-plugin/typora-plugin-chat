@@ -12,7 +12,12 @@ describe('computeSuggestions', () => {
     expect(computeSuggestions({ skills: SKILLS, value: 'hello' })).toEqual([])
   })
 
-  it('suggests all matching skills for a bare /name prefix', () => {
+  it('suggests all skills when only / is typed', () => {
+    const result = computeSuggestions({ skills: SKILLS, value: '/' })
+    expect(result).toEqual(['/skill:alpha', '/skill:beta', '/skill:gamma', '/skill:delta-one'])
+  })
+
+  it('suggests matching skills for a bare /name prefix', () => {
     const result = computeSuggestions({ skills: SKILLS, value: '/d' })
     expect(result).toEqual(['/skill:delta-one'])
   })
@@ -30,9 +35,15 @@ describe('computeSuggestions', () => {
   it('stops suggesting once a whitespace appears after the first token', () => {
     expect(computeSuggestions({ skills: SKILLS, value: '/alpha extra text' })).toEqual([])
     expect(computeSuggestions({ skills: SKILLS, value: '/alpha ' })).toEqual([])
+    expect(computeSuggestions({ skills: SKILLS, value: '/skill:beta extra text' })).toEqual([])
   })
 
-  it('stops suggesting when the bare token contains invalid characters', () => {
+  it('keeps suggesting all skills when /skill: is followed by a space', () => {
+    const result = computeSuggestions({ skills: SKILLS, value: '/skill: ' })
+    expect(result).toEqual(['/skill:alpha', '/skill:beta', '/skill:gamma', '/skill:delta-one'])
+  })
+
+  it('stops suggesting when the bare token contains characters that cannot match a skill name', () => {
     expect(computeSuggestions({ skills: SKILLS, value: '/al.pha' })).toEqual([])
   })
 

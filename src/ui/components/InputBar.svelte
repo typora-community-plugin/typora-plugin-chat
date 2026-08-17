@@ -85,7 +85,12 @@
   }
 
   function applySuggestion(suggested: string) {
-    value = `${suggested} `
+    const spaceIndex = value.search(/\s/)
+    if (spaceIndex === -1) {
+      value = `${suggested} `
+    } else {
+      value = `${suggested}${value.slice(spaceIndex)}`
+    }
     suggestionsOpen = false
     autoResize()
     textarea?.focus()
