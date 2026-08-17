@@ -1,5 +1,5 @@
-import type { ToolResult } from '../config/types'
-import { getCurrentFilePath } from '../adapter/vault'
+import type { ToolResult } from '../../config/types'
+import { getCurrentFilePath } from '../../adapter/vault'
 import { executeReadDocument, readDocumentSchema } from './editor/read-document'
 import { executeEditDocument, editDocumentSchema } from './editor/edit-document'
 import { executeGetProperties, getPropertiesSchema } from './editor/get-properties'

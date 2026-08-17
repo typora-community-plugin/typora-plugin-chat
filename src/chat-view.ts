@@ -7,8 +7,8 @@ import { abortAgentLoop, executeAgentLoop, getAgentHistory, resetAgentHistory, s
 import { createSession, getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
 import { fs } from '@typora-community-plugin/core'
 import { getSelection } from './adapter/editor'
-import { getSkill } from './skills/index'
-import { stripFrontmatter } from './skills/frontmatter'
+import { getSkill } from './agent/skills/index'
+import { stripFrontmatter } from './agent/skills/frontmatter'
 import type { AssistantMeta, ToolResult } from './config/types'
 
 

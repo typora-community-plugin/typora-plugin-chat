@@ -1,5 +1,5 @@
 <script>
-  import { summarizeToolInput } from '../../tools/summary'
+  import { summarizeToolInput } from '../../agent/tools/summary'
   import { truncate } from '../../utils/helpers'
   import { t } from '../../i18n'
 

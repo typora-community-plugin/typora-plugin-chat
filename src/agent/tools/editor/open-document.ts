@@ -1,6 +1,6 @@
 import { app } from '@typora-community-plugin/core'
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { resolveVaultPath, relativePathToRoot } from '../../adapter/vault'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
+import { resolveVaultPath, relativePathToRoot } from '../../../adapter/vault'
 
 
 export const openDocumentSchema: ToolDefinition = {

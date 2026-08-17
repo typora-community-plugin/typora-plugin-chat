@@ -9,7 +9,7 @@ import { getCurrentFilePath } from './adapter/vault'
 import { copyTranscript } from './utils/export'
 import { basename } from './utils/helpers'
 import { format, initI18n, t } from './i18n'
-import { rescanSkills } from './skills/store'
+import { rescanSkills } from './agent/skills/store'
 
 
 export default class extends Plugin {

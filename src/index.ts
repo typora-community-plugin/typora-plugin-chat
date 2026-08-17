@@ -7,13 +7,13 @@ export { executeAgentLoop, abortAgentLoop, resetAgentHistory } from './agent/loo
 export { buildSystemPrompt } from './agent/system-prompt'
 export { buildContextMessage } from './agent/context'
 export { sendMessage } from './api/client'
-export { toolDefinitions } from './tools/registry'
-export { executeTool } from './tools/executor'
+export { toolDefinitions } from './agent/tools/registry'
+export { executeTool } from './agent/tools/executor'
 export { settingsManager, DEFAULT_SETTINGS } from './config/settings'
-export { discoverSkills, getSkill, buildSkillsCatalog } from './skills/index'
-export { rescanSkills, skills as skillStore } from './skills/store'
-export { parseFrontmatter, deriveSkillMeta, stripFrontmatter } from './skills/frontmatter'
-export { globalSkillsDir, vaultSkillsDir, skillRoots } from './skills/paths'
+export { discoverSkills, getSkill, buildSkillsCatalog } from './agent/skills/index'
+export { rescanSkills, skills as skillStore } from './agent/skills/store'
+export { parseFrontmatter, deriveSkillMeta, stripFrontmatter } from './agent/skills/frontmatter'
+export { globalSkillsDir, vaultSkillsDir, skillRoots } from './agent/skills/paths'
 export type {
   AgentCallbacks,
   AgentResult,
@@ -30,4 +30,4 @@ export type {
   ToolResult,
   UnifiedResponse,
 } from './config/types'
-export type { DiscoveredSkill } from './skills/index'
+export type { DiscoveredSkill } from './agent/skills/index'

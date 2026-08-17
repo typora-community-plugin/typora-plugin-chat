@@ -23,7 +23,7 @@
   import { getAgentHistory, setAgentHistory } from '../agent/loop'
   import { settings, settingsManager } from '../config/settings'
   import { availableModels, refreshModels } from '../store/models-store'
-  import { skills as skillStore } from '../skills/store'
+  import { skills as skillStore } from '../agent/skills/store'
 
   let {
     onSend,

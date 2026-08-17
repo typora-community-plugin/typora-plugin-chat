@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '../config/types'
+import type { ToolDefinition } from '../../config/types'
 import { allToolSchemas } from './executor'
 
 

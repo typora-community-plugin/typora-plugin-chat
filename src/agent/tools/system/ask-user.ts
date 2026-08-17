@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
 import type { ExecutorContext } from '../executor'
 
 

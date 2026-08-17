@@ -1,6 +1,6 @@
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { readDocument, relativePathToRoot } from '../../adapter/vault'
-import { parseFrontmatter } from '../../utils/helpers'
+import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
+import { readDocument, relativePathToRoot } from '../../../adapter/vault'
+import { parseFrontmatter } from '../../../utils/helpers'
 
 
 export const getPropertiesSchema: ToolDefinition = {

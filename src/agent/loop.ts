@@ -7,12 +7,12 @@ import type {
 } from '../config/types'
 import { settingsManager } from '../config/settings'
 import { sendMessage } from '../api/client'
-import { toolDefinitions } from '../tools/registry'
-import { executeTool } from '../tools/executor'
+import { toolDefinitions } from './tools/registry'
+import { executeTool } from './tools/executor'
 import { buildSystemPrompt } from './system-prompt'
 import { buildContextMessage } from './context'
 import { getCurrentFilePath } from '../adapter/vault'
-import { discoverSkills, buildSkillsCatalog } from '../skills/index'
+import { discoverSkills, buildSkillsCatalog } from './skills/index'
 
 
 const MAX_HISTORY = 50
