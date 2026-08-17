@@ -69,7 +69,7 @@ export class ChatView extends WorkspaceView {
           // Save the current conversation, then start a fresh session so the
           // previous transcript remains available through the /sessions picker.
           const current = getActiveSession()
-          if (current) {
+          if (current && (chatStore.getMessages().length > 0 || getAgentHistory().length > 0)) {
             saveActiveSession(chatStore.getMessages(), getAgentHistory())
           }
           createSession()

@@ -45,7 +45,7 @@
 
   function handleSwitchSession(id) {
     const current = getActiveSession()
-    if (current) {
+    if (current && ($messages.length > 0 || getAgentHistory().length > 0)) {
       saveActiveSession(chatStore.getMessages(), getAgentHistory())
     }
     const target = switchSession(id)
