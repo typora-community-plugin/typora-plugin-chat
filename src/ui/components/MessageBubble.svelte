@@ -134,10 +134,9 @@
       align-self: flex-start;
       max-width: 92%;
       padding: 8px 14px;
-      border-left: 3px solid rgb(var(--typ-color-red-3));
-      border-radius: 0 var(--typ-radius-m) var(--typ-radius-m) 0;
+      border-radius: 0 var(--typ-radius-m) var(--typ-radius-m);
       background-color: rgba(var(--typ-color-red-1), 0.25);
-      color: var(--text-color, rgb(var(--typ-text-color)));
+      color: rgb(var(--typ-color-red-3));
       font-size: 13px;
       line-height: 1.5;
       word-break: break-word;
