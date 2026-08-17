@@ -133,6 +133,55 @@ export class ChatSettingTab extends SettingTab {
     })
 
     this.addSetting((setting) => {
+      setting.addName(t.settings.contextWindow)
+      setting.addDescription(t.settings.contextWindowDesc)
+      setting.addInput('number', (input) => {
+        input.min = '0'
+        input.placeholder = t.settings.contextWindowPlaceholder
+        input.value = settingsManager.get().contextWindow ? String(settingsManager.get().contextWindow) : ''
+        input.onchange = () => {
+          const value = input.value.trim()
+          if (!value) {
+            void settingsManager.save({ contextWindow: undefined })
+            return
+          }
+          const contextWindow = Number(value)
+          if (Number.isFinite(contextWindow) && contextWindow > 0) {
+            void settingsManager.save({ contextWindow })
+          }
+        }
+      })
+    })
+
+    this.addSetting((setting) => {
+      setting.addName(t.settings.contextWindows)
+      setting.addDescription(t.settings.contextWindowsDesc)
+      setting.addTextArea((textarea) => {
+        textarea.rows = 5
+        textarea.placeholder = t.settings.contextWindowsPlaceholder
+        const overrides = settingsManager.get().contextWindows ?? {}
+        textarea.value = Object.entries(overrides)
+          .filter(([, value]) => value > 0)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([model, value]) => `${model}: ${value}`)
+          .join('\n')
+        textarea.onchange = () => {
+          const next: Record<string, number> = {}
+          for (const rawLine of textarea.value.split('\n')) {
+            const line = rawLine.trim()
+            if (!line) continue
+            const sep = line.search(/[:=]/)
+            if (sep <= 0) continue
+            const model = line.slice(0, sep).trim()
+            const value = Number(line.slice(sep + 1).trim())
+            if (model && Number.isFinite(value) && value > 0) next[model] = value
+          }
+          void settingsManager.save({ contextWindows: next })
+        }
+      })
+    })
+
+    this.addSetting((setting) => {
       setting.addName(t.settings.maxIterations)
       setting.addDescription(t.settings.maxIterationsDesc)
       setting.addInput('number', (input) => {

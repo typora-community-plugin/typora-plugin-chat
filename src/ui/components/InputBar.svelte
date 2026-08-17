@@ -2,6 +2,8 @@
   import { t } from '@/i18n'
   import SlashCommandSuggestions from './SlashCommandSuggestions.svelte'
   import SessionPicker from './SessionPicker.svelte'
+  import ContextUsageRing from './ContextUsageRing.svelte'
+  import { scheduleContextUsageRefresh } from '@/store/context-usage-store'
   import { computeSuggestions, shouldCompleteSubcommand, suggestionsShouldBeOpen } from '@/slash-commands'
   import type { SessionSummary } from '@/store/session-store'
 
@@ -41,6 +43,11 @@
 
   let value = $state('')
   let textarea = $state<HTMLTextAreaElement | null>(null)
+
+  // Keep the context-usage ring in sync with the draft being typed.
+  $effect(() => {
+    scheduleContextUsageRefresh(value)
+  })
 
   // --- slash-command autocomplete -------------------------------------------
   const suggestions = $derived(computeSuggestions({ skills, value }))
@@ -264,6 +271,8 @@
           <option value={m}>{m}</option>
         {/each}
       </select>
+
+      <ContextUsageRing size={16} />
 
       {#if enabled}
         <button

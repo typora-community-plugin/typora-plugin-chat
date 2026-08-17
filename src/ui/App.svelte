@@ -20,6 +20,7 @@
     switchSession,
   } from '@/store/session-store'
   import { getAgentHistory, setAgentHistory } from '@/agent/loop'
+  import { refreshContextUsage } from '@/store/context-usage-store'
   import { settings, settingsManager } from '@/config/settings'
   import { availableModels, refreshModels } from '@/store/models-store'
   import { skills as skillStore } from '@/agent/skills/store'
@@ -40,6 +41,7 @@
     chatStore.replaceMessages(activeSession.messages)
     setAgentHistory(activeSession.history)
   }
+  void refreshContextUsage({ refreshStatic: true })
   const sessionList = $derived($sessionSummaries)
   const activeSessionId = $derived($sessionActiveSessionId)
 
@@ -53,6 +55,7 @@
       chatStore.replaceMessages(target.messages)
       chatStore.clearSelection()
       setAgentHistory(target.history)
+      void refreshContextUsage({ refreshStatic: true })
     }
   }
 

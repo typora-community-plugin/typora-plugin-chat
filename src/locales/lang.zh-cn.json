@@ -39,7 +39,10 @@
     "metaDuration": "回复时长",
     "metaSpeed": "回复速度",
     "speedTokensPerSecond": "tok/s",
-    "speedCharsPerSecond": "字符/秒"
+    "speedCharsPerSecond": "字符/秒",
+    "contextUsage": "上下文占用：{used} / {total} tokens（{percent}%）",
+    "contextUsageEstimated": "估算上下文占用：{used} / {total} tokens（{percent}%）",
+    "contextUsageUnknown": "上下文窗口未知，请在 Chat 插件设置中配置。"
   },
   "settings": {
     "title": "Chat",
@@ -64,6 +67,12 @@
     "model": "模型",
     "modelDesc": "用于聊天补全的模型 ID。",
     "refreshModels": "刷新模型列表",
+    "contextWindow": "上下文窗口",
+    "contextWindowDesc": "模型的上下文窗口大小（token 数）。用于显示上下文占用圆环；留空则自动识别。",
+    "contextWindowPlaceholder": "例如 128000",
+    "contextWindows": "按模型配置上下文窗口",
+    "contextWindowsDesc": "针对特定模型的覆盖配置，每行一条：`模型ID: 128000`。优先级高于全局上下文窗口。",
+    "contextWindowsPlaceholder": "gpt-4o: 128000\nclaude-sonnet-4: 200000",
     "maxIterations": "最大工具迭代次数",
     "maxIterationsDesc": "单次 Agent 循环中工具调用的最大轮数。",
     "skills": "技能（Skills）",

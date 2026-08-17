@@ -7,11 +7,9 @@ import type {
 } from '@/config/types'
 import { settingsManager } from '@/config/settings'
 import { sendMessage } from '@/api/client'
-import { toolDefinitions } from './tools/registry'
 import { executeTool } from './tools/executor'
-import { currentAgentMode, isWriteTool } from './tools/permissions'
-import { buildSystemPrompt } from './system-prompt'
-import { buildContextMessage } from './context'
+import { currentAgentMode } from './tools/permissions'
+import { buildRequestParts } from './request'
 import { getCurrentFilePath } from '@/adapter/vault'
 import { discoverSkills, buildSkillsCatalog } from './skills/index'
 
@@ -65,16 +63,12 @@ export async function executeAgentLoop(
   } catch {
     skillsCatalog = ''
   }
-  const systemMessage: ApiMessage = { role: 'system', content: buildSystemPrompt(skillsCatalog, currentAgentMode()) }
-  const contextMessage: ApiMessage = { role: 'user', content: await buildContextMessage() }
-  // In read-only mode the write tools are not offered to the model at all.
-  const allowedTools = currentAgentMode() === 'read-only'
-    ? toolDefinitions.filter((tool) => !isWriteTool(tool.name))
-    : toolDefinitions
-  const conversation: ApiMessage[] = [
-    ...trimHistory(history),
-    { role: 'user', content: userMessage },
-  ]
+  const {
+    systemMessage,
+    contextMessage,
+    conversation,
+    tools: allowedTools,
+  } = await buildRequestParts(userMessage, trimHistory(history), skillsCatalog, currentAgentMode())
 
   let finalText = ''
   const totalUsage = { inputTokens: 0, outputTokens: 0 }
@@ -101,6 +95,7 @@ export async function executeAgentLoop(
     if (response.usage) {
       totalUsage.inputTokens += response.usage.inputTokens
       totalUsage.outputTokens += response.usage.outputTokens
+      callbacks.onUsage?.(response.usage)
     }
 
     const assistantBlocks: ContentBlock[] = []

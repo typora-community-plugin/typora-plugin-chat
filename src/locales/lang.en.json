@@ -39,7 +39,10 @@
     "metaDuration": "Reply time",
     "metaSpeed": "Reply speed",
     "speedTokensPerSecond": "tok/s",
-    "speedCharsPerSecond": "chars/s"
+    "speedCharsPerSecond": "chars/s",
+    "contextUsage": "Context usage: {used} / {total} tokens ({percent}%)",
+    "contextUsageEstimated": "Estimated context usage: {used} / {total} tokens ({percent}%)",
+    "contextUsageUnknown": "Context window unknown. Set it in Chat plugin settings."
   },
   "settings": {
     "title": "Chat",
@@ -64,6 +67,12 @@
     "model": "Model",
     "modelDesc": "Model id used for chat completions.",
     "refreshModels": "Refresh models",
+    "contextWindow": "Context window",
+    "contextWindowDesc": "Model context window in tokens. Used to show the context-usage ring; leave empty to auto-detect.",
+    "contextWindowPlaceholder": "e.g. 128000",
+    "contextWindows": "Per-model context windows",
+    "contextWindowsDesc": "Optional overrides for specific models. One per line as `model-id: 128000`. These take priority over the global context window.",
+    "contextWindowsPlaceholder": "gpt-4o: 128000\nclaude-sonnet-4: 200000",
     "maxIterations": "Max tool iterations",
     "maxIterationsDesc": "Maximum number of tool-call rounds in one agent loop.",
     "skills": "Skills",

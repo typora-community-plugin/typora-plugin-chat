@@ -2,6 +2,7 @@ import { WorkspaceView } from '@typora-community-plugin/core'
 import { mount, unmount } from 'svelte'
 import App from './ui/App.svelte'
 import { chatStore } from './store/chat-store'
+import { refreshContextUsage, setApiInputTokens } from './store/context-usage-store'
 import { settingsManager } from './config/settings'
 import { abortAgentLoop, executeAgentLoop, getAgentHistory, resetAgentHistory, setAgentHistory } from './agent/loop'
 import { createSession, getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
@@ -76,6 +77,7 @@ export class ChatView extends WorkspaceView {
           chatStore.replaceMessages([])
           chatStore.clearSelection()
           setAgentHistory([])
+          void refreshContextUsage({ refreshStatic: true })
           const seed = rest.trim()
           if (seed) {
             void this.handleSend(seed)
@@ -97,6 +99,7 @@ export class ChatView extends WorkspaceView {
     resetAgentHistory()
     chatStore.clearMessages()
     chatStore.clearSelection()
+    void refreshContextUsage({ refreshStatic: true })
     const current = getActiveSession()
     if (current) {
       saveActiveSession([], [])
@@ -193,6 +196,7 @@ export class ChatView extends WorkspaceView {
             if (isThinking) chatStore.showThinking()
             else chatStore.hideThinking()
           },
+          onUsage: (usage) => setApiInputTokens(usage.inputTokens),
         },
         settingsManager.get().maxIterations,
       )
@@ -223,6 +227,7 @@ export class ChatView extends WorkspaceView {
     } finally {
       chatStore.setInputEnabled(true)
       chatStore.hideThinking()
+      void refreshContextUsage({ refreshStatic: true })
       const current = getActiveSession()
       if (current) {
         saveActiveSession(chatStore.getMessages(), getAgentHistory())

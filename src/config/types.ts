@@ -103,6 +103,10 @@ export interface PluginSettings {
   openaiApiMode?: 'responses' | 'chat'
   /** Agent write-permission mode: `read-only` hides/blocks file-mutating tools. */
   mode?: AgentMode
+  /** Optional model context window in tokens; when unset it is auto-detected. */
+  contextWindow?: number
+  /** Optional per-model context window overrides in tokens. */
+  contextWindows?: Record<string, number>
 }
 
 /** Conversation format used by provider adapters */
@@ -132,4 +136,6 @@ export interface AgentCallbacks {
   /** resolve when the agent wants the user to answer a question */
   onAskUser?: (question: string) => Promise<string>
   onThinkingChange?: (thinking: boolean) => void
+  /** Called with each API response's token usage during an agent loop. */
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void
 }

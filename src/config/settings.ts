@@ -11,6 +11,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   baseUrl: 'http://localhost:11431/v1',
   openaiApiMode: 'responses',
   mode: 'workspace-write',
+  contextWindow: 128000,
+  contextWindows: {},
 }
 
 const SETTINGS_KEY = 'typora-plugin-chat.settings'
