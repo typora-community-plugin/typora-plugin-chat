@@ -5,5 +5,13 @@
  * be reused by any component that needs built-in command suggestions.
  */
 
+import type { SlashCommand } from './types'
+
 /** The `/sessions` built-in command: show the session list and switch sessions. */
-export const SESSIONS_COMMAND = '/sessions'
+export const sessionsCommand: SlashCommand = {
+  name: 'sessions',
+  command: '/sessions',
+  subcommandPrefix: '/sessions:',
+  hasSubcommands: false,
+  suggestSubcommands: () => [],
+}

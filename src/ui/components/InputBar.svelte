@@ -2,7 +2,7 @@
   import { t } from '../../i18n'
   import SlashCommandSuggestions from './SlashCommandSuggestions.svelte'
   import SessionPicker from './SessionPicker.svelte'
-  import { computeSuggestions, suggestionsShouldBeOpen } from './slash-commands'
+  import { computeSuggestions, shouldCompleteSubcommand, suggestionsShouldBeOpen } from '../../slash-commands'
   import type { SessionSummary } from '../../store/session-store'
 
   let {
@@ -38,7 +38,7 @@
   let value = $state('')
   let textarea = $state<HTMLTextAreaElement | null>(null)
 
-  // --- /skill: autocomplete -------------------------------------------------
+  // --- slash-command autocomplete -------------------------------------------
   const suggestions = $derived(computeSuggestions({ skills, value }))
   let suggestionsOpen = $state(false)
   let highlightedIndex = $state(0)
@@ -142,6 +142,15 @@
       suggestionsOpen = false
       sessionPickerOpen = true
       sessionHighlightedIndex = Math.max(0, sessions.findIndex((s) => s.id === activeSessionId))
+      autoResize()
+      textarea?.focus()
+      return
+    }
+    if (shouldCompleteSubcommand(suggested)) {
+      // `/skill` → `/skill:` and keep the list open for skill filtering.
+      value = `${suggested}:`
+      suggestionsOpen = true
+      highlightedIndex = 0
       autoResize()
       textarea?.focus()
       return
