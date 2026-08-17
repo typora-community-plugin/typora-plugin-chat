@@ -68,6 +68,16 @@ export class ChatView extends WorkspaceView {
           resetAgentHistory()
           chatStore.clearMessages()
         },
+        onNew: (rest: string) => {
+          // Reset agent loop state and the chat store so the next turn starts
+          // with a clean transcript; then optionally seed a first message.
+          resetAgentHistory()
+          chatStore.clearMessages()
+          const seed = rest.trim()
+          if (seed) {
+            void this.handleSend(seed)
+          }
+        },
         onSkillInvoke: (name: string, rest: string) => void this.handleSkillInvoke(name, rest),
       },
     }) as unknown as Record<string, unknown>

@@ -20,6 +20,7 @@
     onSend,
     onStop,
     onClear,
+    onNew = null,
     onSkillInvoke = null,
   } = $props()
 
@@ -28,6 +29,12 @@
   function handleMainSend(text) {
     if ($askUserQuestion) {
       chatStore.answerAskUser(text)
+      return
+    }
+    // /new [rest] — start a fresh conversation; any trailing text is sent as the first turn.
+    const newMatch = text.match(/^\/new\s*([\s\S]*)$/)
+    if (newMatch && onNew) {
+      onNew(newMatch[1]?.trim() ?? '')
       return
     }
     // /skill:<name> [rest] — explicit, user-initiated skill invocation.

@@ -14,6 +14,7 @@
     "summarizeNote": "Summarize this note: {file}",
     "clear": "Clear",
     "clearConversationTitle": "Clear conversation",
+    "newSessionCommand": "/new — start a new session",
     "selectModel": "Select model",
     "selectModelTitle": "Select model",
     "send": "Send (Enter)",
