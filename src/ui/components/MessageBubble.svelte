@@ -3,7 +3,10 @@
   import ToolCallDetail from './ToolCallDetail.svelte'
   import { t } from '../../i18n'
 
-  let { message } = $props()
+  let {
+    message,
+    showMeta = false,
+  } = $props()
 
   function formatDuration(ms) {
     const totalSeconds = ms / 1000
@@ -30,7 +33,7 @@
     class:typ-assistant-msg--question={message.isError === false && message.toolName === 'ask_user'}
   >
     <div class="typ-message-content" use:markdown={message.text}></div>
-    {#if message.meta}
+    {#if showMeta && message.meta}
       <div class="typ-assistant-meta">
         <span class="typ-assistant-meta__item" title={t.chat.metaModel}>
           <span class="typ-assistant-meta__icon" aria-hidden="true">🤖</span>
@@ -73,6 +76,7 @@
     .typ-user-msg {
       align-self: flex-end;
       max-width: 85%;
+      margin-top: 16px;
       padding: 8px 14px;
       border-radius: 12px 2px 12px 12px;
       background-color: var(--primary-color, rgb(30, 136, 229));
@@ -86,7 +90,6 @@
     .typ-assistant-msg {
       align-self: flex-start;
       max-width: 92%;
-      padding: 0 0 16px;
       border-radius: 2px 12px 12px 12px;
       background-color: var(--bg-color, #fff);
       color: var(--text-color, rgb(var(--typ-text-color)));

@@ -7,6 +7,23 @@
     thinking = false,
   } = $props()
 
+  let metaMessageIds = $derived.by(() => {
+    const ids = new Set()
+    let lastAssistantId = null
+
+    for (const message of messages) {
+      if (message.type === 'user') {
+        if (lastAssistantId) ids.add(lastAssistantId)
+        lastAssistantId = null
+      } else if (message.type === 'assistant') {
+        lastAssistantId = message.id
+      }
+    }
+
+    if (lastAssistantId) ids.add(lastAssistantId)
+    return ids
+  })
+
   let messagesEl = $state(null)
 
   $effect(() => {
@@ -21,7 +38,7 @@
 
 <div class="typ-chat-messages" bind:this={messagesEl}>
   {#each messages as message (message.id)}
-    <MessageBubble {message} />
+    <MessageBubble {message} showMeta={metaMessageIds.has(message.id)} />
   {/each}
 
   {#if thinking}
