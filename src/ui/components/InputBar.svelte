@@ -1,5 +1,7 @@
-<script>
+<script lang="ts">
   import { t } from '../../i18n'
+  import SlashCommandSuggestions from './SlashCommandSuggestions.svelte'
+  import { computeSuggestions, suggestionsShouldBeOpen } from './slash-commands'
 
   let {
     onSend,
@@ -18,29 +20,15 @@
   let textarea = $state(null)
 
   // --- /skill: autocomplete -------------------------------------------------
-  const MAX_SUGGESTIONS = 8
+  const suggestions = $derived(computeSuggestions({ skills, value }))
   let suggestionsOpen = $state(false)
   let highlightedIndex = $state(0)
 
-  function computeSuggestions() {
-    if (!skills.length || !value.startsWith('/')) return []
-    // Only suggest while typing the first token: no whitespace yet after "/".
-    const firstToken = value.split(/\s/)[0]
-    if (/\s/.test(firstToken)) return []
-    // Accept both bare `/name` and explicit `/skill:name`.
-    let prefix = ''
-    if (/^\/skill:/.test(firstToken)) prefix = firstToken.slice('/skill:'.length)
-    else if (!/^\/[A-Za-z0-9_-]*$/.test(firstToken)) return []
-    const matches = skills.filter((name) => name.toLowerCase().startsWith(prefix.toLowerCase()))
-    return matches.slice(0, MAX_SUGGESTIONS).map((name) => `/skill:${name}`)
-  }
-
-  function updateSuggestions() {
-    suggestionsOpen = computeSuggestions().length > 0 && enabled
+  $effect(() => {
+    // Recompute visibility + reset highlight whenever the suggestion list changes.
+    suggestionsOpen = suggestionsShouldBeOpen({ skills, value }, enabled)
     highlightedIndex = 0
-  }
-
-  $effect(() => { updateSuggestions() }) // eslint-disable-line no-unused-expressions -- react to value/skills/enabled
+  })
 
   $effect(() => {
     if (textAreaEl) textAreaEl(textarea)
@@ -59,7 +47,6 @@
 
   function handleInput() {
     autoResize()
-    updateSuggestions()
   }
 
   function handleBlur() {
@@ -68,9 +55,8 @@
     setTimeout(() => { suggestionsOpen = false }, 150)
   }
 
-  function handleKeydown(e) {
-    if (suggestionsOpen && computeSuggestions().length) {
-      const suggestions = computeSuggestions()
+  function handleKeydown(e: KeyboardEvent) {
+    if (suggestionsOpen && suggestions.length) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         highlightedIndex = (highlightedIndex + 1) % suggestions.length
@@ -98,7 +84,7 @@
     }
   }
 
-  function applySuggestion(suggested) {
+  function applySuggestion(suggested: string) {
     value = `${suggested} `
     suggestionsOpen = false
     autoResize()
@@ -113,8 +99,8 @@
     onSend(text)
   }
 
-  function handleModelChange(e) {
-    onModelChange?.(e.currentTarget.value)
+  function handleModelChange(e: Event) {
+    onModelChange?.((e.currentTarget as HTMLSelectElement).value)
   }
 
   function handleModelClick() {
@@ -125,14 +111,11 @@
 <div class="typ-chat-inputbar">
   <div class="typ-input-wrap">
     {#if suggestionsOpen}
-      <ul class="typ-skill-suggestions">
-        {#each computeSuggestions() as s, i (s)}
-          <li
-            class:typ-suggestion-highlighted={i === highlightedIndex}
-            onmousedown={(e) => { e.preventDefault(); applySuggestion(s); }}
-          >{s}</li>
-        {/each}
-      </ul>
+      <SlashCommandSuggestions
+        {suggestions}
+        {highlightedIndex}
+        onPick={applySuggestion}
+      />
     {/if}
 
     <textarea
@@ -200,38 +183,6 @@
 
         &:focus-within {
           border-color: var(--primary-color, rgb(30, 136, 229));
-        }
-      }
-
-      .typ-skill-suggestions {
-        position: absolute;
-        bottom: calc(100% + 4px);
-        left: 0;
-        right: 0;
-        margin: 0;
-        padding: 4px;
-        list-style: none;
-        max-height: 208px;
-        overflow-y: auto;
-        border: 1px solid rgb(var(--typ-border-color));
-        border-radius: var(--typ-radius-m);
-        background-color: var(--bg-color, #fff);
-        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.12);
-        z-index: 20;
-
-        li {
-          padding: 6px 10px;
-          border-radius: 4px;
-          font-size: 13px;
-          cursor: pointer;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-
-          &:hover,
-          &.typ-suggestion-highlighted {
-            background-color: rgb(var(--typ-color-gray-2));
-          }
         }
       }
 
