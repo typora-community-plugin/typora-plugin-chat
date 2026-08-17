@@ -340,7 +340,6 @@
       padding: 2px 6px 2px 8px;
       border: 1px solid rgb(var(--typ-border-color));
       border-radius: 6px;
-      background-color: rgb(var(--typ-color-gray-1));
       color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
       font-size: 12px;
       line-height: 1.4;
