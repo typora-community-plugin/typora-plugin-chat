@@ -173,6 +173,19 @@ export const chatStore = {
     return get(selection)
   },
 
+  getMessages(): ChatMessage[] {
+    return get(messages)
+  },
+
+  /** Replace the whole transcript, e.g. when switching chat sessions. */
+  replaceMessages(msgs: ChatMessage[]) {
+    messages.set(Array.isArray(msgs) ? msgs : [])
+    askUserQuestion.set(null)
+    askUserResolver = null
+    inputPlaceholder.set(t.chat.inputPlaceholder)
+    persist()
+  },
+
   clearSelection() {
     selection.set(null)
   },

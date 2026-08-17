@@ -12,9 +12,9 @@ describe('computeSuggestions', () => {
     expect(computeSuggestions({ skills: SKILLS, value: 'hello' })).toEqual([])
   })
 
-  it('suggests all skills plus the built-in /new when only / is typed', () => {
+  it('suggests all skills plus the built-in commands when only / is typed', () => {
     const result = computeSuggestions({ skills: SKILLS, value: '/' })
-    expect(result).toEqual(['/new', '/skill:alpha', '/skill:beta', '/skill:gamma', '/skill:delta-one'])
+    expect(result).toEqual(['/new', '/sessions', '/skill:alpha', '/skill:beta', '/skill:gamma', '/skill:delta-one'])
   })
 
   it('suggests matching skills for a bare /name prefix (plus built-ins that match)', () => {
@@ -61,7 +61,7 @@ describe('computeSuggestions', () => {
     it('appears in suggestions for a bare / and is first in the list', () => {
       const result = computeSuggestions({ skills: SKILLS, value: '/' })
       expect(result[0]).toBe('/new')
-      expect(result.slice(1)).toEqual(['/skill:alpha', '/skill:beta', '/skill:gamma', '/skill:delta-one'])
+      expect(result.slice(1)).toEqual(['/sessions', '/skill:alpha', '/skill:beta', '/skill:gamma', '/skill:delta-one'])
     })
 
     it('appears when the query is a prefix of /new', () => {
@@ -89,6 +89,29 @@ describe('computeSuggestions', () => {
     it('appears even when no skills are available', () => {
       const result = computeSuggestions({ skills: [], value: '/n' })
       expect(result).toEqual(['/new'])
+    })
+  })
+
+  describe('/sessions built-in command', () => {
+    it('appears in suggestions for a bare /', () => {
+      const result = computeSuggestions({ skills: SKILLS, value: '/' })
+      expect(result).toContain('/sessions')
+    })
+
+    it('appears when the query is a prefix of /sessions', () => {
+      expect(computeSuggestions({ skills: SKILLS, value: '/s' })).toEqual(['/sessions'])
+      expect(computeSuggestions({ skills: SKILLS, value: '/se' })).toEqual(['/sessions'])
+      expect(computeSuggestions({ skills: SKILLS, value: '/SES' })).toContain('/sessions')
+    })
+
+    it('does not suggest /sessions after a space or further text in the same token', () => {
+      expect(computeSuggestions({ skills: SKILLS, value: '/sessions ' })).toEqual([])
+      expect(computeSuggestions({ skills: SKILLS, value: '/sessions x' })).toEqual([])
+    })
+
+    it('appears even when no skills are available', () => {
+      const result = computeSuggestions({ skills: [], value: '/s' })
+      expect(result).toEqual(['/sessions'])
     })
   })
 })

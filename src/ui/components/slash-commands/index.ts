@@ -3,8 +3,9 @@
  * Pure helpers — no Svelte dependencies, so they are easy to unit test and can
  * be reused by any component that needs skill suggestions or built-in commands.
  *
- * Command-specific logic lives in sibling modules: `/new` in `./new`, `/skill:`
- * in `./skill`. This module only orchestrates them.
+ * Command-specific logic lives in sibling modules: `/new` in `./new`,
+ * `/sessions` in `./sessions`, `/skill:` in `./skill`. This module only
+ * orchestrates them.
  */
 
 import { matchBuiltinCommands } from './new'

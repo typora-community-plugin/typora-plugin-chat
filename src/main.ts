@@ -3,6 +3,7 @@ import './ui/variables.scss'
 import { ChatView } from './chat-view'
 import { ChatSettingTab } from './ui/settings/chat-setting-tab'
 import { chatStore } from './store/chat-store'
+import { getActiveSession, initSessionStore, saveActiveSession } from './store/session-store'
 import { getSelection } from './adapter/editor'
 import { getCurrentFilePath } from './adapter/vault'
 import { copyTranscript } from './utils/export'
@@ -18,6 +19,7 @@ export default class extends Plugin {
 
     initI18n(this.manifest.dir!)
     chatStore.inputPlaceholder.set(t.chat.inputPlaceholder)
+    initSessionStore()
 
     // Skills: initial scan for /skill: autocomplete, plus a rescan whenever the
     // user switches vaults so project-level .agents/skills stay current. The
@@ -77,6 +79,8 @@ export default class extends Plugin {
         callback: () => {
           chatStore.clearMessages()
           this.getChatView()?.clearConversation()
+          const current = getActiveSession()
+          if (current) saveActiveSession([], [])
         }
       })
     )

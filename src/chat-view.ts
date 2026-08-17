@@ -3,7 +3,8 @@ import { mount, unmount } from 'svelte'
 import App from './ui/App.svelte'
 import { chatStore } from './store/chat-store'
 import { settingsManager } from './config/settings'
-import { abortAgentLoop, executeAgentLoop, resetAgentHistory } from './agent/loop'
+import { abortAgentLoop, executeAgentLoop, getAgentHistory, resetAgentHistory, setAgentHistory } from './agent/loop'
+import { createSession, getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
 import { fs } from '@typora-community-plugin/core'
 import { getSelection } from './adapter/editor'
 import { getSkill } from './skills/index'
@@ -64,15 +65,18 @@ export class ChatView extends WorkspaceView {
       props: {
         onSend: (text: string) => this.handleSend(text),
         onStop: () => abortAgentLoop(),
-        onClear: () => {
-          resetAgentHistory()
-          chatStore.clearMessages()
-        },
+        onClear: () => this.clearConversation(),
         onNew: (rest: string) => {
-          // Reset agent loop state and the chat store so the next turn starts
-          // with a clean transcript; then optionally seed a first message.
-          resetAgentHistory()
-          chatStore.clearMessages()
+          // Save the current conversation, then start a fresh session so the
+          // previous transcript remains available through the /sessions picker.
+          const current = getActiveSession()
+          if (current) {
+            saveActiveSession(chatStore.getMessages(), getAgentHistory())
+          }
+          createSession()
+          chatStore.replaceMessages([])
+          chatStore.clearSelection()
+          setAgentHistory([])
           const seed = rest.trim()
           if (seed) {
             void this.handleSend(seed)
@@ -93,6 +97,11 @@ export class ChatView extends WorkspaceView {
   clearConversation() {
     resetAgentHistory()
     chatStore.clearMessages()
+    chatStore.clearSelection()
+    const current = getActiveSession()
+    if (current) {
+      saveActiveSession([], [])
+    }
   }
 
   /**
@@ -156,6 +165,11 @@ export class ChatView extends WorkspaceView {
     }
 
     chatStore.addUserMessage(options.displayText, selection)
+    const active = getActiveSession()
+    if (active && chatStore.getMessages().length === 1) {
+      const title = options.displayText.replace(/\s+/g, ' ').trim().slice(0, 30)
+      if (title) updateSessionTitle(active.id, title)
+    }
     chatStore.setInputEnabled(false)
 
     const startedAt = performance.now()
@@ -210,6 +224,10 @@ export class ChatView extends WorkspaceView {
     } finally {
       chatStore.setInputEnabled(true)
       chatStore.hideThinking()
+      const current = getActiveSession()
+      if (current) {
+        saveActiveSession(chatStore.getMessages(), getAgentHistory())
+      }
     }
   }
 }

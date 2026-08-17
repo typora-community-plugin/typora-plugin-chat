@@ -4,11 +4,13 @@
  * be reused by any component that needs built-in command suggestions.
  */
 
+import { SESSIONS_COMMAND } from './sessions'
+
 /** The `/new` built-in command: start a fresh session. */
 export const NEW_COMMAND = '/new'
 
 /** Built-in slash commands that are not skill invocations. */
-const BUILTIN_COMMANDS = [NEW_COMMAND]
+const BUILTIN_COMMANDS = [NEW_COMMAND, SESSIONS_COMMAND]
 
 /**
  * Built-in commands whose name (without the leading `/`) has `bareQuery` as a

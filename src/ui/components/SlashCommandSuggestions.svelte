@@ -1,6 +1,6 @@
 <script lang="ts">
   let { suggestions, highlightedIndex, onPick }: {
-    /** The `/skill:<name>` entries to render. */
+    /** Slash command entries to render (`/new`, `/sessions`, `/skill:<name>`). */
     suggestions: string[]
     /** Index of the currently highlighted entry. */
     highlightedIndex: number

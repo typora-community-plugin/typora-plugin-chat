@@ -30,6 +30,16 @@ export function resetAgentHistory(): void {
   history = []
 }
 
+/** Return a copy of the current agent history (conversation sent to the API). */
+export function getAgentHistory(): ApiMessage[] {
+  return history.slice()
+}
+
+/** Replace the agent history, e.g. when switching to a saved session. */
+export function setAgentHistory(next: ApiMessage[]): void {
+  history = Array.isArray(next) ? next.slice() : []
+}
+
 export function abortAgentLoop(): void {
   aborted = true
 }

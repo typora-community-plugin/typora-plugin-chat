@@ -1,7 +1,9 @@
 <script lang="ts">
   import { t } from '../../i18n'
   import SlashCommandSuggestions from './SlashCommandSuggestions.svelte'
+  import SessionPicker from './SessionPicker.svelte'
   import { computeSuggestions, suggestionsShouldBeOpen } from './slash-commands'
+  import type { SessionSummary } from '../../store/session-store'
 
   let {
     onSend,
@@ -14,15 +16,36 @@
     skills = [],
     onModelChange = null,
     onModelRefresh = null,
+    sessions = [],
+    activeSessionId = null,
+    onSwitchSession = null,
+  }: {
+    onSend: (text: string) => void
+    onStop: () => void
+    placeholder?: string
+    enabled?: boolean
+    textAreaEl?: ((el: HTMLTextAreaElement | null) => void) | null
+    model?: string
+    models?: string[]
+    skills?: string[]
+    onModelChange?: ((model: string) => void) | null
+    onModelRefresh?: (() => void) | null
+    sessions?: SessionSummary[]
+    activeSessionId?: string | null
+    onSwitchSession?: ((id: string) => void) | null
   } = $props()
 
   let value = $state('')
-  let textarea = $state(null)
+  let textarea = $state<HTMLTextAreaElement | null>(null)
 
   // --- /skill: autocomplete -------------------------------------------------
   const suggestions = $derived(computeSuggestions({ skills, value }))
   let suggestionsOpen = $state(false)
   let highlightedIndex = $state(0)
+
+  // --- /sessions session picker ---------------------------------------------
+  let sessionPickerOpen = $state(false)
+  let sessionHighlightedIndex = $state(0)
 
   $effect(() => {
     // Recompute visibility + reset highlight whenever the suggestion list changes.
@@ -50,12 +73,41 @@
   }
 
   function handleBlur() {
-    // Dismiss after a short delay so click events on the suggestion list
-    // still fire before the list disappears.
-    setTimeout(() => { suggestionsOpen = false }, 150)
+    // Dismiss after a short delay so click events on the suggestion or session
+    // list still fire before the list disappears.
+    setTimeout(() => {
+      suggestionsOpen = false
+      sessionPickerOpen = false
+    }, 150)
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    if (sessionPickerOpen) {
+      if (sessions.length) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          sessionHighlightedIndex = (sessionHighlightedIndex + 1) % sessions.length
+          return
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          sessionHighlightedIndex = (sessionHighlightedIndex - 1 + sessions.length) % sessions.length
+          return
+        }
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault()
+          const index = Math.min(sessionHighlightedIndex, sessions.length - 1)
+          pickSession(sessions[index].id)
+          return
+        }
+      }
+      if (e.key === 'Escape') {
+        sessionPickerOpen = false
+        textarea?.focus()
+        return
+      }
+    }
+
     if (suggestionsOpen && suggestions.length) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
@@ -85,6 +137,15 @@
   }
 
   function applySuggestion(suggested: string) {
+    if (suggested === '/sessions') {
+      value = ''
+      suggestionsOpen = false
+      sessionPickerOpen = true
+      sessionHighlightedIndex = Math.max(0, sessions.findIndex((s) => s.id === activeSessionId))
+      autoResize()
+      textarea?.focus()
+      return
+    }
     const spaceIndex = value.search(/\s/)
     if (spaceIndex === -1) {
       value = `${suggested} `
@@ -96,9 +157,25 @@
     textarea?.focus()
   }
 
+  function pickSession(id: string) {
+    onSwitchSession?.(id)
+    sessionPickerOpen = false
+    value = ''
+    autoResize()
+    textarea?.focus()
+  }
+
   function submit() {
     const text = value.trim()
     if (!text || !enabled) return
+    if (text === '/sessions') {
+      value = ''
+      sessionPickerOpen = true
+      sessionHighlightedIndex = Math.max(0, sessions.findIndex((s) => s.id === activeSessionId))
+      autoResize()
+      textarea?.focus()
+      return
+    }
     value = ''
     requestAnimationFrame(autoResize)
     onSend(text)
@@ -115,7 +192,14 @@
 
 <div class="typ-chat-inputbar">
   <div class="typ-input-wrap">
-    {#if suggestionsOpen}
+    {#if sessionPickerOpen}
+      <SessionPicker
+        {sessions}
+        {activeSessionId}
+        highlightedIndex={sessionHighlightedIndex}
+        onPick={pickSession}
+      />
+    {:else if suggestionsOpen}
       <SlashCommandSuggestions
         {suggestions}
         {highlightedIndex}

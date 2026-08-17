@@ -12,6 +12,15 @@
     askUserQuestion,
     inputPlaceholder,
   } from '../store/chat-store'
+  import {
+    activeSessionId as sessionActiveSessionId,
+    initSessionStore,
+    getActiveSession,
+    saveActiveSession,
+    sessionSummaries,
+    switchSession,
+  } from '../store/session-store'
+  import { getAgentHistory, setAgentHistory } from '../agent/loop'
   import { settings, settingsManager } from '../config/settings'
   import { availableModels, refreshModels } from '../store/models-store'
   import { skills as skillStore } from '../skills/store'
@@ -25,6 +34,29 @@
   } = $props()
 
   const skillNames = $derived($skillStore.map((s) => s.name))
+
+  // Initialize session persistence and load the active session into the UI.
+  initSessionStore()
+  const activeSession = getActiveSession()
+  if (activeSession) {
+    chatStore.replaceMessages(activeSession.messages)
+    setAgentHistory(activeSession.history)
+  }
+  const sessionList = $derived($sessionSummaries)
+  const activeSessionId = $derived($sessionActiveSessionId)
+
+  function handleSwitchSession(id) {
+    const current = getActiveSession()
+    if (current) {
+      saveActiveSession(chatStore.getMessages(), getAgentHistory())
+    }
+    const target = switchSession(id)
+    if (target) {
+      chatStore.replaceMessages(target.messages)
+      chatStore.clearSelection()
+      setAgentHistory(target.history)
+    }
+  }
 
   function handleMainSend(text) {
     if ($askUserQuestion) {
@@ -68,6 +100,9 @@
     model={$settings.model}
     models={$availableModels}
     skills={skillNames}
+    sessions={sessionList}
+    activeSessionId={activeSessionId}
+    onSwitchSession={handleSwitchSession}
     onModelChange={(model) => settingsManager.save({ model })}
     onModelRefresh={() => refreshModels()}
     onSend={handleMainSend}
