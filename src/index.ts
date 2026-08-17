@@ -10,6 +10,10 @@ export { sendMessage } from './api/client'
 export { toolDefinitions } from './tools/registry'
 export { executeTool } from './tools/executor'
 export { settingsManager, DEFAULT_SETTINGS } from './config/settings'
+export { discoverSkills, getSkill, buildSkillsCatalog } from './skills/index'
+export { rescanSkills, skills as skillStore } from './skills/store'
+export { parseFrontmatter, deriveSkillMeta, stripFrontmatter } from './skills/frontmatter'
+export { globalSkillsDir, vaultSkillsDir, skillRoots } from './skills/paths'
 export type {
   AgentCallbacks,
   AgentResult,
@@ -26,3 +30,4 @@ export type {
   ToolResult,
   UnifiedResponse,
 } from './config/types'
+export type { DiscoveredSkill } from './skills/index'

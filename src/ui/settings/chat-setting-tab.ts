@@ -2,6 +2,8 @@ import { SettingTab } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
 import { settingsManager } from '../../config/settings'
 import { availableModels, modelRefreshMessage, refreshModels } from '../../store/models-store'
+import { globalSkillsDir, vaultSkillsDir } from '../../skills/paths'
+import { rescanSkills } from '../../skills/store'
 import type { ApiProvider, PluginSettings } from '../../config/types'
 import { t } from '../../i18n'
 
@@ -142,6 +144,39 @@ export class ChatSettingTab extends SettingTab {
           if (Number.isFinite(maxIterations) && maxIterations > 0) {
             void settingsManager.save({ maxIterations })
           }
+        }
+      })
+    })
+
+    this.addSetting((setting) => {
+      setting.addName(t.settings.skills)
+      setting.addDescription(t.settings.skillsDesc)
+
+      const vaultDir = vaultSkillsDir()
+      const globalDir = globalSkillsDir()
+      const dirsText = [vaultDir, globalDir]
+        .filter(Boolean)
+        .map((dir) => dir as string)
+        .join('\n')
+
+      setting.addDescription((el) => {
+        el.textContent = dirsText || '—'
+        el.style.whiteSpace = 'pre-line'
+        el.style.fontFamily = 'var(--code-font-family, monospace)'
+        el.style.fontSize = '12px'
+      })
+
+      let statusEl: HTMLElement | null = null
+      setting.addDescription((el) => { statusEl = el })
+
+      setting.addButton((button) => {
+        button.textContent = t.settings.rescanSkills
+        button.onclick = () => {
+          void rescanSkills().then(() => {
+            if (statusEl) statusEl.textContent = ''
+          }).catch(() => {
+            if (statusEl) statusEl.textContent = '—'
+          })
         }
       })
     })

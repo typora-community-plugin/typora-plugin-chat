@@ -4,8 +4,11 @@ import App from './ui/App.svelte'
 import { chatStore } from './store/chat-store'
 import { settingsManager } from './config/settings'
 import { abortAgentLoop, executeAgentLoop, resetAgentHistory } from './agent/loop'
+import { fs } from '@typora-community-plugin/core'
 import { getSelection } from './adapter/editor'
-import type { AssistantMeta } from './config/types'
+import { getSkill } from './skills/index'
+import { stripFrontmatter } from './skills/frontmatter'
+import type { AssistantMeta, ToolResult } from './config/types'
 
 
 /**
@@ -65,6 +68,7 @@ export class ChatView extends WorkspaceView {
           resetAgentHistory()
           chatStore.clearMessages()
         },
+        onSkillInvoke: (name: string, rest: string) => void this.handleSkillInvoke(name, rest),
       },
     }) as unknown as Record<string, unknown>
   }
@@ -81,17 +85,67 @@ export class ChatView extends WorkspaceView {
     chatStore.clearMessages()
   }
 
+  /**
+   * Public entry point for a normal user message. The transcript shows the raw
+   * text; any skill expansion happens inside runTurn without touching what is
+   * displayed to the user.
+   */
   async handleSend(text: string) {
+    await this.runTurn({ displayText: text, expandedMessage: null })
+  }
+
+  /**
+   * Entry point for an explicit `/skill:<name>` invocation. The transcript
+   * shows the original command line; internally the skill body is inlined as
+   * an instruction prefix so the model follows it for this turn regardless of
+   * whether it would have called use_skill on its own.
+   */
+  async handleSkillInvoke(skillName: string, rest: string) {
+    const displayText = `/skill:${skillName}${rest ? ` ${rest}` : ''}`
+
+    let skill
+    try {
+      skill = await getSkill(skillName)
+    } catch {
+      /* fall through to error below */
+    }
+    if (!skill) {
+      chatStore.addUserMessage(displayText, null)
+      const callId = chatStore.addToolCall('use_skill', { name: skillName })
+      chatStore.updateToolResult(callId, { content: `Unknown skill "${skillName}".`, isError: true }, true)
+      return
+    }
+
+    let body = ''
+    try {
+      const text = await fs.readText(skill.path)
+      body = stripFrontmatter(text).trim()
+    } catch (error: any) {
+      chatStore.addUserMessage(displayText, null)
+      chatStore.addError(`Failed to read skill "${skillName}": ${error.message || error}`)
+      return
+    }
+
+    const expandedMessage =
+      `Follow the instructions of the skill "${skill.name}" for this turn. ` +
+      `Auxiliary files live under ${skill.dir}; read them if referenced.\n\n` +
+      `${body}\n\n` +
+      (rest.trim() ? `User request: ${rest.trim()}` : 'Apply the skill to the current context.')
+
+    await this.runTurn({ displayText, expandedMessage })
+  }
+
+  private async runTurn(options: { displayText: string; expandedMessage: string | null }) {
     const selection = chatStore.getSelection()
-    let userMessage = text
+    let userMessage = options.expandedMessage ?? options.displayText
     if (selection) {
       const origin = selection.filePath ?? 'the active document'
       userMessage =
         `[Selection scope: Work only within this selection from ${origin}.]\n` +
-        `Selected text:\n> ${selection.text}\n\nUser message: ${text}`
+        `Selected text:\n> ${selection.text}\n\nUser message: ${userMessage}`
     }
 
-    chatStore.addUserMessage(text, selection)
+    chatStore.addUserMessage(options.displayText, selection)
     chatStore.setInputEnabled(false)
 
     const startedAt = performance.now()

@@ -57,7 +57,10 @@
     "modelDesc": "Modell-ID für Chat-Completions.",
     "refreshModels": "Modelle aktualisieren",
     "maxIterations": "Maximale Tool-Iterationen",
-    "maxIterationsDesc": "Maximale Anzahl von Tool-Aufruf-Runden in einer Agent-Schleife."
+    "maxIterationsDesc": "Maximale Anzahl von Tool-Aufruf-Runden in einer Agent-Schleife.",
+    "skills": "Skills",
+    "skillsDesc": "SKILL.md-Ordner werden automatisch aus den unten stehenden Verzeichnissen geladen. Rufe einen mit /skill:<name> im Chat auf oder lass das Modell use_skill aufrufen, wenn eine Aufgabe passt.",
+    "rescanSkills": "Skills neu laden"
   },
   "models": {
     "loading": "Modelle werden geladen...",

@@ -13,6 +13,9 @@ const mockFs = {
   appendText: vi.fn(),
   exists: vi.fn(),
   listFiles: vi.fn(),
+  // Non-recursive directory listing used by skill discovery.
+  list: vi.fn(),
+  isDirectory: vi.fn(),
   mkdir: vi.fn(),
   move: vi.fn(),
   remove: vi.fn(),
@@ -39,9 +42,14 @@ const mockApp = {
   viewManager: { registerView: vi.fn() },
 }
 
+vi.mock('os', () => {
+  // Skill discovery (paths.ts) resolves the global root from the OS home dir.
+  return { homedir: vi.fn(() => '/home') }
+})
+
 vi.mock('@typora-community-plugin/core', () => ({
   app: mockApp,
-  fs: mockFs,
+  fs: mockFs as Record<string, unknown>,
   path: {
     sep: '/',
     isAbsolute: (p: string) => p.startsWith('/'),

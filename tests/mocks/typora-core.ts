@@ -8,7 +8,7 @@
 
 export const app = {}
 export const fs = {}
-export const path = {}
+export const path = { join: (...parts: string[]) => parts.join('/').replace(/\/+/g, '/') }
 
 export class I18n {
   locale: string

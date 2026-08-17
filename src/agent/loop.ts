@@ -12,6 +12,7 @@ import { executeTool } from '../tools/executor'
 import { buildSystemPrompt } from './system-prompt'
 import { buildContextMessage } from './context'
 import { getCurrentFilePath } from '../adapter/vault'
+import { discoverSkills, buildSkillsCatalog } from '../skills/index'
 
 
 const MAX_HISTORY = 50
@@ -44,7 +45,16 @@ export async function executeAgentLoop(
 ): Promise<AgentResult> {
   aborted = false
   const settings = settingsManager.get()
-  const systemMessage: ApiMessage = { role: 'system', content: buildSystemPrompt() }
+  // Re-discover skills on every turn so a freshly added SKILL.md is picked up
+  // without a plugin restart; with no skills this yields an empty catalog and
+  // the system prompt stays byte-identical to the pre-skills version.
+  let skillsCatalog = ''
+  try {
+    skillsCatalog = buildSkillsCatalog(await discoverSkills())
+  } catch {
+    skillsCatalog = ''
+  }
+  const systemMessage: ApiMessage = { role: 'system', content: buildSystemPrompt(skillsCatalog) }
   const contextMessage: ApiMessage = { role: 'user', content: await buildContextMessage() }
   const conversation: ApiMessage[] = [
     ...trimHistory(history),

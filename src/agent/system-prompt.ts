@@ -5,7 +5,8 @@
  * identical across requests — this is what makes provider KV-cache
  * prefix matching effective.
  */
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(skillsCatalog = ''): string {
+  const skillsSection = skillsCatalog ? `\n\n${skillsCatalog}` : ''
   return `You are Typora Chat, an AI assistant embedded in the Typora editor with direct access to the user's vault.
 
 ## Core rules
@@ -20,5 +21,5 @@ export function buildSystemPrompt(): string {
 
 ## Format
 - Use markdown for multi-paragraph answers.
-- When a tool result is large, summarize instead of repeating it verbatim.`
+- When a tool result is large, summarize instead of repeating it verbatim.${skillsSection}`
 }

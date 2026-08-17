@@ -57,7 +57,10 @@
     "modelDesc": "Model id used for chat completions.",
     "refreshModels": "Refresh models",
     "maxIterations": "Max tool iterations",
-    "maxIterationsDesc": "Maximum number of tool-call rounds in one agent loop."
+    "maxIterationsDesc": "Maximum number of tool-call rounds in one agent loop.",
+    "skills": "Skills",
+    "skillsDesc": "SKILL.md folders auto-loaded from the directories below. Invoke one explicitly with /skill:<name> in chat, or let the model call use_skill when a task matches.",
+    "rescanSkills": "Rescan skills"
   },
   "models": {
     "loading": "Loading models...",

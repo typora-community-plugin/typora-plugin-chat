@@ -57,7 +57,10 @@
     "modelDesc": "用于聊天补全的模型 ID。",
     "refreshModels": "刷新模型列表",
     "maxIterations": "最大工具迭代次数",
-    "maxIterationsDesc": "单次 Agent 循环中工具调用的最大轮数。"
+    "maxIterationsDesc": "单次 Agent 循环中工具调用的最大轮数。",
+    "skills": "技能（Skills）",
+    "skillsDesc": "自动加载以下目录中的 SKILL.md 文件夹。可在聊天中输入 /skill:<名称> 显式调用，或由模型在任务匹配时自行调用 use_skill。",
+    "rescanSkills": "重新扫描技能"
   },
   "models": {
     "loading": "正在加载模型...",

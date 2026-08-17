@@ -14,6 +14,7 @@ import { executeRenameFile, renameFileSchema } from './vault/rename-file'
 import { executeGetBacklinks, getBacklinksSchema } from './vault/get-backlinks'
 import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './system/get-current-datetime'
 import { executeAskUser, askUserSchema } from './system/ask-user'
+import { executeUseSkill, useSkillSchema } from './system/use-skill'
 
 
 export interface ExecutorContext {
@@ -40,6 +41,7 @@ export const allToolSchemas = [
   // System tools
   getCurrentDatetimeSchema,
   askUserSchema,
+  useSkillSchema,
 ] as const
 
 /** Tools whose `path` parameter is optional; when missing, fall back to the active file for summary display. */
@@ -94,6 +96,7 @@ async function runTool(
     // System tools
     case 'get_current_datetime': return executeGetCurrentDatetime()
     case 'ask_user': return executeAskUser(input, context)
+    case 'use_skill': return executeUseSkill(input)
     default:
       return { content: `Unknown tool: ${name}`, isError: true }
   }

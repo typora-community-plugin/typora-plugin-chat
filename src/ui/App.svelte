@@ -14,16 +14,26 @@
   } from '../store/chat-store'
   import { settings, settingsManager } from '../config/settings'
   import { availableModels, refreshModels } from '../store/models-store'
+  import { skills as skillStore } from '../skills/store'
 
   let {
     onSend,
     onStop,
     onClear,
+    onSkillInvoke = null,
   } = $props()
+
+  const skillNames = $derived($skillStore.map((s) => s.name))
 
   function handleMainSend(text) {
     if ($askUserQuestion) {
       chatStore.answerAskUser(text)
+      return
+    }
+    // /skill:<name> [rest] — explicit, user-initiated skill invocation.
+    const match = text.match(/^\/skill:([A-Za-z0-9_-]+)\s*([\s\S]*)$/i)
+    if (match && onSkillInvoke) {
+      onSkillInvoke(match[1], match[2] ?? '')
       return
     }
     onSend(text)
@@ -50,6 +60,7 @@
     enabled={$inputEnabled}
     model={$settings.model}
     models={$availableModels}
+    skills={skillNames}
     onModelChange={(model) => settingsManager.save({ model })}
     onModelRefresh={() => refreshModels()}
     onSend={handleMainSend}

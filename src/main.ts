@@ -8,6 +8,7 @@ import { getCurrentFilePath } from './adapter/vault'
 import { copyTranscript } from './utils/export'
 import { basename } from './utils/helpers'
 import { format, initI18n, t } from './i18n'
+import { rescanSkills } from './skills/store'
 
 
 export default class extends Plugin {
@@ -17,6 +18,12 @@ export default class extends Plugin {
 
     initI18n(this.manifest.dir!)
     chatStore.inputPlaceholder.set(t.chat.inputPlaceholder)
+
+    // Skills: initial scan for /skill: autocomplete, plus a rescan whenever the
+    // user switches vaults so project-level .agents/skills stay current. The
+    // agent loop re-discovers on disk per turn regardless of this cache.
+    void rescanSkills()
+    this.register(app.vault.on('change', () => { void rescanSkills() }))
 
     this.registerSettingTab(new ChatSettingTab(this.app, this))
 
