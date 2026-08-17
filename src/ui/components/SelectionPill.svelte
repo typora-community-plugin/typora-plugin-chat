@@ -1,6 +1,6 @@
 <script>
-  import { basename, truncateMiddle } from '../../utils/helpers'
-  import { format, t } from '../../i18n'
+  import { basename, truncateMiddle } from '@/utils/helpers'
+  import { format, t } from '@/i18n'
 
   let { selection, onClear } = $props()
 

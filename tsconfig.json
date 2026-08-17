@@ -6,6 +6,11 @@
     ],
     "target": "ESNext",
     "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
     "module": "ESNext",
     "allowJs": true,
     "resolveJsonModule": true,

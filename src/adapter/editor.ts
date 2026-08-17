@@ -1,5 +1,5 @@
 import { app } from '@typora-community-plugin/core'
-import type { SelectionScope } from '../config/types'
+import type { SelectionScope } from '@/config/types'
 import { getCurrentFilePath } from './vault'
 
 

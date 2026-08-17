@@ -3,8 +3,8 @@ import type {
   PluginSettings,
   ToolDefinition,
   UnifiedResponse,
-} from '../config/types'
-import { backoffDelay, sleep } from '../utils/helpers'
+} from '@/config/types'
+import { backoffDelay, sleep } from '@/utils/helpers'
 import { sendAnthropic } from './anthropic-adapter'
 import { sendOpenAI } from './openai-adapter'
 import { sendOllama } from './ollama-adapter'

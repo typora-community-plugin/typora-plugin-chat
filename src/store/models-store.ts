@@ -1,7 +1,7 @@
 import { get, writable } from 'svelte/store'
-import { settings, settingsManager } from '../config/settings'
-import type { ApiProvider } from '../config/types'
-import { format, t } from '../i18n'
+import { settings, settingsManager } from '@/config/settings'
+import type { ApiProvider } from '@/config/types'
+import { format, t } from '@/i18n'
 
 
 export interface ModelRefreshResult {

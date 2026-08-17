@@ -1,5 +1,5 @@
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
-import type { ExecutorContext } from '../executor'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import type { ExecutorContext } from '@/agent/tools/executor'
 
 
 export const askUserSchema: ToolDefinition = {

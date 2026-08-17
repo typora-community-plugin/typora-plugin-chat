@@ -1,6 +1,6 @@
 import { app } from '@typora-community-plugin/core'
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
-import { findReplace, getActiveDocumentContent, insertText, readFile, relativePathToRoot, writeFile } from '../../../adapter/vault'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import { findReplace, getActiveDocumentContent, insertText, readFile, relativePathToRoot, writeFile } from '@/adapter/vault'
 
 
 export const editDocumentSchema: ToolDefinition = {

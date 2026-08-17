@@ -5,8 +5,8 @@ import type {
   StopReason,
   ToolDefinition,
   UnifiedResponse,
-} from '../config/types'
-import { httpError } from '../utils/helpers'
+} from '@/config/types'
+import { httpError } from '@/utils/helpers'
 
 
 function normalizeBaseUrl(baseUrl: string): string {

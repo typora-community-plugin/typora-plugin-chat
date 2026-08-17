@@ -1,6 +1,6 @@
 <script>
   import MessageBubble from './MessageBubble.svelte'
-  import { t } from '../../i18n'
+  import { t } from '@/i18n'
 
   let {
     messages = [],

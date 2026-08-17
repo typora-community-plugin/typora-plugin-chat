@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { t } from '../../i18n'
+  import { t } from '@/i18n'
   import SlashCommandSuggestions from './SlashCommandSuggestions.svelte'
   import SessionPicker from './SessionPicker.svelte'
-  import { computeSuggestions, shouldCompleteSubcommand, suggestionsShouldBeOpen } from '../../slash-commands'
-  import type { SessionSummary } from '../../store/session-store'
+  import { computeSuggestions, shouldCompleteSubcommand, suggestionsShouldBeOpen } from '@/slash-commands'
+  import type { SessionSummary } from '@/store/session-store'
 
   let {
     onSend,

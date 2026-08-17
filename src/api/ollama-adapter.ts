@@ -4,8 +4,8 @@ import type {
   PluginSettings,
   ToolDefinition,
   UnifiedResponse,
-} from '../config/types'
-import { extractReasoningContent, httpError } from '../utils/helpers'
+} from '@/config/types'
+import { extractReasoningContent, httpError } from '@/utils/helpers'
 
 
 function normalizeBaseUrl(baseUrl: string): string {

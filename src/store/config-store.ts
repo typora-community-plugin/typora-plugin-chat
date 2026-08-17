@@ -1,6 +1,6 @@
 import { derived } from 'svelte/store'
-import { settings, settingsManager } from '../config/settings'
-import type { PluginSettings } from '../config/types'
+import { settings, settingsManager } from '@/config/settings'
+import type { PluginSettings } from '@/config/types'
 
 
 /**

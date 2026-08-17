@@ -10,7 +10,7 @@
     selection,
     askUserQuestion,
     inputPlaceholder,
-  } from '../store/chat-store'
+  } from '@/store/chat-store'
   import {
     activeSessionId as sessionActiveSessionId,
     initSessionStore,
@@ -18,11 +18,11 @@
     saveActiveSession,
     sessionSummaries,
     switchSession,
-  } from '../store/session-store'
-  import { getAgentHistory, setAgentHistory } from '../agent/loop'
-  import { settings, settingsManager } from '../config/settings'
-  import { availableModels, refreshModels } from '../store/models-store'
-  import { skills as skillStore } from '../agent/skills/store'
+  } from '@/store/session-store'
+  import { getAgentHistory, setAgentHistory } from '@/agent/loop'
+  import { settings, settingsManager } from '@/config/settings'
+  import { availableModels, refreshModels } from '@/store/models-store'
+  import { skills as skillStore } from '@/agent/skills/store'
 
   let {
     onSend,

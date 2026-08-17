@@ -1,4 +1,4 @@
-import type { ToolSummary } from '../../config/types'
+import type { ToolSummary } from '@/config/types'
 import { summarizeReadDocument } from './editor/read-document'
 import { summarizeEditDocument } from './editor/edit-document'
 import { summarizeGetProperties } from './editor/get-properties'

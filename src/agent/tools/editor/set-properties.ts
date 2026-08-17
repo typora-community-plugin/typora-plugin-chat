@@ -1,6 +1,6 @@
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
-import { readDocument, relativePathToRoot, writeDocument } from '../../../adapter/vault'
-import { parseFrontmatter, stringifyYamlScalar } from '../../../utils/helpers'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import { readDocument, relativePathToRoot, writeDocument } from '@/adapter/vault'
+import { parseFrontmatter, stringifyYamlScalar } from '@/utils/helpers'
 
 
 export const setPropertiesSchema: ToolDefinition = {

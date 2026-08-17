@@ -1,7 +1,7 @@
 import { app } from '@typora-community-plugin/core'
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
-import { listFiles, readFile, resolveVaultPath, relativePathToRoot } from '../../../adapter/vault'
-import { basename } from '../../../utils/helpers'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import { listFiles, readFile, resolveVaultPath, relativePathToRoot } from '@/adapter/vault'
+import { basename } from '@/utils/helpers'
 
 
 export const getBacklinksSchema: ToolDefinition = {

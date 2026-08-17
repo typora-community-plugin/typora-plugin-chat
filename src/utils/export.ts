@@ -1,7 +1,7 @@
 import { get } from 'svelte/store'
-import type { ChatMessage } from '../config/types'
-import { messages } from '../store/chat-store'
-import { format, t } from '../i18n'
+import type { ChatMessage } from '@/config/types'
+import { messages } from '@/store/chat-store'
+import { format, t } from '@/i18n'
 
 
 export function formatChatMarkdown(list: ChatMessage[]): string {

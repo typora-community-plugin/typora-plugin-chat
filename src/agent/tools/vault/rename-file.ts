@@ -1,5 +1,5 @@
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
-import { renameFile, relativePathToRoot } from '../../../adapter/vault'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import { renameFile, relativePathToRoot } from '@/adapter/vault'
 
 
 export const renameFileSchema: ToolDefinition = {

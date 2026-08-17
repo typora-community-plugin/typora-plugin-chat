@@ -1,5 +1,5 @@
-import type { AgentMode } from '../../config/types'
-import { settingsManager } from '../../config/settings'
+import type { AgentMode } from '@/config/types'
+import { settingsManager } from '@/config/settings'
 
 
 /**

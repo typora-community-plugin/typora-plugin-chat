@@ -1,11 +1,11 @@
 import { SettingTab } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
-import { settingsManager } from '../../config/settings'
-import { availableModels, modelRefreshMessage, refreshModels } from '../../store/models-store'
-import { globalSkillsDir, vaultSkillsDir } from '../../agent/skills/paths'
-import { rescanSkills } from '../../agent/skills/store'
-import type { ApiProvider, PluginSettings } from '../../config/types'
-import { t } from '../../i18n'
+import { settingsManager } from '@/config/settings'
+import { availableModels, modelRefreshMessage, refreshModels } from '@/store/models-store'
+import { globalSkillsDir, vaultSkillsDir } from '@/agent/skills/paths'
+import { rescanSkills } from '@/agent/skills/store'
+import type { ApiProvider, PluginSettings } from '@/config/types'
+import { t } from '@/i18n'
 
 
 function getProviders(): Array<{ value: ApiProvider; label: string }> {

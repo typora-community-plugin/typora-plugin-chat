@@ -1,7 +1,7 @@
 import { fs } from '@typora-community-plugin/core'
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
-import { discoverSkills, getSkill } from '../../skills/index'
-import { stripFrontmatter } from '../../skills/frontmatter'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import { discoverSkills, getSkill } from '@/agent/skills/index'
+import { stripFrontmatter } from '@/agent/skills/frontmatter'
 
 
 export const useSkillSchema: ToolDefinition = {

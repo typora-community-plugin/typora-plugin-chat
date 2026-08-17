@@ -1,5 +1,5 @@
 import { app, fs, path } from '@typora-community-plugin/core'
-import { isMarkdownFile } from '../utils/helpers'
+import { isMarkdownFile } from '@/utils/helpers'
 
 
 /**

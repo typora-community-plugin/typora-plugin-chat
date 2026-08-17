@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store'
-import type { AssistantMeta, ChatMessage, SelectionScope, ToolResult } from '../config/types'
-import { t } from '../i18n'
+import type { AssistantMeta, ChatMessage, SelectionScope, ToolResult } from '@/config/types'
+import { t } from '@/i18n'
 
 
 const HISTORY_KEY = 'typora-plugin-chat.history'

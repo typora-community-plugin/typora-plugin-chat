@@ -7,7 +7,7 @@
  */
 
 import { derived, get, writable } from 'svelte/store'
-import type { ApiMessage, ChatMessage } from '../config/types'
+import type { ApiMessage, ChatMessage } from '@/config/types'
 
 export interface ChatSession {
   id: string

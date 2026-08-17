@@ -1,7 +1,7 @@
 <script>
-  import { markdown } from '../global'
+  import { markdown } from '@/ui/global'
   import ToolCallDetail from './ToolCallDetail.svelte'
-  import { t } from '../../i18n'
+  import { t } from '@/i18n'
 
   let {
     message,

@@ -1,6 +1,6 @@
 import { app } from '@typora-community-plugin/core'
-import { listFiles } from '../adapter/vault'
-import { basename } from '../utils/helpers'
+import { listFiles } from '@/adapter/vault'
+import { basename } from '@/utils/helpers'
 
 
 /**

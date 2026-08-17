@@ -1,7 +1,7 @@
 <script>
-  import { summarizeToolInput } from '../../agent/tools/summary'
-  import { truncate } from '../../utils/helpers'
-  import { t } from '../../i18n'
+  import { summarizeToolInput } from '@/agent/tools/summary'
+  import { truncate } from '@/utils/helpers'
+  import { t } from '@/i18n'
 
   let { message } = $props()
 

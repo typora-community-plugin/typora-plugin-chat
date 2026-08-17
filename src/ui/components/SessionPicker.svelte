@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { t } from '../../i18n'
-  import type { SessionSummary } from '../../store/session-store'
+  import { t } from '@/i18n'
+  import type { SessionSummary } from '@/store/session-store'
 
   let {
     sessions,

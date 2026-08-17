@@ -1,4 +1,4 @@
-import { renderMarkdown } from '../utils/markdown-renderer'
+import { renderMarkdown } from '@/utils/markdown-renderer'
 
 
 interface MarkdownAction {

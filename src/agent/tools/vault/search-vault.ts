@@ -1,5 +1,5 @@
-import type { ToolDefinition, ToolResult, ToolSummary } from '../../../config/types'
-import { searchFiles } from '../../../adapter/vault'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import { searchFiles } from '@/adapter/vault'
 
 
 export const searchVaultSchema: ToolDefinition = {

@@ -17,6 +17,8 @@ export default defineConfig({
       // entry), so point vitest at a stub; tests/setup.ts overrides it via
       // `vi.mock(...)` factories.
       '@typora-community-plugin/core': fileURLToPath(new URL('./tests/mocks/typora-core.ts', import.meta.url)),
+      // `@/` maps to the `src/` root, matching tsconfig `paths`.
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
 })
