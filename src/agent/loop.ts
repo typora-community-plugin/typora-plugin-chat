@@ -11,6 +11,7 @@ import { toolDefinitions } from '../tools/registry'
 import { executeTool } from '../tools/executor'
 import { buildSystemPrompt } from './system-prompt'
 import { buildContextMessage } from './context'
+import { getCurrentFilePath } from '../adapter/vault'
 
 
 const MAX_HISTORY = 50
@@ -119,6 +120,7 @@ export async function executeAgentLoop(
           ? returnedId
           : toolUse.id ?? `${name}-${iterations}`
         const result = await executeTool(name, toolUse.input ?? {}, {
+          activeFile: getCurrentFilePath(),
           askUser: callbacks.onAskUser,
         })
         callbacks.onToolResult?.(toolCallId, name, result)

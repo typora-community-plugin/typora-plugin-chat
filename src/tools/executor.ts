@@ -1,5 +1,5 @@
 import type { ToolResult } from '../config/types'
-import type { ExecutorContext } from './system/ask-user'
+import { getCurrentFilePath } from '../adapter/vault'
 import { executeReadDocument, readDocumentSchema } from './editor/read-document'
 import { executeEditDocument, editDocumentSchema } from './editor/edit-document'
 import { executeGetProperties, getPropertiesSchema } from './editor/get-properties'
@@ -16,7 +16,10 @@ import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './system/ge
 import { executeAskUser, askUserSchema } from './system/ask-user'
 
 
-export type { ExecutorContext }
+export interface ExecutorContext {
+  activeFile?: string | null
+  askUser?: (question: string) => Promise<string>
+}
 
 /** All 14 tool schemas — re-exported for registry.ts */
 export const allToolSchemas = [
@@ -39,6 +42,15 @@ export const allToolSchemas = [
   askUserSchema,
 ] as const
 
+/** Tools whose `path` parameter is optional; when missing, fall back to the active file for summary display. */
+const OPTIONAL_PATH_TOOLS = new Set([
+  'read_document',
+  'edit_document',
+  'get_properties',
+  'set_properties',
+  'get_backlinks',
+])
+
 /**
  * Execute a tool by name against Typora's vault/editor APIs.
  * All executors return a `ToolResult`; they never throw.
@@ -47,6 +59,22 @@ export async function executeTool(
   name: string,
   input: Record<string, unknown>,
   context: ExecutorContext = {},
+): Promise<ToolResult> {
+  const result = await runTool(name, input, context)
+  if (OPTIONAL_PATH_TOOLS.has(name)) {
+    const path = input.path
+    if (!(typeof path === 'string' && path)) {
+      const activeFile = context.activeFile ?? getCurrentFilePath()
+      if (activeFile) input.path = activeFile
+    }
+  }
+  return result
+}
+
+async function runTool(
+  name: string,
+  input: Record<string, unknown>,
+  context: ExecutorContext,
 ): Promise<ToolResult> {
   switch (name) {
     // Editor tools
