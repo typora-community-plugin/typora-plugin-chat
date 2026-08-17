@@ -5,6 +5,9 @@
 
 export type ApiProvider = 'anthropic' | 'openai' | 'ollama' | 'custom'
 
+/** Agent write-permission mode. */
+export type AgentMode = 'read-only' | 'workspace-write'
+
 export type ChatMessageType = 'user' | 'assistant' | 'tool_call' | 'tool_result' | 'error' | 'thinking'
 
 export type ReplySpeedUnit = 'tokens' | 'chars'
@@ -98,6 +101,8 @@ export interface PluginSettings {
   baseUrl: string
   /** OpenAI adapter mode: `responses` (default) or `chat` fallback */
   openaiApiMode?: 'responses' | 'chat'
+  /** Agent write-permission mode: `read-only` hides/blocks file-mutating tools. */
+  mode?: AgentMode
 }
 
 /** Conversation format used by provider adapters */

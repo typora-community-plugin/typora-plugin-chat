@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { executeTool } from '../../src/tools/executor'
+import { executeTool } from '../../src/agent/tools/executor'
+import { settingsManager } from '../../src/config/settings'
 import { mockFs } from '../setup'
 
 
 describe('tool executor', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.mocked(mockFs.readText).mockReset()
     vi.mocked(mockFs.writeText).mockReset()
     vi.mocked(mockFs.exists).mockReset()
     vi.mocked(mockFs.readText).mockResolvedValue('# Hello\n\nworld')
     vi.mocked(mockFs.exists).mockResolvedValue(true)
+    await settingsManager.save({ mode: 'workspace-write' })
   })
 
   it('read_document reads a vault file', async () => {
@@ -65,5 +67,38 @@ describe('tool executor', () => {
 
     expect(result.isError).toBe(true)
     expect(result.content).toContain('does not exist')
+  })
+
+  describe('read-only mode', () => {
+    beforeEach(async () => {
+      await settingsManager.save({ mode: 'read-only' })
+    })
+
+    it('blocks edit_document without touching the file system', async () => {
+      const result = await executeTool('edit_document', {
+        path: 'notes/a.md',
+        operation: 'replace_all',
+        content: 'x',
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content).toContain('Read Only')
+      expect(mockFs.writeText).not.toHaveBeenCalled()
+    })
+
+    it('blocks create_file', async () => {
+      const result = await executeTool('create_file', { path: 'notes/new.md', content: 'x' })
+
+      expect(result.isError).toBe(true)
+      expect(result.content).toContain('Read Only')
+      expect(mockFs.writeText).not.toHaveBeenCalled()
+    })
+
+    it('still allows read tools', async () => {
+      const result = await executeTool('read_document', { path: 'notes/a.md' })
+
+      expect(result.isError).toBeFalsy()
+      expect(result.content).toBe('# Hello\n\nworld')
+    })
   })
 })

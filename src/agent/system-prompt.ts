@@ -5,8 +5,11 @@
  * identical across requests — this is what makes provider KV-cache
  * prefix matching effective.
  */
-export function buildSystemPrompt(skillsCatalog = ''): string {
+export function buildSystemPrompt(skillsCatalog = '', mode: 'read-only' | 'workspace-write' = 'workspace-write'): string {
   const skillsSection = skillsCatalog ? `\n\n${skillsCatalog}` : ''
+  const modeLine = mode === 'read-only'
+    ? '\n- The current access mode is READ ONLY: do not modify any file; only read tools are available.'
+    : ''
   return `You are Typora Chat, an AI assistant embedded in the Typora editor with direct access to the user's vault.
 
 ## Core rules
@@ -17,7 +20,7 @@ export function buildSystemPrompt(skillsCatalog = ''): string {
 - Do not add an H1 heading to documents unless asked.
 - If you create a new file, give it a meaningful name (never "Untitled").
 - Be proactive: execute the tools needed to complete the task instead of asking permission first. Use ask_user only when a decision truly needs the user's input.
-- Keep answers conversational and concise. Do not wrap file names in backticks in prose unless quoting code.
+- Keep answers conversational and concise. Do not wrap file names in backticks in prose unless quoting code.${modeLine}
 
 ## Format
 - Use markdown for multi-paragraph answers.

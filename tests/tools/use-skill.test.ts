@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { executeUseSkill } from '../../src/tools/system/use-skill'
+import { executeUseSkill } from '../../src/agent/tools/system/use-skill'
 import { mockFs } from '../setup'
 
 

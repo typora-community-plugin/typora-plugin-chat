@@ -1,5 +1,6 @@
 import type { ToolResult } from '../../config/types'
 import { getCurrentFilePath } from '../../adapter/vault'
+import { currentAgentMode, isWriteTool } from './permissions'
 import { executeReadDocument, readDocumentSchema } from './editor/read-document'
 import { executeEditDocument, editDocumentSchema } from './editor/edit-document'
 import { executeGetProperties, getPropertiesSchema } from './editor/get-properties'
@@ -62,6 +63,14 @@ export async function executeTool(
   input: Record<string, unknown>,
   context: ExecutorContext = {},
 ): Promise<ToolResult> {
+  // Defense in depth: even if a write tool reaches the executor (e.g. a model
+  // calling a stale tool id), block it in read-only mode.
+  if (isWriteTool(name) && currentAgentMode() === 'read-only') {
+    return {
+      content: `Blocked: ${name} requires write access (current mode is Read Only).`,
+      isError: true,
+    }
+  }
   const result = await runTool(name, input, context)
   if (OPTIONAL_PATH_TOOLS.has(name)) {
     const path = input.path

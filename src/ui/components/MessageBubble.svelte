@@ -86,7 +86,7 @@
     .typ-assistant-msg {
       align-self: flex-start;
       max-width: 92%;
-      padding: 8px 0;
+      padding: 0 0 16px;
       border-radius: 2px 12px 12px 12px;
       background-color: var(--bg-color, #fff);
       color: var(--text-color, rgb(var(--typ-text-color)));

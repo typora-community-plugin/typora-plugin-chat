@@ -9,6 +9,7 @@ import { settingsManager } from '../config/settings'
 import { sendMessage } from '../api/client'
 import { toolDefinitions } from './tools/registry'
 import { executeTool } from './tools/executor'
+import { currentAgentMode, isWriteTool } from './tools/permissions'
 import { buildSystemPrompt } from './system-prompt'
 import { buildContextMessage } from './context'
 import { getCurrentFilePath } from '../adapter/vault'
@@ -64,8 +65,12 @@ export async function executeAgentLoop(
   } catch {
     skillsCatalog = ''
   }
-  const systemMessage: ApiMessage = { role: 'system', content: buildSystemPrompt(skillsCatalog) }
+  const systemMessage: ApiMessage = { role: 'system', content: buildSystemPrompt(skillsCatalog, currentAgentMode()) }
   const contextMessage: ApiMessage = { role: 'user', content: await buildContextMessage() }
+  // In read-only mode the write tools are not offered to the model at all.
+  const allowedTools = currentAgentMode() === 'read-only'
+    ? toolDefinitions.filter((tool) => !isWriteTool(tool.name))
+    : toolDefinitions
   const conversation: ApiMessage[] = [
     ...trimHistory(history),
     { role: 'user', content: userMessage },
@@ -84,7 +89,7 @@ export async function executeAgentLoop(
     let response: UnifiedResponse
     const requestStartedAt = performance.now()
     try {
-      response = await sendMessage(settings, [systemMessage, contextMessage, ...conversation], toolDefinitions)
+      response = await sendMessage(settings, [systemMessage, contextMessage, ...conversation], allowedTools)
       apiDurationMs += performance.now() - requestStartedAt
     } catch (error) {
       callbacks.onThinkingChange?.(false)

@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   maxIterations: 20,
   baseUrl: 'http://localhost:11431/v1',
   openaiApiMode: 'responses',
+  mode: 'workspace-write',
 }
 
 const SETTINGS_KEY = 'typora-plugin-chat.settings'

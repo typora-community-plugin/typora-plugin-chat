@@ -101,6 +101,8 @@
     onSwitchSession={handleSwitchSession}
     onModelChange={(model) => settingsManager.save({ model })}
     onModelRefresh={() => refreshModels()}
+    mode={$settings.mode ?? 'workspace-write'}
+    onModeChange={(mode) => settingsManager.save({ mode })}
     onSend={handleMainSend}
     onStop={onStop}
   />

@@ -1,24 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ApiMessage, ContentBlock, UnifiedResponse } from '../../src/config/types'
+import type { ApiMessage, ContentBlock, ToolDefinition, UnifiedResponse } from '../../src/config/types'
 
 vi.mock('../../src/api/client', () => ({
   sendMessage: vi.fn(),
 }))
 
-vi.mock('../../src/tools/executor', () => ({
+vi.mock('../../src/agent/tools/executor', () => ({
   executeTool: vi.fn(),
-  allToolSchemas: [],
+  allToolSchemas: [
+    { name: 'read_document', description: 'Read a document.', parameters: { type: 'object', properties: {} } },
+    { name: 'edit_document', description: 'Edit a document.', parameters: { type: 'object', properties: {} } },
+  ],
+}))
+
+const settingsState = vi.hoisted(() => ({
+  value: {
+    provider: 'ollama',
+    apiKey: '',
+    model: 'test-model',
+    maxIterations: 20,
+    baseUrl: 'http://localhost/v1',
+  },
 }))
 
 vi.mock('../../src/config/settings', () => ({
   settingsManager: {
-    get: () => ({
-      provider: 'ollama',
-      apiKey: '',
-      model: 'test-model',
-      maxIterations: 20,
-      baseUrl: 'http://localhost/v1',
-    }),
+    get: () => settingsState.value,
   },
 }))
 
@@ -27,7 +34,7 @@ vi.mock('../../src/agent/context', () => ({
 }))
 
 import { sendMessage } from '../../src/api/client'
-import { executeTool } from '../../src/tools/executor'
+import { executeTool } from '../../src/agent/tools/executor'
 import { abortAgentLoop, executeAgentLoop, resetAgentHistory } from '../../src/agent/loop'
 
 
@@ -49,6 +56,13 @@ describe('agent loop', () => {
     vi.mocked(executeTool).mockReset()
     vi.mocked(executeTool).mockResolvedValue({ content: 'tool result' })
     resetAgentHistory()
+    settingsState.value = {
+      provider: 'ollama',
+      apiKey: '',
+      model: 'test-model',
+      maxIterations: 20,
+      baseUrl: 'http://localhost/v1',
+    }
   })
 
   it('completes a single turn on end_turn', async () => {
@@ -75,7 +89,7 @@ describe('agent loop', () => {
 
     expect(result.iterations).toBe(2)
     expect(onToolCall).toHaveBeenCalledWith('read_document', {})
-    expect(executeTool).toHaveBeenCalledWith('read_document', {}, { askUser: undefined })
+    expect(executeTool).toHaveBeenCalledWith('read_document', {}, expect.objectContaining({ askUser: undefined }))
     expect(onToolResult).toHaveBeenCalledWith('ui-tool-call-1', 'read_document', { content: 'tool result' })
     expect(result.text).toBe('Done.')
   })
@@ -131,5 +145,24 @@ describe('agent loop', () => {
     const blocks = assistantMsg!.content as ContentBlock[]
     expect(blocks.some(b => b.type === 'thinking')).toBe(false)
     expect(blocks.some(b => b.type === 'tool_use')).toBe(true)
+  })
+
+  it('omits write tools from the API tool list in read-only mode', async () => {
+    settingsState.value = { ...settingsState.value, mode: 'read-only' }
+    vi.mocked(sendMessage).mockResolvedValue(textResponse('Done.'))
+
+    await executeAgentLoop('hi')
+
+    const tools = vi.mocked(sendMessage).mock.calls[0][2] as ToolDefinition[]
+    expect(tools.map((t) => t.name)).toEqual(['read_document'])
+  })
+
+  it('keeps write tools in the API tool list in workspace-write mode', async () => {
+    vi.mocked(sendMessage).mockResolvedValue(textResponse('Done.'))
+
+    await executeAgentLoop('hi')
+
+    const tools = vi.mocked(sendMessage).mock.calls[0][2] as ToolDefinition[]
+    expect(tools.map((t) => t.name).sort()).toEqual(['edit_document', 'read_document'])
   })
 })

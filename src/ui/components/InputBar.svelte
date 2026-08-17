@@ -19,6 +19,8 @@
     sessions = [],
     activeSessionId = null,
     onSwitchSession = null,
+    mode = 'workspace-write',
+    onModeChange = null,
   }: {
     onSend: (text: string) => void
     onStop: () => void
@@ -33,6 +35,8 @@
     sessions?: SessionSummary[]
     activeSessionId?: string | null
     onSwitchSession?: ((id: string) => void) | null
+    mode?: 'read-only' | 'workspace-write'
+    onModeChange?: ((mode: 'read-only' | 'workspace-write') => void) | null
   } = $props()
 
   let value = $state('')
@@ -194,6 +198,10 @@
     onModelChange?.((e.currentTarget as HTMLSelectElement).value)
   }
 
+  function handleModeChange(e: Event) {
+    onModeChange?.((e.currentTarget as HTMLSelectElement).value as 'read-only' | 'workspace-write')
+  }
+
   function handleModelClick() {
     onModelRefresh?.()
   }
@@ -227,6 +235,17 @@
     ></textarea>
 
     <div class="typ-input-actions">
+      <select
+        class="typ-input-mode"
+        value={mode}
+        onchange={handleModeChange}
+        title={t.chat.modeTitle}
+        disabled={!enabled}
+      >
+        <option value="read-only">{t.chat.modeReadOnly}</option>
+        <option value="workspace-write">{t.chat.modeWorkspaceWrite}</option>
+      </select>
+
       <select
         class="typ-input-model"
         value={model}
@@ -315,7 +334,8 @@
       padding: 2px 10px 8px;
     }
 
-    .typ-input-model {
+    .typ-input-model,
+    .typ-input-mode {
       max-width: 150px;
       padding: 2px 6px 2px 8px;
       border: 1px solid rgb(var(--typ-border-color));
