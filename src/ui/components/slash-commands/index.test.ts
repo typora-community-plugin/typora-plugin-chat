@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeSuggestions, MAX_SUGGESTIONS, suggestionsShouldBeOpen } from './slash-commands'
+import { computeSuggestions, MAX_SUGGESTIONS, suggestionsShouldBeOpen } from './index'
 
 const SKILLS = ['alpha', 'beta', 'gamma', 'delta-one']
 
