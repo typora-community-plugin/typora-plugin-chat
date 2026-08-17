@@ -1,6 +1,6 @@
 import { app } from '@typora-community-plugin/core'
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { findReplace, getActiveDocumentContent, insertText, readFile, writeFile } from '../../adapter/vault'
+import { findReplace, getActiveDocumentContent, insertText, readFile, relativePathToRoot, writeFile } from '../../adapter/vault'
 
 
 export const editDocumentSchema: ToolDefinition = {
@@ -49,7 +49,7 @@ function findInText(text: string, find: string): string | null {
 
 export const summarizeEditDocument: ToolSummary = (input) => {
   const parts: string[] = []
-  if (typeof input.path === 'string' && input.path) parts.push(input.path)
+  if (typeof input.path === 'string' && input.path) parts.push(relativePathToRoot(input.path))
   return parts.length ? parts.join(', ') : '(no parameters)'
 }
 

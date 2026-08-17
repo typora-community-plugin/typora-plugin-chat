@@ -1,6 +1,6 @@
 import { app } from '@typora-community-plugin/core'
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { listFiles, readFile, resolveVaultPath } from '../../adapter/vault'
+import { listFiles, readFile, resolveVaultPath, relativePathToRoot } from '../../adapter/vault'
 import { basename } from '../../utils/helpers'
 
 
@@ -22,7 +22,7 @@ function escapeRegExp(text: string): string {
 
 export const summarizeGetBacklinks: ToolSummary = (input) => {
   const path = input.path
-  return typeof path === 'string' && path ? path : '(active document)'
+  return typeof path === 'string' && path ? relativePathToRoot(path) : '(active document)'
 }
 
 export async function executeGetBacklinks(input: Record<string, unknown>): Promise<ToolResult> {

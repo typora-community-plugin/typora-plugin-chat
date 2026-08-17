@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { deleteFile } from '../../adapter/vault'
+import { deleteFile, relativePathToRoot } from '../../adapter/vault'
 
 
 export const deleteFileSchema: ToolDefinition = {
@@ -16,7 +16,7 @@ export const deleteFileSchema: ToolDefinition = {
 
 export const summarizeDeleteFile: ToolSummary = (input) => {
   const path = input.path
-  return typeof path === 'string' && path ? path : '(no path)'
+  return typeof path === 'string' && path ? relativePathToRoot(path) : '(no path)'
 }
 
 export async function executeDeleteFile(input: Record<string, unknown>): Promise<ToolResult> {

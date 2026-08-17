@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { renameFile } from '../../adapter/vault'
+import { renameFile, relativePathToRoot } from '../../adapter/vault'
 
 
 export const renameFileSchema: ToolDefinition = {
@@ -19,8 +19,8 @@ export const summarizeRenameFile: ToolSummary = (input) => {
   const path = input.path
   const newPath = input.new_path
   const parts: string[] = []
-  if (typeof path === 'string' && path) parts.push(path)
-  if (typeof newPath === 'string' && newPath) parts.push(newPath)
+  if (typeof path === 'string' && path) parts.push(relativePathToRoot(path))
+  if (typeof newPath === 'string' && newPath) parts.push(relativePathToRoot(newPath))
   return parts.length ? parts.join(' → ') : '(no parameters)'
 }
 

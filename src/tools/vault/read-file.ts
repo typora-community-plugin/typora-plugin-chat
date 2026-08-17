@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { readFile } from '../../adapter/vault'
+import { readFile, relativePathToRoot } from '../../adapter/vault'
 
 
 export const readFileSchema: ToolDefinition = {
@@ -16,7 +16,7 @@ export const readFileSchema: ToolDefinition = {
 
 export const summarizeReadFile: ToolSummary = (input) => {
   const path = input.path
-  return typeof path === 'string' && path ? path : '(no path)'
+  return typeof path === 'string' && path ? relativePathToRoot(path) : '(no path)'
 }
 
 export async function executeReadFile(input: Record<string, unknown>): Promise<ToolResult> {

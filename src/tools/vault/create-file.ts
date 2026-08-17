@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { createFile } from '../../adapter/vault'
+import { createFile, relativePathToRoot } from '../../adapter/vault'
 
 
 export const createFileSchema: ToolDefinition = {
@@ -17,7 +17,7 @@ export const createFileSchema: ToolDefinition = {
 
 export const summarizeCreateFile: ToolSummary = (input) => {
   const path = input.path
-  return typeof path === 'string' && path ? path : '(no path)'
+  return typeof path === 'string' && path ? relativePathToRoot(path) : '(no path)'
 }
 
 export async function executeCreateFile(input: Record<string, unknown>): Promise<ToolResult> {

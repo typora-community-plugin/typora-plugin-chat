@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { readDocument, writeDocument } from '../../adapter/vault'
+import { readDocument, relativePathToRoot, writeDocument } from '../../adapter/vault'
 import { parseFrontmatter, stringifyYamlScalar } from '../../utils/helpers'
 
 
@@ -42,7 +42,7 @@ function mergeFrontmatter(markdown: string, properties: Record<string, unknown>)
 
 export const summarizeSetProperties: ToolSummary = (input) => {
   const parts: string[] = []
-  if (typeof input.path === 'string' && input.path) parts.push(input.path)
+  if (typeof input.path === 'string' && input.path) parts.push(relativePathToRoot(input.path))
   return parts.length ? parts.join(', ') : '(no parameters)'
 }
 

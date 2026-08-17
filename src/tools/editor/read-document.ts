@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '../../config/types'
-import { getActiveDocumentContent, readFile } from '../../adapter/vault'
+import { getActiveDocumentContent, readFile, relativePathToRoot } from '../../adapter/vault'
 
 
 export const readDocumentSchema: ToolDefinition = {
@@ -16,7 +16,7 @@ export const readDocumentSchema: ToolDefinition = {
 
 export const summarizeReadDocument: ToolSummary = (input) => {
   const path = input.path
-  return typeof path === 'string' && path ? path : '(active document)'
+  return typeof path === 'string' && path ? relativePathToRoot(path) : '(active document)'
 }
 
 export async function executeReadDocument(input: Record<string, unknown>): Promise<ToolResult> {

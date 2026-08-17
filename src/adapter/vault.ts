@@ -11,6 +11,20 @@ export function vaultRoot(): string {
   return app.vault.path
 }
 
+/** Normalize any path to be relative to the vault root. */
+export function relativePathToRoot(absOrRel: string): string {
+  const root = app.vault.path
+  if (path.isAbsolute(absOrRel) && absOrRel.startsWith(root)) {
+    let rel = absOrRel.slice(root.length)
+    // strip leading separator(s)
+    while (rel.startsWith('/') || rel.startsWith('\\')) {
+      rel = rel.slice(1)
+    }
+    return rel || '.'
+  }
+  return absOrRel
+}
+
 export function resolveVaultPath(vaultPath: string): string {
   if (path.isAbsolute(vaultPath)) return vaultPath
   return path.join(app.vault.path, vaultPath)
