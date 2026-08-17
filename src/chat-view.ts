@@ -65,7 +65,6 @@ export class ChatView extends WorkspaceView {
       props: {
         onSend: (text: string) => this.handleSend(text),
         onStop: () => abortAgentLoop(),
-        onClear: () => this.clearConversation(),
         onNew: (rest: string) => {
           // Save the current conversation, then start a fresh session so the
           // previous transcript remains available through the /sessions picker.

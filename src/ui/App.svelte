@@ -1,5 +1,4 @@
 <script>
-  import Header from './components/Header.svelte'
   import Messages from './components/Messages.svelte'
   import SelectionPill from './components/SelectionPill.svelte'
   import InputBar from './components/InputBar.svelte'
@@ -28,7 +27,6 @@
   let {
     onSend,
     onStop,
-    onClear,
     onNew = null,
     onSkillInvoke = null,
   } = $props()
@@ -80,8 +78,6 @@
 </script>
 
 <div class="typ-chat-view">
-  <Header onClear={onClear} />
-
   <Messages messages={$messages} thinking={$thinking} />
 
   {#if $askUserQuestion}
