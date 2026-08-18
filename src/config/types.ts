@@ -62,8 +62,8 @@ export interface ToolDefinition {
   }
 }
 
-/** Builds a compact human-readable summary of a tool call's key parameters. */
-export type ToolSummary = (input: Record<string, unknown>) => string
+/** Builds a compact human-readable summary from a tool call's input and/or result. */
+export type ToolSummary = (input: Record<string, unknown>, result?: ToolResult) => string
 
 /** Unified content block returned by every provider adapter */
 export interface ContentBlock {

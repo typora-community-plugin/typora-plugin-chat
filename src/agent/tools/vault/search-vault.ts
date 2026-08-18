@@ -24,11 +24,15 @@ export const searchVaultSchema: ToolDefinition = {
   },
 }
 
-export const summarizeSearchVault: ToolSummary = (input) => {
-  const parts: string[] = []
-  if (typeof input.query === 'string' && input.query) parts.push(input.query)
-  if (typeof input.limit === 'number' && input.limit !== 20) parts.push(`[limit=${input.limit}]`)
-  return parts.length ? parts.join(' ') : '(no parameters)'
+export const summarizeSearchVault: ToolSummary = (input, result) => {
+  if (result?.isError) return 'search failed'
+  if (typeof result?.content === `string`) {
+    const m = result.content.match(/Found (\d+) file/)
+    if (m) return `found ${m[1]} file(s)`
+    if (/^No files found/.test(result.content)) return 'no matches'
+  }
+  const q = typeof input.query === `string` && input.query ? `"${input.query}"` : `(no query)`
+  return `search ${q}`
 }
 
 export async function executeSearchVault(input: Record<string, unknown>): Promise<ToolResult> {

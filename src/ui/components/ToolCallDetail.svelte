@@ -1,5 +1,5 @@
 <script>
-  import { summarizeToolInput } from '@/agent/tools/summary'
+  import { summarizeToolMessage } from '@/agent/tools/summary'
   import { truncate } from '@/utils/helpers'
   import { t } from '@/i18n'
 
@@ -10,7 +10,7 @@
     isCall ? 'loading' : (message.toolResult?.isError || message.isError ? 'error' : 'success')
   )
   const summary = $derived(
-    message.toolName ? summarizeToolInput(message.toolName, message.toolInput ?? {}) : ''
+    message.toolName ? summarizeToolMessage(message.toolName, message) : ''
   )
   const paramsJson = $derived(JSON.stringify(message.toolInput ?? {}, null, 2))
   const resultText = $derived(truncate(message.toolResult?.content ?? '', 2000))

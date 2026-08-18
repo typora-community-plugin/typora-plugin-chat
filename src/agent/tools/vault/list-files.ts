@@ -15,10 +15,14 @@ export const listFilesSchema: ToolDefinition = {
   },
 }
 
-export const summarizeListFiles: ToolSummary = (input) => {
-  const parts: string[] = []
-  if (typeof input.folder === 'string' && input.folder) parts.push(input.folder)
-  return parts.length ? parts.join(', ') : '(root)'
+export const summarizeListFiles: ToolSummary = (input, result) => {
+  const folder = typeof input.folder === 'string' && input.folder ? input.folder : '(root)'
+  if (!result || typeof result.content !== `string`) return folder
+  if (result.isError) return `${folder} — failed`
+  const m = result.content.match(/^(\d+) file/)
+  if (m) return `${folder}: ${m[1]} file(s)`
+  if (/^No files found/.test(result.content)) return `${folder}: empty`
+  return folder
 }
 
 export async function executeListFiles(input: Record<string, unknown>): Promise<ToolResult> {

@@ -14,9 +14,13 @@ export const readFileSchema: ToolDefinition = {
   },
 }
 
-export const summarizeReadFile: ToolSummary = (input) => {
+export const summarizeReadFile: ToolSummary = (input, result) => {
   const path = input.path
-  return typeof path === 'string' && path ? relativePathToRoot(path) : '(no path)'
+  const target = typeof path === 'string' && path ? relativePathToRoot(path) : '(no path)'
+  if (!result || typeof result.content !== `string` || !result.content.length) return target
+  if (result.isError) return `${target} — failed`
+  const n = result.content.split(`\n`).length
+  return `${target} (${n} lines)`
 }
 
 export async function executeReadFile(input: Record<string, unknown>): Promise<ToolResult> {

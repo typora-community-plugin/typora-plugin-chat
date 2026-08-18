@@ -20,9 +20,15 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-export const summarizeGetBacklinks: ToolSummary = (input) => {
+export const summarizeGetBacklinks: ToolSummary = (input, result) => {
   const path = input.path
-  return typeof path === 'string' && path ? relativePathToRoot(path) : '(active document)'
+  const target = typeof path === 'string' && path ? relativePathToRoot(path) : '(active document)'
+  if (!result || typeof result.content !== `string`) return target
+  if (result.isError) return `${target} — failed`
+  const m = result.content.match(/^(\d+) backlink/)
+  if (m) return `${target}: ${m[1]} backlink(s)`
+  if (/^No backlinks found/.test(result.content)) return `${target}: no backlinks`
+  return target
 }
 
 export async function executeGetBacklinks(input: Record<string, unknown>): Promise<ToolResult> {

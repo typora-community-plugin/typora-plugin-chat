@@ -1,4 +1,4 @@
-import type { ToolSummary } from '@/config/types'
+import type { ToolResult, ToolSummary } from '@/config/types'
 import { summarizeReadDocument } from './editor/read-document'
 import { summarizeEditDocument } from './editor/edit-document'
 import { summarizeGetProperties } from './editor/get-properties'
@@ -38,7 +38,11 @@ export const toolSummaries: Record<string, ToolSummary> = {
   ask_user: summarizeAskUser,
 }
 
-export function summarizeToolInput(name: string, input: Record<string, unknown>): string {
+export function summarizeToolMessage(
+  name: string,
+  message: { toolInput?: Record<string, unknown>; toolResult?: ToolResult },
+): string {
   const summarize = toolSummaries[name]
-  return summarize ? summarize(input) : ''
+  if (!summarize) return ''
+  return summarize(message.toolInput ?? {}, message.toolResult)
 }
