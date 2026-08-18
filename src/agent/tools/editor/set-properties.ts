@@ -61,6 +61,8 @@ export async function executeSetProperties(input: Record<string, unknown>, turnI
       op: 'set_properties',
       before: { kind: 'content', content: markdown, wasActiveDoc: !targetPath },
       turnId: turnId ?? '',
+      toolName: 'set_properties',
+      toolInput: input,
     })
     const updated = mergeFrontmatter(markdown, properties)
     await writeDocument(targetPath, updated)

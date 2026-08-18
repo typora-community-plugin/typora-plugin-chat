@@ -19,7 +19,7 @@
     sessionSummaries,
     switchSession,
   } from '@/store/session-store'
-  import { getAgentHistory, popLastAgentTurn, setAgentHistory } from '@/agent/loop'
+  import { getAgentHistory, popLastAgentTurn, setAgentHistory } from '@/agent/history'
   import { refreshContextUsage } from '@/store/context-usage-store'
   import { settings, settingsManager } from '@/config/settings'
   import { writable } from 'svelte/store'
@@ -28,6 +28,7 @@
 
   import { undoStore } from '@/store/undo-store'
   import { executeUndo } from '@/agent/tools/system/undo'
+  import { replayRedoEntry } from '@/agent/tools/system/redo'
 
   import { t } from '@/i18n'
 
@@ -71,9 +72,10 @@
     if (current && ($messages.length > 0 || getAgentHistory().length > 0)) {
       saveActiveSession(chatStore.getMessages(), getAgentHistory())
     }
-    // /undo is session-scoped: dropping the stack here guarantees switching to
-    // another session cannot undo mutations made in a different one.
+    // /undo and /redo are session-scoped: dropping both stacks guarantees
+    // switching sessions cannot reach across boundaries.
     undoStore.clear()
+    undoStore.clearRedo()
     const target = switchSession(id)
     if (target) {
       chatStore.replaceMessages(target.messages)
@@ -105,9 +107,33 @@
       } else {
         // Remove the rolled-back turn from both stores, keeping their removals
         // in sync so a later /sessions save or reload stays consistent.
-        const userText = chatStore.popLastUserTurn() ?? popLastAgentTurn()
+        // Capture removed chat messages for potential /redo re-insertion.
+        const { userText, removedMessages } = chatStore.popLastUserTurnWithMessages()
+        popLastAgentTurn()
+        undoStore.setRedoChatMessages(removedMessages)
         if (userText) inputPlaceholder.set(userText)
       }
+      return
+    }
+    // /redo — restore the most recently undone turn: re-insert its messages into
+    // the transcript + agent history and re-execute write-tool calls.
+    if (/^\/redo\s*$/.test(text)) {
+      const entry = undoStore.popRedo()
+      if (!entry) {
+        chatStore.addError('没有可重做的操作')
+        return
+      }
+      // Re-insert the removed chat messages so the turn re-appears in the UI.
+      if (entry.chatMessages && entry.chatMessages.length > 0) {
+        chatStore.appendMessages(entry.chatMessages)
+      }
+      const result = await replayRedoEntry(entry)
+      if (result.isError) {
+        // Surface failures as a redo tool-call block instead of an error bubble.
+        const callId = chatStore.addToolCall('redo', {})
+        chatStore.updateToolResult(callId, result, true)
+      }
+      // On success: no transcript entry — the re-inserted turn already shows it.
       return
     }
     // /skill:<name> [rest] — explicit, user-initiated skill invocation.

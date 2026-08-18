@@ -1,7 +1,7 @@
 import { get, writable } from 'svelte/store'
 import type { AgentMode, ApiMessage, ToolDefinition } from '@/config/types'
 import { settings, settingsManager } from '@/config/settings'
-import { getAgentHistory } from '@/agent/loop'
+import { getAgentHistory } from '@/agent/history'
 import { buildContextMessage } from '@/agent/context'
 import { buildSkillsCatalog, discoverSkills } from '@/agent/skills/index'
 import { currentAgentMode } from '@/agent/tools/permissions'

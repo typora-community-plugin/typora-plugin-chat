@@ -206,6 +206,36 @@ export const chatStore = {
     return typeof userMsg.text === 'string' && userMsg.text ? userMsg.text : null
   },
 
+  /**
+   * Drop the last user turn and return BOTH the removed messages (for redo)
+   * and the user text. Used by `/undo` to capture what was removed so `/redo`
+   * can re-insert it into the transcript.
+   */
+  popLastUserTurnWithMessages(): { userText: string | null; removedMessages: ChatMessage[] } {
+    const msgs = get(messages)
+    let i = -1
+    for (let k = msgs.length - 1; k >= 0; k--) {
+      if (msgs[k]!.type === 'user') { i = k; break }
+    }
+    if (i < 0) return { userText: null, removedMessages: [] }
+    const userMsg = msgs[i]!
+    const removedMessages = msgs.slice(i)
+    messages.set(msgs.slice(0, i))
+    persist()
+    return {
+      userText: typeof userMsg.text === 'string' && userMsg.text ? userMsg.text : null,
+      removedMessages,
+    }
+  },
+
+  /** Re-append previously removed chat messages (used by /redo). */
+  appendMessages(msgs: ChatMessage[]): void {
+    if (!msgs.length) return
+    const current = get(messages)
+    messages.set([...current, ...msgs])
+    persist()
+  },
+
   clearSelection() {
     selection.set(null)
   },

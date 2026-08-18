@@ -4,7 +4,8 @@ import App from './ui/App.svelte'
 import { chatStore } from './store/chat-store'
 import { refreshContextUsage, setApiInputTokens } from './store/context-usage-store'
 import { settingsManager } from './config/settings'
-import { abortAgentLoop, executeAgentLoop, getAgentHistory, resetAgentHistory, setAgentHistory } from './agent/loop'
+import { abortAgentLoop, executeAgentLoop } from './agent/loop'
+import { getAgentHistory, resetAgentHistory, setAgentHistory } from './agent/history'
 import { createSession, getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
 import { undoStore } from './store/undo-store'
 import { fs } from '@typora-community-plugin/core'
@@ -74,9 +75,10 @@ export class ChatView extends WorkspaceView {
           if (current && (chatStore.getMessages().length > 0 || getAgentHistory().length > 0)) {
             saveActiveSession(chatStore.getMessages(), getAgentHistory())
           }
-          // /undo is session-scoped: dropping the stack here guarantees a new
-          // session cannot undo mutations made in the previous one.
+          // /undo and /redo are session-scoped: dropping both stacks here
+          // guarantees a new session cannot reach across boundaries.
           undoStore.clear()
+          undoStore.clearRedo()
           createSession()
           chatStore.replaceMessages([])
           chatStore.clearSelection()
@@ -104,6 +106,7 @@ export class ChatView extends WorkspaceView {
     chatStore.clearMessages()
     chatStore.clearSelection()
     undoStore.clear()
+    undoStore.clearRedo()
     void refreshContextUsage({ refreshStatic: true })
     const current = getActiveSession()
     if (current) {

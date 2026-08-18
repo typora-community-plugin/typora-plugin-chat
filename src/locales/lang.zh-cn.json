@@ -46,7 +46,10 @@
     "undoCommand": "/undo — 撤销上一轮所有文件修改",
     "undoEmpty": "没有可撤销的操作",
     "undoSuccess": "已撤销 {op}：{file}",
-    "undoBlockedReadOnly": "Read Only 模式下无法撤销"
+    "undoBlockedReadOnly": "Read Only 模式下无法撤销",
+    "redoCommand": "/redo — 重做上一次撤销的轮次",
+    "redoEmpty": "没有可重做的操作",
+    "redoBlockedReadOnly": "Read Only 模式下无法重做"
   },
   "settings": {
     "title": "Chat",

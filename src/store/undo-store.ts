@@ -1,15 +1,22 @@
 /**
- * In-memory undo stack for the `/undo` slash command.
+ * In-memory undo/redo stacks for the `/undo` and `/redo` slash commands.
  *
- * Scope: current session only. The stack is intentionally NOT persisted and is
- * cleared on session switch / new session / conversation clear / view close so
- * that an undo never reaches across a session boundary (the plan's hard rule).
+ * Scope: current session only. The stacks are intentionally NOT persisted and
+ * are cleared on session switch / new session / conversation clear / view close
+ * so that an undo or redo never reaches across a session boundary.
  *
- * Each entry records the before-image of exactly one write-tool call, tagged
- * with the `turnId` of the agent turn that made it. `/undo` pops ALL entries of
- * the most recent turn and reverses them in chronological order (oldest first),
- * so the whole previous turn's file mutations are rolled back together.
+ * Undo: each entry records the before-image of exactly one write-tool call,
+ * tagged with the `turnId` of the agent turn that made it. `/undo` pops ALL
+ * entries of the most recent turn and reverses them in chronological order
+ * (oldest first), so the whole previous turn's file mutations are rolled back
+ * together. The popped data is captured into a RedoEntry for potential replay.
+ *
+ * Redo: each entry preserves the agent history slice that `/undo` removed, plus
+ * the original tool inputs. `/redo` pushes the slice back into agent history and
+ * re-executes every write-tool call so the file mutations are restored.
  */
+
+import type { ApiMessage, ChatMessage } from '@/config/types'
 
 export type UndoOp =
   | 'replace_all'
@@ -39,6 +46,29 @@ export interface UndoEntry {
   before: UndoSnapshot
   /** For rename entries only: the path the file moved to. */
   newFile?: string
+  /** The original tool name that produced this entry — used by /redo to re-execute. */
+  toolName?: string
+  /** The original tool input — used by /redo to re-execute with identical parameters. */
+  toolInput?: Record<string, unknown>
+}
+
+/** A single write-tool invocation captured for redo replay. */
+export interface RedoToolCall {
+  name: string
+  input: Record<string, unknown>
+}
+
+/** Captured data needed by `/redo` to restore a rolled-back turn. */
+export interface RedoEntry {
+  ts: number
+  /** The agent history messages that were removed by /undo (user + assistant + tool blocks). */
+  historySlice: ApiMessage[]
+  /** Original user message text for re-insertion into the chat transcript. */
+  userText: string | null
+  /** Write-tool calls to re-execute, in original order. */
+  toolCalls: RedoToolCall[]
+  /** The chat transcript messages that were removed from the UI by /undo (set post-hoc). */
+  chatMessages?: ChatMessage[]
 }
 
 /** Cap on stack depth so a very long session cannot exhaust memory. */
@@ -46,6 +76,8 @@ export const MAX_UNDO = 200
 
 class UndoStack {
   private entries: UndoEntry[] = []
+  /** Redo buffer: at most one entry (the most recent undo). */
+  private redoEntries: RedoEntry[] = []
 
   push(entry: Omit<UndoEntry, 'ts'>): void {
     this.entries.push({ ...entry, ts: Date.now() })
@@ -58,7 +90,7 @@ class UndoStack {
   /** Remove and return the most recent entry, or null when empty. */
   pop(): UndoEntry | null {
     if (this.entries.length === 0) return null
-    const last = this.entries[this.entries.length - 1]
+    const last = this.entries[this.entries.length - 1]!
     this.entries.pop()
     return last
   }
@@ -93,6 +125,34 @@ class UndoStack {
 
   get isEmpty(): boolean {
     return this.entries.length === 0
+  }
+
+  // ─── Redo stack ────────────────────────────────────────────────────────
+
+  /** Store the captured data from a completed /undo. Replaces any previous redo entry. */
+  pushRedo(entry: Omit<RedoEntry, 'ts'>): void {
+    this.redoEntries = [{ ...entry, ts: Date.now() }]
+  }
+
+  /** Supplement the most recent redo entry with chat transcript messages (set after UI removal). */
+  setRedoChatMessages(msgs: ChatMessage[]): void {
+    if (this.redoEntries.length > 0) {
+      this.redoEntries[0]!.chatMessages = msgs
+    }
+  }
+
+  /** Remove and return the stored redo entry, or null when none exists. */
+  popRedo(): RedoEntry | null {
+    if (this.redoEntries.length === 0) return null
+    return this.redoEntries.pop()!
+  }
+
+  clearRedo(): void {
+    this.redoEntries = []
+  }
+
+  get redoAvailable(): boolean {
+    return this.redoEntries.length > 0
   }
 }
 

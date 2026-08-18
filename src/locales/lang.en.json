@@ -46,7 +46,10 @@
     "undoCommand": "/undo — undo all file changes from the last turn",
     "undoEmpty": "Nothing to undo",
     "undoSuccess": "Undid {op}: {file}",
-    "undoBlockedReadOnly": "Cannot undo in Read Only mode"
+    "undoBlockedReadOnly": "Cannot undo in Read Only mode",
+    "redoCommand": "/redo — redo the last undone turn",
+    "redoEmpty": "Nothing to redo",
+    "redoBlockedReadOnly": "Cannot redo in Read Only mode"
   },
   "settings": {
     "title": "Chat",

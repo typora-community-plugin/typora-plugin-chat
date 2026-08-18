@@ -15,6 +15,7 @@ import { newCommand } from './new'
 import { sessionsCommand } from './sessions'
 import { skillCommand } from './skill'
 import { undoCommand } from './undo'
+import { redoCommand } from './redo'
 import type { SlashCommand } from './types'
 
 export interface SlashCommandOptions {
@@ -28,7 +29,7 @@ export interface SlashCommandOptions {
 export const MAX_SUGGESTIONS = 8
 
 /** All built-in slash commands, in display order. */
-export const SLASH_COMMANDS: readonly SlashCommand[] = [newCommand, sessionsCommand, skillCommand, undoCommand]
+export const SLASH_COMMANDS: readonly SlashCommand[] = [newCommand, sessionsCommand, skillCommand, undoCommand, redoCommand]
 
 /**
  * Returns the first token when it is a single slash token without a following

@@ -53,7 +53,7 @@ function findInText(text: string, find: string): string | null {
  * For the active document we read from the editor buffer (not disk), since that
  * is what `setMarkdown` will replace; for vault files we read from disk.
  */
-async function captureBefore(targetPath: string | undefined, operation: 'replace_all' | 'find_replace' | 'insert', turnId?: string): Promise<void> {
+async function captureBefore(targetPath: string | undefined, operation: 'replace_all' | 'find_replace' | 'insert', turnId?: string, toolInput?: Record<string, unknown>): Promise<void> {
   try {
     const before = await readTarget(targetPath)
     undoStore.push({
@@ -61,6 +61,8 @@ async function captureBefore(targetPath: string | undefined, operation: 'replace
       op: operation,
       before: { kind: 'content', content: before, wasActiveDoc: !targetPath },
       turnId: turnId ?? '',
+      toolName: 'edit_document',
+      toolInput,
     })
   } catch {
     // If the read fails (e.g. active doc has no content), we cannot offer a
@@ -86,7 +88,7 @@ export async function executeEditDocument(input: Record<string, unknown>, turnId
       if (typeof content !== 'string') {
         return { content: 'edit_document failed: content is required for replace_all', isError: true }
       }
-      await captureBefore(targetPath, 'replace_all', turnId)
+      await captureBefore(targetPath, 'replace_all', turnId, input)
       await writeTarget(targetPath, content)
       return { content: `Replaced entire document${targetPath ? ` ${targetPath}` : ''}.` }
     }
@@ -95,7 +97,7 @@ export async function executeEditDocument(input: Record<string, unknown>, turnId
       if (typeof find !== 'string' || typeof content !== 'string') {
         return { content: 'edit_document failed: find and content are required for find_replace', isError: true }
       }
-      await captureBefore(targetPath, 'find_replace', turnId)
+      await captureBefore(targetPath, 'find_replace', turnId, input)
       if (targetPath) {
         await findReplace(targetPath, find, content)
       } else {
@@ -113,7 +115,7 @@ export async function executeEditDocument(input: Record<string, unknown>, turnId
       if (typeof content !== 'string') {
         return { content: 'edit_document failed: content is required for insert', isError: true }
       }
-      await captureBefore(targetPath, 'insert', turnId)
+      await captureBefore(targetPath, 'insert', turnId, input)
       if (targetPath) {
         await insertText(targetPath, content, position)
       } else {

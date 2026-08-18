@@ -12,10 +12,11 @@
  */
 
 import { app } from '@typora-community-plugin/core'
-import type { ToolDefinition, ToolResult } from '@/config/types'
+import type { ToolDefinition, ToolResult, ApiMessage } from '@/config/types'
 import { deleteFile, writeFile } from '@/adapter/vault'
 import { currentAgentMode } from '../permissions'
-import { undoStore, type UndoEntry } from '@/store/undo-store'
+import { undoStore, type UndoEntry, type RedoToolCall } from '@/store/undo-store'
+import { getAgentHistory } from '@/agent/history'
 
 export const undoSchema: ToolDefinition = {
   name: 'undo',
@@ -93,6 +94,21 @@ async function reverseEntry(entry: UndoEntry): Promise<ToolResult> {
   }
 }
 
+/**
+ * Extract the last user turn's messages from agent history (everything from
+ * the last role='user' message to the end). Used by /undo to capture what will
+ * be removed, so /redo can re-insert it.
+ */
+function extractLastTurnHistory(history: ApiMessage[]): { slice: ApiMessage[]; userText: string | null } {
+  let i = history.length - 1
+  while (i >= 0 && history[i]!.role !== 'user') i--
+  if (i < 0) return { slice: [], userText: null }
+  const slice = history.slice(i)
+  const first = slice[0]!
+  const userText = typeof first.content === 'string' ? first.content : null
+  return { slice, userText }
+}
+
 export async function executeUndo(): Promise<ToolResult> {
   // Defense in depth: undo is a write-back, so it must respect the same mode
   // gate as every other mutating tool.
@@ -104,6 +120,19 @@ export async function executeUndo(): Promise<ToolResult> {
   if (!entries || entries.length === 0) {
     return { content: '没有可撤销的操作' }
   }
+
+  // Capture the agent history slice BEFORE it is removed by App.svelte's
+  // popLastAgentTurn(), so /redo can re-insert it later.
+  const currentHistory = getAgentHistory()
+  const { slice, userText } = extractLastTurnHistory(currentHistory)
+
+  // Collect original tool calls (name + input) from the undo entries for redo replay.
+  const toolCalls: RedoToolCall[] = entries
+    .filter((e): e is UndoEntry & { toolName: string; toolInput: Record<string, unknown> } => !!e.toolName && !!e.toolInput)
+    .map((e) => ({ name: e.toolName!, input: e.toolInput! }))
+
+  // Store redo data so /redo can restore this turn.
+  undoStore.pushRedo({ historySlice: slice, userText, toolCalls })
 
   // Reverse in chronological order (oldest first): the net effect is exactly
   // "the previous turn's mutations never happened". A single failure does not

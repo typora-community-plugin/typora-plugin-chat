@@ -30,7 +30,7 @@ export async function executeCreateFile(input: Record<string, unknown>, turnId?:
     // so undo = delete it again. If the path already exists, createFile will
     // throw and we skip the push — nothing was written to revert.
     if (!(await fileExists(targetPath))) {
-      undoStore.push({ file: targetPath, op: 'create', before: { kind: 'absent' }, turnId: turnId ?? '' })
+      undoStore.push({ file: targetPath, op: 'create', before: { kind: 'absent' }, turnId: turnId ?? '', toolName: 'create_file', toolInput: input })
     }
     await createFile(targetPath, content)
     return { content: `Created ${targetPath}.` }

@@ -46,7 +46,10 @@
     "undoCommand": "/undo — alle Dateänderungen des letzten Turns rückgängig machen",
     "undoEmpty": "Nichts zum Rückgängigmachen",
     "undoSuccess": "{op} rückgängig gemacht: {file}",
-    "undoBlockedReadOnly": "Rückgängig machen im Nur-Lese-Modus nicht möglich"
+    "undoBlockedReadOnly": "Rückgängig machen im Nur-Lese-Modus nicht möglich",
+    "redoCommand": "/redo — letzten Undo erneut ausführen",
+    "redoEmpty": "Nichts zum Wiederherstellen",
+    "redoBlockedReadOnly": "Wiederholen im Nur-Lese-Modus nicht möglich"
   },
   "settings": {
     "title": "Chat",

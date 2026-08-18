@@ -43,6 +43,8 @@ export async function executeRenameFile(input: Record<string, unknown>, turnId?:
         op: 'rename',
         before: { kind: 'content', content },
         turnId: turnId ?? '',
+        toolName: 'rename_file',
+        toolInput: input,
       })
     }
     await renameFile(targetPath, newPath)

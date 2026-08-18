@@ -27,7 +27,7 @@ export async function executeDeleteFile(input: Record<string, unknown>, turnId?:
     // Capture the file's full text before trashing it so /undo can write it back.
     if (await fileExists(targetPath)) {
       const content = await readFile(targetPath).catch(() => '')
-      undoStore.push({ file: targetPath, op: 'delete', before: { kind: 'content', content }, turnId: turnId ?? '' })
+      undoStore.push({ file: targetPath, op: 'delete', before: { kind: 'content', content }, turnId: turnId ?? '', toolName: 'delete_file', toolInput: input })
     }
     await deleteFile(targetPath)
     return { content: `Deleted ${targetPath}.` }
