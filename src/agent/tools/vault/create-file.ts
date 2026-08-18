@@ -1,5 +1,6 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
-import { createFile, relativePathToRoot } from '@/adapter/vault'
+import { createFile, fileExists, relativePathToRoot } from '@/adapter/vault'
+import { undoStore } from '@/store/undo-store'
 
 
 export const createFileSchema: ToolDefinition = {
@@ -25,6 +26,12 @@ export async function executeCreateFile(input: Record<string, unknown>): Promise
   const content = (input.content as string) ?? ''
   if (!targetPath) return { content: 'create_file failed: path is required', isError: true }
   try {
+    // Record the before-state: a fresh file has no prior content (kind 'absent'),
+    // so undo = delete it again. If the path already exists, createFile will
+    // throw and we skip the push — nothing was written to revert.
+    if (!(await fileExists(targetPath))) {
+      undoStore.push({ file: targetPath, op: 'create', before: { kind: 'absent' } })
+    }
     await createFile(targetPath, content)
     return { content: `Created ${targetPath}.` }
   } catch (error: any) {

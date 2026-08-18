@@ -6,6 +6,7 @@ import { refreshContextUsage, setApiInputTokens } from './store/context-usage-st
 import { settingsManager } from './config/settings'
 import { abortAgentLoop, executeAgentLoop, getAgentHistory, resetAgentHistory, setAgentHistory } from './agent/loop'
 import { createSession, getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
+import { undoStore } from './store/undo-store'
 import { fs } from '@typora-community-plugin/core'
 import { getSelection } from './adapter/editor'
 import { getSkill } from './agent/skills/index'
@@ -73,6 +74,9 @@ export class ChatView extends WorkspaceView {
           if (current && (chatStore.getMessages().length > 0 || getAgentHistory().length > 0)) {
             saveActiveSession(chatStore.getMessages(), getAgentHistory())
           }
+          // /undo is session-scoped: dropping the stack here guarantees a new
+          // session cannot undo mutations made in the previous one.
+          undoStore.clear()
           createSession()
           chatStore.replaceMessages([])
           chatStore.clearSelection()
@@ -99,6 +103,7 @@ export class ChatView extends WorkspaceView {
     resetAgentHistory()
     chatStore.clearMessages()
     chatStore.clearSelection()
+    undoStore.clear()
     void refreshContextUsage({ refreshStatic: true })
     const current = getActiveSession()
     if (current) {

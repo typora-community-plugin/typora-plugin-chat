@@ -25,6 +25,9 @@
   import { availableModels, refreshModels } from '@/store/models-store'
   import { skills as skillStore } from '@/agent/skills/store'
 
+  import { undoStore } from '@/store/undo-store'
+  import { executeUndo } from '@/agent/tools/system/undo'
+
   let {
     onSend,
     onStop,
@@ -50,6 +53,9 @@
     if (current && ($messages.length > 0 || getAgentHistory().length > 0)) {
       saveActiveSession(chatStore.getMessages(), getAgentHistory())
     }
+    // /undo is session-scoped: dropping the stack here guarantees switching to
+    // another session cannot undo mutations made in a different one.
+    undoStore.clear()
     const target = switchSession(id)
     if (target) {
       chatStore.replaceMessages(target.messages)
@@ -59,7 +65,7 @@
     }
   }
 
-  function handleMainSend(text) {
+  async function handleMainSend(text) {
     if ($askUserQuestion) {
       chatStore.answerAskUser(text)
       return
@@ -68,6 +74,15 @@
     const newMatch = text.match(/^\/new\s*([\s\S]*)$/)
     if (newMatch && onNew) {
       onNew(newMatch[1]?.trim() ?? '')
+      return
+    }
+    // /undo — reverse the most recent write-tool call in this session. No args,
+    // no agent loop: run synchronously and surface the result as a tool call.
+    if (/^\/undo\s*$/.test(text)) {
+      const result = await executeUndo()
+      chatStore.addUserMessage('/undo', null)
+      const callId = chatStore.addToolCall('undo', {})
+      chatStore.updateToolResult(callId, result, result.isError)
       return
     }
     // /skill:<name> [rest] — explicit, user-initiated skill invocation.

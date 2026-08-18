@@ -1,5 +1,6 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
-import { renameFile, relativePathToRoot } from '@/adapter/vault'
+import { fileExists, readFile, renameFile, relativePathToRoot } from '@/adapter/vault'
+import { undoStore } from '@/store/undo-store'
 
 
 export const renameFileSchema: ToolDefinition = {
@@ -31,6 +32,18 @@ export async function executeRenameFile(input: Record<string, unknown>): Promise
     return { content: 'rename_file failed: path and new_path are required', isError: true }
   }
   try {
+    // Capture the source file's text before moving it. Undo will move it back;
+    // if the reverse move fails for any reason, we can fall back to writing the
+    // captured content at the old path (see undo.ts).
+    if (await fileExists(targetPath)) {
+      const content = await readFile(targetPath).catch(() => '')
+      undoStore.push({
+        file: targetPath,
+        newFile: newPath,
+        op: 'rename',
+        before: { kind: 'content', content },
+      })
+    }
     await renameFile(targetPath, newPath)
     return { content: `Renamed ${targetPath} → ${newPath}.` }
   } catch (error: any) {

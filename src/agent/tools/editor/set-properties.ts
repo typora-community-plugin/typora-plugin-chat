@@ -1,6 +1,7 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
 import { readDocument, relativePathToRoot, writeDocument } from '@/adapter/vault'
 import { parseFrontmatter, stringifyYamlScalar } from '@/utils/helpers'
+import { undoStore } from '@/store/undo-store'
 
 
 export const setPropertiesSchema: ToolDefinition = {
@@ -54,6 +55,12 @@ export async function executeSetProperties(input: Record<string, unknown>): Prom
   }
   try {
     const markdown = await readDocument(targetPath)
+    // Record the full document before merging so /undo can restore it verbatim.
+    undoStore.push({
+      file: targetPath ?? '(active document)',
+      op: 'set_properties',
+      before: { kind: 'content', content: markdown, wasActiveDoc: !targetPath },
+    })
     const updated = mergeFrontmatter(markdown, properties)
     await writeDocument(targetPath, updated)
     return { content: `Updated frontmatter${targetPath ? ` of ${targetPath}` : ''}.` }

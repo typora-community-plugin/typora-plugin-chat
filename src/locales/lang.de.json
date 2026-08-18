@@ -42,7 +42,11 @@
     "speedCharsPerSecond": "Zeichen/s",
     "contextUsage": "Kontextnutzung: {used} / {total} Tokens ({percent}%)",
     "contextUsageEstimated": "Geschätzte Kontextnutzung: {used} / {total} Tokens ({percent}%)",
-    "contextUsageUnknown": "Kontextfenster unbekannt. Bitte in den Chat-Plugin-Einstellungen festlegen."
+    "contextUsageUnknown": "Kontextfenster unbekannt. Bitte in den Chat-Plugin-Einstellungen festlegen.",
+    "undoCommand": "/undo — letzte Dateänderung rückgängig machen",
+    "undoEmpty": "Nichts zum Rückgängigmachen",
+    "undoSuccess": "{op} rückgängig gemacht: {file}",
+    "undoBlockedReadOnly": "Rückgängig machen im Nur-Lese-Modus nicht möglich"
   },
   "settings": {
     "title": "Chat",

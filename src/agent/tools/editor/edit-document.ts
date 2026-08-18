@@ -1,6 +1,7 @@
 import { app } from '@typora-community-plugin/core'
 import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
 import { findReplace, getActiveDocumentContent, insertText, readFile, relativePathToRoot, writeFile } from '@/adapter/vault'
+import { undoStore } from '@/store/undo-store'
 
 
 export const editDocumentSchema: ToolDefinition = {
@@ -47,6 +48,25 @@ function findInText(text: string, find: string): string | null {
   return text.includes(find) ? text.replace(find, '') : null
 }
 
+/**
+ * Capture a before-image for the target and record it on the undo stack.
+ * For the active document we read from the editor buffer (not disk), since that
+ * is what `setMarkdown` will replace; for vault files we read from disk.
+ */
+async function captureBefore(targetPath: string | undefined, operation: 'replace_all' | 'find_replace' | 'insert'): Promise<void> {
+  try {
+    const before = await readTarget(targetPath)
+    undoStore.push({
+      file: targetPath ?? '(active document)',
+      op: operation,
+      before: { kind: 'content', content: before, wasActiveDoc: !targetPath },
+    })
+  } catch {
+    // If the read fails (e.g. active doc has no content), we cannot offer a
+    // meaningful undo for this call — skip silently so the write still proceeds.
+  }
+}
+
 export const summarizeEditDocument: ToolSummary = (input) => {
   const parts: string[] = []
   if (typeof input.path === 'string' && input.path) parts.push(relativePathToRoot(input.path))
@@ -65,6 +85,7 @@ export async function executeEditDocument(input: Record<string, unknown>): Promi
       if (typeof content !== 'string') {
         return { content: 'edit_document failed: content is required for replace_all', isError: true }
       }
+      await captureBefore(targetPath, 'replace_all')
       await writeTarget(targetPath, content)
       return { content: `Replaced entire document${targetPath ? ` ${targetPath}` : ''}.` }
     }
@@ -73,6 +94,7 @@ export async function executeEditDocument(input: Record<string, unknown>): Promi
       if (typeof find !== 'string' || typeof content !== 'string') {
         return { content: 'edit_document failed: find and content are required for find_replace', isError: true }
       }
+      await captureBefore(targetPath, 'find_replace')
       if (targetPath) {
         await findReplace(targetPath, find, content)
       } else {
@@ -90,6 +112,7 @@ export async function executeEditDocument(input: Record<string, unknown>): Promi
       if (typeof content !== 'string') {
         return { content: 'edit_document failed: content is required for insert', isError: true }
       }
+      await captureBefore(targetPath, 'insert')
       if (targetPath) {
         await insertText(targetPath, content, position)
       } else {

@@ -16,6 +16,7 @@ import { executeGetBacklinks, getBacklinksSchema } from './vault/get-backlinks'
 import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './system/get-current-datetime'
 import { executeAskUser, askUserSchema } from './system/ask-user'
 import { executeUseSkill, useSkillSchema } from './system/use-skill'
+import { executeUndo } from './system/undo'
 
 
 export interface ExecutorContext {
@@ -106,6 +107,8 @@ async function runTool(
     case 'get_current_datetime': return executeGetCurrentDatetime()
     case 'ask_user': return executeAskUser(input, context)
     case 'use_skill': return executeUseSkill(input)
+    // UI-only slash command (not exposed to the model); see undo.ts.
+    case 'undo': return executeUndo()
     default:
       return { content: `Unknown tool: ${name}`, isError: true }
   }
