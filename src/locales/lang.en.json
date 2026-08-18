@@ -22,7 +22,7 @@
     "deleteSessionTitle": "Delete session",
     "deleteConfirm": "Delete session “{title}”? Its transcript and context cannot be restored.",
     "deleteSessionPrompt": "Delete session “{title}”?",
-    "confirmDelete": "Delete",
+    "confirmDelete": "Confirm delete",
     "selectModel": "Select model",
     "selectModelTitle": "Select model",
     "modeTitle": "Access mode",

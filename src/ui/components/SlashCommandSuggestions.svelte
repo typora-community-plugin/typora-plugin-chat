@@ -49,7 +49,7 @@
 
         &:hover,
         &.typ-suggestion-highlighted {
-          background-color: rgb(var(--typ-color-gray-2));
+          background-color: rgb(var(--typ-color-gray-1));
         }
       }
     }

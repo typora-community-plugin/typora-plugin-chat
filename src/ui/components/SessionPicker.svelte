@@ -46,7 +46,7 @@
         >
           <span class="typ-session-title" data-typ-session-delete={onDelete ? '' : undefined}>
             {#if pendingDeleteId === s.id}
-              <em class="typ-session-delete-prompt">…{typeof t.chat.confirmDelete === 'string' ? t.chat.confirmDelete : 'Confirm delete'}</em>
+              <em class="typ-session-delete-prompt">{typeof t.chat.confirmDelete === 'string' ? t.chat.confirmDelete : 'Confirm delete'}?</em>
             {:else}
               {s.title}
             {/if}
@@ -120,7 +120,7 @@
 
         &:hover,
         &.typ-session-highlighted {
-          background-color: rgb(var(--typ-color-gray-2));
+          background-color: rgb(var(--typ-color-gray-1));
         }
 
         &.typ-session-active {
