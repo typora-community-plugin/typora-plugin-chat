@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { summarizeToolMessage } from '@/agent/tools/summary'
   import { truncate } from '@/utils/helpers'
   import { t } from '@/i18n'

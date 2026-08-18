@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { basename, truncateMiddle } from '@/utils/helpers'
   import { format, t } from '@/i18n'
 

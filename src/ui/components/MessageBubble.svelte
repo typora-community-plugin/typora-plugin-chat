@@ -1,14 +1,15 @@
-<script>
+<script lang="ts">
   import { markdown } from '@/ui/global'
   import ToolCallDetail from './ToolCallDetail.svelte'
   import { t } from '@/i18n'
+  import type { AssistantMeta } from '@/config/types'
 
   let {
     message,
     showMeta = false,
   } = $props()
 
-  function formatDuration(ms) {
+  function formatDuration(ms: number) {
     const totalSeconds = ms / 1000
     if (totalSeconds < 1) return `${Math.round(ms)}ms`
     if (totalSeconds < 60) return `${totalSeconds.toFixed(1)}s`
@@ -17,7 +18,7 @@
     return `${minutes}m ${seconds}s`
   }
 
-  function formatSpeed(meta) {
+  function formatSpeed(meta: AssistantMeta) {
     const value = meta.speed ?? 0
     const unit = meta.speedUnit === 'tokens' ? t.chat.speedTokensPerSecond : t.chat.speedCharsPerSecond
     return `${value.toFixed(1)} ${unit}`

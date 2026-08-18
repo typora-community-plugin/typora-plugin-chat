@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import MessageBubble from './MessageBubble.svelte'
   import { t } from '@/i18n'
 
@@ -24,7 +24,7 @@
     return ids
   })
 
-  let messagesEl = $state(null)
+  let messagesEl = $state<HTMLElement | null>(null)
 
   $effect(() => {
     // track both message count and thinking state so new content triggers scroll
