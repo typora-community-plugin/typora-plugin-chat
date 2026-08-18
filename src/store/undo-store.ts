@@ -5,8 +5,10 @@
  * cleared on session switch / new session / conversation clear / view close so
  * that an undo never reaches across a session boundary (the plan's hard rule).
  *
- * Each entry records the before-image of exactly one write-tool call, so `/undo`
- * pops the most recent entry and reverses it. No arguments: one press = one step.
+ * Each entry records the before-image of exactly one write-tool call, tagged
+ * with the `turnId` of the agent turn that made it. `/undo` pops ALL entries of
+ * the most recent turn and reverses them in chronological order (oldest first),
+ * so the whole previous turn's file mutations are rolled back together.
  */
 
 export type UndoOp =
@@ -30,6 +32,8 @@ export interface UndoSnapshot {
 
 export interface UndoEntry {
   ts: number
+  /** Agent turn that produced this write tool call (see loop.ts). */
+  turnId: string
   file: string
   op: UndoOp
   before: UndoSnapshot
@@ -38,7 +42,7 @@ export interface UndoEntry {
 }
 
 /** Cap on stack depth so a very long session cannot exhaust memory. */
-export const MAX_UNDO = 50
+export const MAX_UNDO = 200
 
 class UndoStack {
   private entries: UndoEntry[] = []
@@ -57,6 +61,22 @@ class UndoStack {
     const last = this.entries[this.entries.length - 1]
     this.entries.pop()
     return last
+  }
+
+  /**
+   * Remove and return ALL entries belonging to the most recent turn, in
+   * chronological order (oldest first) so callers can reverse them in the
+   * original execution order. Returns null when the stack is empty.
+   */
+  popTurn(): UndoEntry[] | null {
+    if (this.entries.length === 0) return null
+    const turnId = this.entries[this.entries.length - 1]!.turnId
+    const removed: UndoEntry[] = []
+    while (this.entries.length > 0 && this.entries[this.entries.length - 1]!.turnId === turnId) {
+      removed.push(this.entries.pop()!)
+    }
+    // `removed` is newest-first; flip to oldest-first for reversal.
+    return removed.reverse()
   }
 
   peek(): UndoEntry | undefined {

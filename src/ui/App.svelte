@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import Messages from './components/Messages.svelte'
   import SelectionPill from './components/SelectionPill.svelte'
   import InputBar from './components/InputBar.svelte'
@@ -19,14 +19,17 @@
     sessionSummaries,
     switchSession,
   } from '@/store/session-store'
-  import { getAgentHistory, setAgentHistory } from '@/agent/loop'
+  import { getAgentHistory, popLastAgentTurn, setAgentHistory } from '@/agent/loop'
   import { refreshContextUsage } from '@/store/context-usage-store'
   import { settings, settingsManager } from '@/config/settings'
+  import { writable } from 'svelte/store'
   import { availableModels, refreshModels } from '@/store/models-store'
   import { skills as skillStore } from '@/agent/skills/store'
 
   import { undoStore } from '@/store/undo-store'
   import { executeUndo } from '@/agent/tools/system/undo'
+
+  import { t } from '@/i18n'
 
   let {
     onSend,
@@ -36,6 +39,10 @@
   } = $props()
 
   const skillNames = $derived($skillStore.map((s) => s.name))
+
+  // One-shot channel: /undo writes the rolled-back user message here and App's
+  // reactive effect hands it to InputBar as editable draft text.
+  const inputRefill = writable<string | null>(null)
 
   // Initialize session persistence and load the active session into the UI.
   initSessionStore()
@@ -48,7 +55,18 @@
   const sessionList = $derived($sessionSummaries)
   const activeSessionId = $derived($sessionActiveSessionId)
 
-  function handleSwitchSession(id) {
+  // A non-empty inputPlaceholder that is NOT one of the built-in prompts (e.g.
+  // "Type your answer…") means /undo just refilled a rolled-back user message:
+  // hand it to InputBar as editable draft text and restore the default prompt.
+  $effect(() => {
+    const p = $inputPlaceholder
+    if (!p) return
+    if (p === t.chat.inputPlaceholder || p === t.chat.typeYourAnswer) return
+    inputRefill.set(p)
+    inputPlaceholder.set(t.chat.inputPlaceholder)
+  })
+
+  function handleSwitchSession(id: string) {
     const current = getActiveSession()
     if (current && ($messages.length > 0 || getAgentHistory().length > 0)) {
       saveActiveSession(chatStore.getMessages(), getAgentHistory())
@@ -65,7 +83,7 @@
     }
   }
 
-  async function handleMainSend(text) {
+  async function handleMainSend(text: string) {
     if ($askUserQuestion) {
       chatStore.answerAskUser(text)
       return
@@ -76,13 +94,20 @@
       onNew(newMatch[1]?.trim() ?? '')
       return
     }
-    // /undo — reverse the most recent write-tool call in this session. No args,
-    // no agent loop: run synchronously and surface the result as a tool call.
+    // /undo — reverse ALL write-tool calls from the most recent agent turn in
+    // this session (see undo.ts). No args, no agent loop. On success it also
+    // removes that whole turn from the transcript + agent history and refills
+    // its user message into the input box; on failure only an error is shown.
     if (/^\/undo\s*$/.test(text)) {
       const result = await executeUndo()
-      chatStore.addUserMessage('/undo', null)
-      const callId = chatStore.addToolCall('undo', {})
-      chatStore.updateToolResult(callId, result, result.isError)
+      if (result.isError) {
+        chatStore.addError(result.content)
+      } else {
+        // Remove the rolled-back turn from both stores, keeping their removals
+        // in sync so a later /sessions save or reload stays consistent.
+        const userText = chatStore.popLastUserTurn() ?? popLastAgentTurn()
+        if (userText) inputPlaceholder.set(userText)
+      }
       return
     }
     // /skill:<name> [rest] — explicit, user-initiated skill invocation.
@@ -123,6 +148,7 @@
     onModeChange={(mode) => settingsManager.save({ mode })}
     onSend={handleMainSend}
     onStop={onStop}
+    refill={$inputRefill}
   />
 </div>
 

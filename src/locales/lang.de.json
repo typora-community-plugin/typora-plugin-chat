@@ -43,7 +43,7 @@
     "contextUsage": "Kontextnutzung: {used} / {total} Tokens ({percent}%)",
     "contextUsageEstimated": "Geschätzte Kontextnutzung: {used} / {total} Tokens ({percent}%)",
     "contextUsageUnknown": "Kontextfenster unbekannt. Bitte in den Chat-Plugin-Einstellungen festlegen.",
-    "undoCommand": "/undo — letzte Dateänderung rückgängig machen",
+    "undoCommand": "/undo — alle Dateänderungen des letzten Turns rückgängig machen",
     "undoEmpty": "Nichts zum Rückgängigmachen",
     "undoSuccess": "{op} rückgängig gemacht: {file}",
     "undoBlockedReadOnly": "Rückgängig machen im Nur-Lese-Modus nicht möglich"

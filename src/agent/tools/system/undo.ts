@@ -1,21 +1,25 @@
 /**
  * `/undo` slash-command tool.
  *
- * Reverses the most recent write-tool call recorded on the in-memory undo stack
- * (see `@/store/undo-store`). No parameters: one invocation = one step. The
- * stack is session-scoped and cleared on session switch / new / clear / close,
- * so an undo can never reach across a session boundary.
+ * Reverses ALL write-tool calls recorded on the in-memory undo stack (see
+ * `@/store/undo-store`) that belong to the most recent agent turn, popping them
+ * together and reversing them in chronological order (oldest first) so the net
+ * effect is exactly "the previous turn never happened". No parameters: one
+ * invocation = one whole turn rolled back.
+ *
+ * The stack is session-scoped and cleared on session switch / new / clear /
+ * close, so an undo can never reach across a session boundary.
  */
 
 import { app } from '@typora-community-plugin/core'
 import type { ToolDefinition, ToolResult } from '@/config/types'
-import { deleteFile, readFile, writeFile } from '@/adapter/vault'
+import { deleteFile, writeFile } from '@/adapter/vault'
 import { currentAgentMode } from '../permissions'
 import { undoStore, type UndoEntry } from '@/store/undo-store'
 
 export const undoSchema: ToolDefinition = {
   name: 'undo',
-  description: 'Undo the most recent file mutation made by a write tool in this session.',
+  description: 'Undo all file mutations made by write tools in the most recent agent turn of this session.',
   parameters: { type: 'object', properties: {} },
 }
 
@@ -96,9 +100,31 @@ export async function executeUndo(): Promise<ToolResult> {
     return { content: 'Read Only 模式下无法撤销', isError: true }
   }
 
-  const entry = undoStore.pop()
-  if (!entry) {
+  const entries = undoStore.popTurn()
+  if (!entries || entries.length === 0) {
     return { content: '没有可撤销的操作' }
   }
-  return reverseEntry(entry)
+
+  // Reverse in chronological order (oldest first): the net effect is exactly
+  // "the previous turn's mutations never happened". A single failure does not
+  // stop the rest — each entry was already popped, and we continue so later
+  // steps are not left stranded.
+  const results: ToolResult[] = []
+  for (const entry of entries) {
+    results.push(await reverseEntry(entry))
+  }
+
+  if (results.length === 1) {
+    return results[0] ?? { content: '没有可撤销的操作' }
+  }
+
+  // Multiple steps: merge into a single summary. The overall result is an error
+  // only when EVERY step failed; partial failures are reported inline so the
+  // user can see what was and was not rolled back.
+  const failed = results.filter((r) => r.isError).length
+  const lines = [`已撤销上一轮 ${results.length} 步操作（${failed ? `其中 ${failed} 步失败` : '全部成功'}）：`]
+  for (const r of results) {
+    lines.push(r.isError ? `- ⚠️ ${r.content}` : `- ✅ ${r.content}`)
+  }
+  return { content: lines.join('\n'), isError: failed === results.length }
 }

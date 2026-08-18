@@ -43,7 +43,7 @@
     "contextUsage": "上下文占用：{used} / {total} tokens（{percent}%）",
     "contextUsageEstimated": "估算上下文占用：{used} / {total} tokens（{percent}%）",
     "contextUsageUnknown": "上下文窗口未知，请在 Chat 插件设置中配置。",
-    "undoCommand": "/undo — 撤销上一步文件修改",
+    "undoCommand": "/undo — 撤销上一轮所有文件修改",
     "undoEmpty": "没有可撤销的操作",
     "undoSuccess": "已撤销 {op}：{file}",
     "undoBlockedReadOnly": "Read Only 模式下无法撤销"

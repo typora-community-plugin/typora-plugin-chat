@@ -25,7 +25,7 @@ export const summarizeRenameFile: ToolSummary = (input) => {
   return parts.length ? parts.join(' → ') : '(no parameters)'
 }
 
-export async function executeRenameFile(input: Record<string, unknown>): Promise<ToolResult> {
+export async function executeRenameFile(input: Record<string, unknown>, turnId?: string): Promise<ToolResult> {
   const targetPath = input.path as string
   const newPath = input.new_path as string
   if (!targetPath || !newPath) {
@@ -42,6 +42,7 @@ export async function executeRenameFile(input: Record<string, unknown>): Promise
         newFile: newPath,
         op: 'rename',
         before: { kind: 'content', content },
+        turnId: turnId ?? '',
       })
     }
     await renameFile(targetPath, newPath)

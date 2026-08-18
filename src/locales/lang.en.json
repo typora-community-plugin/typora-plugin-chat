@@ -43,7 +43,7 @@
     "contextUsage": "Context usage: {used} / {total} tokens ({percent}%)",
     "contextUsageEstimated": "Estimated context usage: {used} / {total} tokens ({percent}%)",
     "contextUsageUnknown": "Context window unknown. Set it in Chat plugin settings.",
-    "undoCommand": "/undo — undo the last file change",
+    "undoCommand": "/undo — undo all file changes from the last turn",
     "undoEmpty": "Nothing to undo",
     "undoSuccess": "Undid {op}: {file}",
     "undoBlockedReadOnly": "Cannot undo in Read Only mode"

@@ -186,6 +186,26 @@ export const chatStore = {
     persist()
   },
 
+  /**
+   * Drop the last user turn from the transcript (the user message plus every
+   * assistant / tool_call / tool_result / thinking / error message after it).
+   * Returns the removed user message's text, or null when there is no user
+   * message to drop. Used by `/undo` so the rolled-back turn disappears from
+   * the UI and its prompt can be refilled into the input box.
+   */
+  popLastUserTurn(): string | null {
+    const msgs = get(messages)
+    let i = -1
+    for (let k = msgs.length - 1; k >= 0; k--) {
+      if (msgs[k]!.type === 'user') { i = k; break }
+    }
+    if (i < 0) return null
+    const userMsg = msgs[i]!
+    messages.set(msgs.slice(0, i))
+    persist()
+    return typeof userMsg.text === 'string' && userMsg.text ? userMsg.text : null
+  },
+
   clearSelection() {
     selection.set(null)
   },

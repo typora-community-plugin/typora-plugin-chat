@@ -53,13 +53,14 @@ function findInText(text: string, find: string): string | null {
  * For the active document we read from the editor buffer (not disk), since that
  * is what `setMarkdown` will replace; for vault files we read from disk.
  */
-async function captureBefore(targetPath: string | undefined, operation: 'replace_all' | 'find_replace' | 'insert'): Promise<void> {
+async function captureBefore(targetPath: string | undefined, operation: 'replace_all' | 'find_replace' | 'insert', turnId?: string): Promise<void> {
   try {
     const before = await readTarget(targetPath)
     undoStore.push({
       file: targetPath ?? '(active document)',
       op: operation,
       before: { kind: 'content', content: before, wasActiveDoc: !targetPath },
+      turnId: turnId ?? '',
     })
   } catch {
     // If the read fails (e.g. active doc has no content), we cannot offer a
@@ -73,7 +74,7 @@ export const summarizeEditDocument: ToolSummary = (input) => {
   return parts.length ? parts.join(', ') : '(no parameters)'
 }
 
-export async function executeEditDocument(input: Record<string, unknown>): Promise<ToolResult> {
+export async function executeEditDocument(input: Record<string, unknown>, turnId?: string): Promise<ToolResult> {
   const targetPath = typeof input.path === 'string' ? input.path : undefined
   const operation = input.operation as string
   const content = input.content as string
@@ -85,7 +86,7 @@ export async function executeEditDocument(input: Record<string, unknown>): Promi
       if (typeof content !== 'string') {
         return { content: 'edit_document failed: content is required for replace_all', isError: true }
       }
-      await captureBefore(targetPath, 'replace_all')
+      await captureBefore(targetPath, 'replace_all', turnId)
       await writeTarget(targetPath, content)
       return { content: `Replaced entire document${targetPath ? ` ${targetPath}` : ''}.` }
     }
@@ -94,7 +95,7 @@ export async function executeEditDocument(input: Record<string, unknown>): Promi
       if (typeof find !== 'string' || typeof content !== 'string') {
         return { content: 'edit_document failed: find and content are required for find_replace', isError: true }
       }
-      await captureBefore(targetPath, 'find_replace')
+      await captureBefore(targetPath, 'find_replace', turnId)
       if (targetPath) {
         await findReplace(targetPath, find, content)
       } else {
@@ -112,7 +113,7 @@ export async function executeEditDocument(input: Record<string, unknown>): Promi
       if (typeof content !== 'string') {
         return { content: 'edit_document failed: content is required for insert', isError: true }
       }
-      await captureBefore(targetPath, 'insert')
+      await captureBefore(targetPath, 'insert', turnId)
       if (targetPath) {
         await insertText(targetPath, content, position)
       } else {

@@ -21,7 +21,7 @@ export const summarizeCreateFile: ToolSummary = (input) => {
   return typeof path === 'string' && path ? relativePathToRoot(path) : '(no path)'
 }
 
-export async function executeCreateFile(input: Record<string, unknown>): Promise<ToolResult> {
+export async function executeCreateFile(input: Record<string, unknown>, turnId?: string): Promise<ToolResult> {
   const targetPath = input.path as string
   const content = (input.content as string) ?? ''
   if (!targetPath) return { content: 'create_file failed: path is required', isError: true }
@@ -30,7 +30,7 @@ export async function executeCreateFile(input: Record<string, unknown>): Promise
     // so undo = delete it again. If the path already exists, createFile will
     // throw and we skip the push — nothing was written to revert.
     if (!(await fileExists(targetPath))) {
-      undoStore.push({ file: targetPath, op: 'create', before: { kind: 'absent' } })
+      undoStore.push({ file: targetPath, op: 'create', before: { kind: 'absent' }, turnId: turnId ?? '' })
     }
     await createFile(targetPath, content)
     return { content: `Created ${targetPath}.` }

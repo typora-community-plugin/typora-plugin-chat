@@ -21,6 +21,8 @@ import { executeUndo } from './system/undo'
 
 export interface ExecutorContext {
   activeFile?: string | null
+  /** Agent turn id; stamped onto undo entries so /undo can roll back a whole turn. */
+  turnId?: string
   askUser?: (question: string) => Promise<string>
 }
 
@@ -91,17 +93,17 @@ async function runTool(
   switch (name) {
     // Editor tools
     case 'read_document': return executeReadDocument(input)
-    case 'edit_document': return executeEditDocument(input)
+    case 'edit_document': return executeEditDocument(input, context.turnId)
     case 'get_properties': return executeGetProperties(input)
-    case 'set_properties': return executeSetProperties(input)
+    case 'set_properties': return executeSetProperties(input, context.turnId)
     case 'open_document': return executeOpenDocument(input)
     // Vault tools
     case 'read_file': return executeReadFile(input)
     case 'search_vault': return executeSearchVault(input)
     case 'list_files': return executeListFiles(input)
-    case 'create_file': return executeCreateFile(input)
-    case 'delete_file': return executeDeleteFile(input)
-    case 'rename_file': return executeRenameFile(input)
+    case 'create_file': return executeCreateFile(input, context.turnId)
+    case 'delete_file': return executeDeleteFile(input, context.turnId)
+    case 'rename_file': return executeRenameFile(input, context.turnId)
     case 'get_backlinks': return executeGetBacklinks(input)
     // System tools
     case 'get_current_datetime': return executeGetCurrentDatetime()

@@ -29,6 +29,22 @@ export function resetAgentHistory(): void {
   history = []
 }
 
+/**
+ * Drop the last user turn from agent history so a `/undo` (which rolls back the
+ * file mutations that turn caused) also removes its context from future model
+ * requests. Returns the turn's original user message text, or null when there
+ * is no user turn to drop — callers use it to refill the input box.
+ */
+export function popLastAgentTurn(): string | null {
+  let i = history.length - 1
+  while (i >= 0 && history[i]!.role !== 'user') i--
+  if (i < 0) return null
+  const userMsg = history[i]!
+  const content = typeof userMsg.content === 'string' ? userMsg.content : ''
+  history = history.slice(0, i)
+  return content || null
+}
+
 /** Return a copy of the current agent history (conversation sent to the API). */
 export function getAgentHistory(): ApiMessage[] {
   return history.slice()
@@ -69,6 +85,10 @@ export async function executeAgentLoop(
     conversation,
     tools: allowedTools,
   } = await buildRequestParts(userMessage, trimHistory(history), skillsCatalog, currentAgentMode())
+
+  // One turnId per user turn (i.e. one executeAgentLoop call). All write tool
+  // calls made during this loop share it so /undo can roll the whole turn back.
+  const turnId = `turn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
   let finalText = ''
   const totalUsage = { inputTokens: 0, outputTokens: 0 }
@@ -141,6 +161,7 @@ export async function executeAgentLoop(
           : toolUse.id ?? `${name}-${iterations}`
         const result = await executeTool(name, toolUse.input ?? {}, {
           activeFile: getCurrentFilePath(),
+          turnId,
           askUser: callbacks.onAskUser,
         })
         callbacks.onToolResult?.(toolCallId, name, result)

@@ -23,6 +23,7 @@
     onSwitchSession = null,
     mode = 'workspace-write',
     onModeChange = null,
+    refill = $bindable(null),
   }: {
     onSend: (text: string) => void
     onStop: () => void
@@ -39,6 +40,8 @@
     onSwitchSession?: ((id: string) => void) | null
     mode?: 'read-only' | 'workspace-write'
     onModeChange?: ((mode: 'read-only' | 'workspace-write') => void) | null
+    /** One-shot refill (e.g. /undo): when non-null, becomes editable draft text and is cleared. */
+    refill?: string | null
   } = $props()
 
   let value = $state('')
@@ -78,6 +81,17 @@
     textarea.style.height = height + 'px'
     textarea.style.overflowY = textarea.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
   }
+
+  // A fresh non-empty `refill` replaces the current draft; clearing it back to
+  // null afterwards lets the next /undo re-trigger even for identical text.
+  $effect(() => {
+    if (typeof refill === 'string' && refill.length > 0) {
+      value = refill
+      textarea?.focus()
+      requestAnimationFrame(autoResize)
+      refill = null
+    }
+  })
 
   function handleInput() {
     autoResize()

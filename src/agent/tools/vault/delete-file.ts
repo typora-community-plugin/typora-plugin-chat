@@ -20,14 +20,14 @@ export const summarizeDeleteFile: ToolSummary = (input) => {
   return typeof path === 'string' && path ? relativePathToRoot(path) : '(no path)'
 }
 
-export async function executeDeleteFile(input: Record<string, unknown>): Promise<ToolResult> {
+export async function executeDeleteFile(input: Record<string, unknown>, turnId?: string): Promise<ToolResult> {
   const targetPath = input.path as string
   if (!targetPath) return { content: 'delete_file failed: path is required', isError: true }
   try {
     // Capture the file's full text before trashing it so /undo can write it back.
     if (await fileExists(targetPath)) {
       const content = await readFile(targetPath).catch(() => '')
-      undoStore.push({ file: targetPath, op: 'delete', before: { kind: 'content', content } })
+      undoStore.push({ file: targetPath, op: 'delete', before: { kind: 'content', content }, turnId: turnId ?? '' })
     }
     await deleteFile(targetPath)
     return { content: `Deleted ${targetPath}.` }

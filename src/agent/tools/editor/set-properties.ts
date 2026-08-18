@@ -47,7 +47,7 @@ export const summarizeSetProperties: ToolSummary = (input) => {
   return parts.length ? parts.join(', ') : '(no parameters)'
 }
 
-export async function executeSetProperties(input: Record<string, unknown>): Promise<ToolResult> {
+export async function executeSetProperties(input: Record<string, unknown>, turnId?: string): Promise<ToolResult> {
   const targetPath = typeof input.path === 'string' ? input.path : undefined
   const properties = input.properties as Record<string, unknown> | undefined
   if (!properties || typeof properties !== 'object') {
@@ -60,6 +60,7 @@ export async function executeSetProperties(input: Record<string, unknown>): Prom
       file: targetPath ?? '(active document)',
       op: 'set_properties',
       before: { kind: 'content', content: markdown, wasActiveDoc: !targetPath },
+      turnId: turnId ?? '',
     })
     const updated = mergeFrontmatter(markdown, properties)
     await writeDocument(targetPath, updated)
