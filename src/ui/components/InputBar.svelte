@@ -1,9 +1,9 @@
 <script lang="ts">
   import { t } from '@/i18n'
+  import DraftTextarea from './DraftTextarea.svelte'
+  import InputToolbar from './InputToolbar.svelte'
   import SlashCommandSuggestions from './SlashCommandSuggestions.svelte'
   import SessionPicker from './SessionPicker.svelte'
-  import ContextUsageRing from './ContextUsageRing.svelte'
-  import { scheduleContextUsageRefresh } from '@/store/context-usage-store'
   import { computeSuggestions, shouldCompleteSubcommand, suggestionsShouldBeOpen } from '@/slash-commands'
   import type { SessionSummary } from '@/store/session-store'
 
@@ -49,11 +49,6 @@
   let value = $state('')
   let textarea = $state<HTMLTextAreaElement | null>(null)
 
-  // Keep the context-usage ring in sync with the draft being typed.
-  $effect(() => {
-    scheduleContextUsageRefresh(value)
-  })
-
   // --- slash-command autocomplete -------------------------------------------
   const suggestions = $derived(computeSuggestions({ skills, value }))
   let suggestionsOpen = $state(false)
@@ -63,10 +58,9 @@
   let sessionPickerOpen = $state(false)
   let sessionHighlightedIndex = $state(0)
 
-  // Inline two-step delete confirmation. A native `window.confirm()` dialog is
-  // rendered by the host and freezes the whole Typora UI for tens of seconds,
-  // so it is replaced with this in-place prompt: first click arms the row, a
-  // second click (or Enter) deletes, anything else dismisses after a timeout.
+  // Inline two-step delete confirmation: first click arms the row, a second
+  // click (or Enter) deletes — replaces native window.confirm(), which freezes
+  // the host Typora UI for tens of seconds. Dismissed after a timeout.
   let pendingDeleteId = $state<string | null>(null)
   let pendingDeleteTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -83,11 +77,10 @@
   }
 
   $effect(() => {
-    // Recompute visibility + reset highlight whenever the suggestion list changes.
+    // Recompute visibility + reset highlight whenever the suggestion list changes;
+    // drop a pending delete prompt if its session disappeared from the list.
     suggestionsOpen = suggestionsShouldBeOpen({ skills, value }, enabled)
     highlightedIndex = 0
-    // The delete prompt belongs to one specific session: drop it when that
-    // session disappears from the list (already deleted or picker re-rendered).
     if (pendingDeleteId && !sessions.some((s) => s.id === pendingDeleteId)) clearPendingDelete()
   })
 
@@ -95,104 +88,47 @@
     return () => { if (pendingDeleteTimer != null) clearTimeout(pendingDeleteTimer) }
   })
 
-  $effect(() => {
-    if (textAreaEl) textAreaEl(textarea)
-    return () => { if (textAreaEl) textAreaEl(null) }
-  })
-
-  const MAX_HEIGHT = 300
-
   function autoResize() {
-    if (!textarea) return
-    textarea.style.height = 'auto'
-    const height = Math.min(textarea.scrollHeight, MAX_HEIGHT)
-    textarea.style.height = height + 'px'
-    textarea.style.overflowY = textarea.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
+    textarea?.dispatchEvent(new Event('input')) // DraftTextarea owns the sizing.
   }
 
-  // A fresh non-empty `refill` replaces the current draft; clearing it back to
-  // null afterwards lets the next /undo re-trigger even for identical text.
-  $effect(() => {
-    if (typeof refill === 'string' && refill.length > 0) {
-      value = refill
-      textarea?.focus()
-      requestAnimationFrame(autoResize)
-      refill = null
-    }
-  })
-
-  function handleInput() {
-    autoResize()
-  }
-
-  function handleBlur() {
-    // Dismiss after a short delay so click events on the suggestion or session
-    // list still fire before the list disappears.
-    setTimeout(() => {
-      suggestionsOpen = false
-      sessionPickerOpen = false
-      clearPendingDelete()
-    }, 150)
-  }
-
+  // --- key handling ----------------------------------------------------------
   function handleKeydown(e: KeyboardEvent) {
-    if (sessionPickerOpen) {
-      if (sessions.length) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault()
-          sessionHighlightedIndex = (sessionHighlightedIndex + 1) % sessions.length
-          return
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault()
-          sessionHighlightedIndex = (sessionHighlightedIndex - 1 + sessions.length) % sessions.length
-          return
-        }
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault()
-          const index = Math.min(sessionHighlightedIndex, sessions.length - 1)
-          const s = sessions[index]
-          // Enter acts as the confirmation for an armed delete prompt.
-          if (onDeleteSession && pendingDeleteId === s.id) {
-            clearPendingDelete()
-            onDeleteSession(s)
-          } else {
-            pickSession(s.id)
-          }
-          return
-        }
-        // Delete / Backspace arms or confirms the highlighted session's delete,
-        // so no native confirm dialog is ever shown.
-        if (onDeleteSession && (e.key === 'Delete' || e.key === 'Backspace')) {
-          e.preventDefault()
-          const index = Math.min(sessionHighlightedIndex, sessions.length - 1)
-          const s = sessions[index]
-          if (pendingDeleteId === s.id) {
-            clearPendingDelete()
-            onDeleteSession(s)
-          } else {
-            armDelete(s.id, s.title)
-          }
-          return
-        }
+    if (sessionPickerOpen && sessions.length) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault(); sessionHighlightedIndex = (sessionHighlightedIndex + 1) % sessions.length; return
+        case 'ArrowUp':
+          e.preventDefault(); sessionHighlightedIndex = (sessionHighlightedIndex - 1 + sessions.length) % sessions.length; return
       }
-      if (e.key === 'Escape') {
-        sessionPickerOpen = false
-        textarea?.focus()
+      const index = Math.min(sessionHighlightedIndex, sessions.length - 1)
+      if ((e.key === 'Enter' && !e.shiftKey) || (onDeleteSession && (e.key === 'Delete' || e.key === 'Backspace'))) {
+        e.preventDefault()
+        const s = sessions[index]
+        // Enter / Delete confirm an armed delete prompt; Enter otherwise picks.
+        if (pendingDeleteId === s.id) {
+          clearPendingDelete()
+          onDeleteSession?.(s)
+        } else {
+          if (e.key === 'Enter') pickSession(s.id)
+          else armDelete(s.id, s.title)
+        }
         return
       }
+    }
+
+    if (sessionPickerOpen && e.key === 'Escape') {
+      sessionPickerOpen = false
+      textarea?.focus()
+      return
     }
 
     if (suggestionsOpen && suggestions.length) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        highlightedIndex = (highlightedIndex + 1) % suggestions.length
-        return
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        highlightedIndex = (highlightedIndex - 1 + suggestions.length) % suggestions.length
-        return
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault(); highlightedIndex = (highlightedIndex + 1) % suggestions.length; return
+        case 'ArrowUp':
+          e.preventDefault(); highlightedIndex = (highlightedIndex - 1 + suggestions.length) % suggestions.length; return
       }
       if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
         e.preventDefault()
@@ -211,22 +147,14 @@
     }
   }
 
+  // --- actions ----------------------------------------------------------------
   function applySuggestion(suggested: string) {
-    if (suggested === '/sessions') {
-      value = ''
-      suggestionsOpen = false
-      sessionPickerOpen = true
-      sessionHighlightedIndex = Math.max(0, sessions.findIndex((s) => s.id === activeSessionId))
-      autoResize()
-      textarea?.focus()
-      return
-    }
+    if (suggested === '/sessions') return openSessionsPicker()
     if (shouldCompleteSubcommand(suggested)) {
       // `/skill` → `/skill:` and keep the list open for skill filtering.
       value = `${suggested}:`
       suggestionsOpen = true
       highlightedIndex = 0
-      autoResize()
       textarea?.focus()
       return
     }
@@ -237,7 +165,6 @@
       value = `${suggested}${value.slice(spaceIndex)}`
     }
     suggestionsOpen = false
-    autoResize()
     textarea?.focus()
   }
 
@@ -250,8 +177,7 @@
   }
 
   function handleDeleteSession(s: SessionSummary) {
-    // Two-step delete: the first click arms the confirmation prompt shown in
-    // place of the row title; a second click on the same row actually deletes.
+    // Two-step delete: first click arms the prompt, second click deletes.
     if (pendingDeleteId === s.id) {
       clearPendingDelete()
       onDeleteSession?.(s)
@@ -268,32 +194,29 @@
     pickSession(id)
   }
 
+  function openSessionsPicker() {
+    value = '' // /sessions: swap suggestions for the picker, starting on active session.
+    suggestionsOpen = false
+    sessionPickerOpen = true
+    sessionHighlightedIndex = Math.max(0, sessions.findIndex((s) => s.id === activeSessionId))
+    textarea?.focus()
+  }
+
   function submit() {
     const text = value.trim()
     if (!text || !enabled) return
-    if (text === '/sessions') {
-      value = ''
-      sessionPickerOpen = true
-      sessionHighlightedIndex = Math.max(0, sessions.findIndex((s) => s.id === activeSessionId))
-      autoResize()
-      textarea?.focus()
-      return
-    }
+    if (text === '/sessions') return openSessionsPicker()
     value = ''
-    requestAnimationFrame(autoResize)
     onSend(text)
   }
 
-  function handleModelChange(e: Event) {
-    onModelChange?.((e.currentTarget as HTMLSelectElement).value)
-  }
-
-  function handleModeChange(e: Event) {
-    onModeChange?.((e.currentTarget as HTMLSelectElement).value as 'read-only' | 'workspace-write')
-  }
-
-  function handleModelClick() {
-    onModelRefresh?.()
+  function handleBlur() {
+    // Delay so click events on the suggestion/session list fire first.
+    setTimeout(() => {
+      suggestionsOpen = false
+      sessionPickerOpen = false
+      clearPendingDelete()
+    }, 150)
   }
 </script>
 
@@ -316,60 +239,28 @@
       />
     {/if}
 
-    <textarea
-      bind:this={textarea}
-      bind:value={value}
-      rows="1"
+    <DraftTextarea
+      bind:value
       {placeholder}
-      oninput={handleInput}
-      onkeydown={handleKeydown}
-      onblur={handleBlur}
-    ></textarea>
+      disabled={!enabled}
+      textAreaEl={(el) => { textarea = el; if (textAreaEl) textAreaEl(el) }}
+      {refill}
+      onKeydown={handleKeydown}
+      onBlur={handleBlur}
+    />
 
-    <div class="typ-input-actions">
-      <select
-        class="typ-input-mode"
-        value={mode}
-        onchange={handleModeChange}
-        title={t.chat.modeTitle}
-        disabled={!enabled}
-      >
-        <option value="read-only">{t.chat.modeReadOnly}</option>
-        <option value="workspace-write">{t.chat.modeWorkspaceWrite}</option>
-      </select>
-
-      <select
-        class="typ-input-model"
-        value={model}
-        onchange={handleModelChange}
-        onclick={handleModelClick}
-        title={t.chat.selectModelTitle}
-        disabled={!enabled}
-      >
-        {#if !model}
-          <option value="" disabled>{t.chat.selectModel}</option>
-        {/if}
-        {#if model && !models.includes(model)}
-          <option value={model}>{model}</option>
-        {/if}
-        {#each models as m (m)}
-          <option value={m}>{m}</option>
-        {/each}
-      </select>
-
-      <ContextUsageRing size={16} />
-
-      {#if enabled}
-        <button
-          class="typ-send-btn"
-          onclick={submit}
-          disabled={!value.trim()}
-          title={t.chat.send}
-        >➤</button>
-      {:else}
-        <button class="typ-stop-btn" onclick={onStop} title={t.chat.stop}>■</button>
-      {/if}
-    </div>
+    <InputToolbar
+      {enabled}
+      {model}
+      {models}
+      {mode}
+      canSend={!!value.trim()}
+      {onModelChange}
+      {onModelRefresh}
+      {onModeChange}
+      onSend={submit}
+      {onStop}
+    />
   </div>
 </div>
 
@@ -395,97 +286,6 @@
         &:focus-within {
           border-color: var(--primary-color, rgb(30, 136, 229));
         }
-      }
-
-      textarea {
-        flex: none;
-        width: 100%;
-        min-height: 42px;
-        max-height: 300px;
-        padding: 10px 14px 2px;
-        border: none;
-        border-radius: 0;
-        background: transparent;
-        color: var(--text-color, rgb(var(--typ-text-color)));
-        font-size: 14px;
-        font-family: inherit;
-        line-height: 1.4;
-        resize: none;
-        outline: none;
-        overflow-y: hidden;
-
-        &::placeholder {
-          color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
-        }
-      }
-    }
-
-    .typ-input-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-      padding: 2px 10px 8px;
-    }
-
-    .typ-input-model,
-    .typ-input-mode {
-      max-width: 150px;
-      padding: 2px 6px 2px 8px;
-      border: 1px solid rgb(var(--typ-border-color));
-      border-radius: 6px;
-      color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
-      font-size: 12px;
-      line-height: 1.4;
-      cursor: pointer;
-      outline: none;
-      user-select: none;
-
-      &:hover,
-      &:focus {
-        border-color: var(--primary-color, rgb(30, 136, 229));
-      }
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-    }
-
-    .typ-send-btn,
-    .typ-stop-btn {
-      flex: 0 0 auto;
-      width: 34px;
-      height: 34px;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-    }
-
-    .typ-send-btn {
-      background-color: var(--primary-color, rgb(30, 136, 229));
-      color: var(--primary-btn-text-color, #fff);
-
-      &:hover {
-        opacity: 0.9;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-
-    .typ-stop-btn {
-      background-color: rgb(var(--typ-color-red-3));
-      color: #fff;
-
-      &:hover {
-        background-color: rgb(var(--typ-color-red-4));
       }
     }
   }
