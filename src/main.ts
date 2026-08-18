@@ -89,7 +89,8 @@ export default class extends Plugin {
     this.register(
       app.workspace.on('file-menu', ({ menu, path }) => {
         if (!/\.md$/i.test(path)) return
-        menu.addItem(item => item
+        menu.insertItemAfter('[data-action="search"]', item => item
+          .setKey('typ-chat-about-note')
           .setTitle(t.command.chatAboutNote)
           .onClick(() => this.chatAboutNote(path)))
       })
