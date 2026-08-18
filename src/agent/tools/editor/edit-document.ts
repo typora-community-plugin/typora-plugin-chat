@@ -44,8 +44,9 @@ async function writeTarget(path: string | undefined, content: string): Promise<v
   app.workspace.activeEditor.setMarkdown(content)
 }
 
-function findInText(text: string, find: string): string | null {
-  return text.includes(find) ? text.replace(find, '') : null
+/** Replace the first occurrence of `find` with `replacement` in `text`. Returns null when not found. */
+function findInText(text: string, find: string, replacement: string): string | null {
+  return text.includes(find) ? text.replace(find, replacement) : null
 }
 
 /**
@@ -102,7 +103,7 @@ export async function executeEditDocument(input: Record<string, unknown>, turnId
         await findReplace(targetPath, find, content)
       } else {
         const current = await getActiveDocumentContent()
-        const updated = findInText(current, find)
+        const updated = findInText(current, find, content)
         if (updated === null) {
           return { content: 'edit_document failed: text not found in active document', isError: true }
         }
