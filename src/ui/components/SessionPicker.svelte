@@ -7,6 +7,8 @@
     activeSessionId,
     highlightedIndex,
     onPick,
+    onDelete = null,
+    pendingDeleteId = null,
   }: {
     /** Session summaries to display. */
     sessions: SessionSummary[]
@@ -16,7 +18,17 @@
     highlightedIndex: number
     /** Called with a session id when it is clicked (mousedown). */
     onPick: (id: string) => void
+    /** Optional delete handler; when present, rows show a delete button. */
+    onDelete?: ((s: SessionSummary) => void) | null
+    /** Id of the session whose inline "confirm delete?" prompt is armed. */
+    pendingDeleteId?: string | null
   } = $props()
+
+  function handleDelete(e: MouseEvent, s: SessionSummary) {
+    e.preventDefault()
+    e.stopPropagation()
+    onDelete?.(s)
+  }
 </script>
 
 <div class="typ-session-picker" role="listbox" aria-label={t.chat.sessionPickerTitle}>
@@ -29,11 +41,26 @@
           aria-selected={s.id === activeSessionId || i === highlightedIndex}
           class:typ-session-active={s.id === activeSessionId}
           class:typ-session-highlighted={i === highlightedIndex}
+          class:typ-session-delete-armed={pendingDeleteId === s.id}
           onmousedown={(e) => { e.preventDefault(); onPick(s.id); }}
         >
-          <span class="typ-session-title">{s.title}</span>
+          <span class="typ-session-title" data-typ-session-delete={onDelete ? '' : undefined}>
+            {#if pendingDeleteId === s.id}
+              <em class="typ-session-delete-prompt">…{typeof t.chat.confirmDelete === 'string' ? t.chat.confirmDelete : 'Confirm delete'}</em>
+            {:else}
+              {s.title}
+            {/if}
+          </span>
           {#if s.id === activeSessionId}
             <span class="typ-session-badge">{t.chat.currentSession}</span>
+          {/if}
+          {#if onDelete}
+            <button
+              type="button"
+              class="typ-session-delete"
+              title={typeof t.chat.deleteSessionTitle === 'string' ? t.chat.deleteSessionTitle : 'Delete session'}
+              onmousedown={(e) => handleDelete(e, s)}
+            >×</button>
           {/if}
         </li>
       {/each}
@@ -102,8 +129,51 @@
       }
 
       .typ-session-title {
+        flex: 1 1 auto;
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      /* Two-step delete confirmation, shown in place of the row title. */
+      li.typ-session-delete-armed {
+        color: rgb(var(--typ-color-red-3));
+
+        .typ-session-title {
+          cursor: default;
+        }
+      }
+
+      .typ-session-delete-prompt {
+        font-style: normal;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      /* Title spans the whole row (except the badge) so a click anywhere picks it. */
+      [data-typ-session-delete] {
+        flex-grow: 999;
+      }
+
+      .typ-session-delete {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        margin: 0 -4px 0 2px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background-color: transparent;
+        color: var(--control-text-color, rgb(var(--typ-color-gray-3)));
+        font-size: 14px;
+        line-height: 18px;
+        text-align: center;
+        cursor: pointer;
+
+        &:hover {
+          background-color: rgba(var(--typ-color-red-3), 0.15);
+          color: rgb(var(--typ-color-red-3));
+        }
       }
 
       .typ-session-badge {

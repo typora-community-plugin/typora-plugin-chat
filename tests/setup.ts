@@ -47,6 +47,30 @@ vi.mock('os', () => {
   return { homedir: vi.fn(() => '/home') }
 })
 
+// session-store persists to localStorage and its confirm dialog uses window.confirm;
+// neither exists in the node test environment. Provide minimal globals that every
+// suite can rely on (a fresh map per file, an always-accepting confirmation).
+const storage = new Map<string, string>()
+if (!globalThis.localStorage) {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (k: string) => storage.get(k) ?? null,
+      setItem: (k: string, v: string) => void storage.set(k, String(v)),
+      removeItem: (k: string) => void storage.delete(k),
+      clear: () => storage.clear(),
+    },
+  })
+}
+if (!globalThis.window) {
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: globalThis })
+}
+Object.defineProperty(globalThis, 'confirm', {
+  configurable: true,
+  writable: true,
+  value: (message?: string) => String(message ?? ''),
+})
+
 vi.mock('@typora-community-plugin/core', () => ({
   app: mockApp,
   fs: mockFs as Record<string, unknown>,

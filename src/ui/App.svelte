@@ -18,6 +18,7 @@
     saveActiveSession,
     sessionSummaries,
     switchSession,
+    deleteSession,
   } from '@/store/session-store'
   import { getAgentHistory, popLastAgentTurn, setAgentHistory } from '@/agent/history'
   import { refreshContextUsage } from '@/store/context-usage-store'
@@ -77,6 +78,22 @@
     undoStore.clear()
     undoStore.clearRedo()
     const target = switchSession(id)
+    if (target) {
+      chatStore.replaceMessages(target.messages)
+      chatStore.clearSelection()
+      setAgentHistory(target.history)
+      void refreshContextUsage({ refreshStatic: true })
+    }
+  }
+
+  function handleDeleteSession(s: { id: string; title: string }) {
+    // Confirmation happens inline in the picker (InputBar's two-step prompt);
+    // a native window.confirm() would freeze the whole Typora UI for seconds.
+    const target = deleteSession(s.id)
+    // Drop the undo/redo stacks of the deleted session so they can never be
+    // replayed across a boundary, then load whatever is now active.
+    undoStore.clear()
+    undoStore.clearRedo()
     if (target) {
       chatStore.replaceMessages(target.messages)
       chatStore.clearSelection()
@@ -168,6 +185,7 @@
     sessions={sessionList}
     activeSessionId={activeSessionId}
     onSwitchSession={handleSwitchSession}
+    onDeleteSession={handleDeleteSession}
     onModelChange={(model) => settingsManager.save({ model })}
     onModelRefresh={() => refreshModels()}
     mode={$settings.mode ?? 'workspace-write'}

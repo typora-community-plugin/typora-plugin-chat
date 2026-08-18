@@ -21,6 +21,7 @@
     sessions = [],
     activeSessionId = null,
     onSwitchSession = null,
+    onDeleteSession = null,
     mode = 'workspace-write',
     onModeChange = null,
     refill = $bindable(null),
@@ -38,6 +39,7 @@
     sessions?: SessionSummary[]
     activeSessionId?: string | null
     onSwitchSession?: ((id: string) => void) | null
+    onDeleteSession?: ((s: SessionSummary) => void) | null
     mode?: 'read-only' | 'workspace-write'
     onModeChange?: ((mode: 'read-only' | 'workspace-write') => void) | null
     /** One-shot refill (e.g. /undo): when non-null, becomes editable draft text and is cleared. */
@@ -61,10 +63,36 @@
   let sessionPickerOpen = $state(false)
   let sessionHighlightedIndex = $state(0)
 
+  // Inline two-step delete confirmation. A native `window.confirm()` dialog is
+  // rendered by the host and freezes the whole Typora UI for tens of seconds,
+  // so it is replaced with this in-place prompt: first click arms the row, a
+  // second click (or Enter) deletes, anything else dismisses after a timeout.
+  let pendingDeleteId = $state<string | null>(null)
+  let pendingDeleteTimer: ReturnType<typeof setTimeout> | null = null
+
+  function clearPendingDelete() {
+    if (pendingDeleteTimer != null) clearTimeout(pendingDeleteTimer)
+    pendingDeleteTimer = null
+    pendingDeleteId = null
+  }
+
+  function armDelete(id: string, title: string) {
+    clearPendingDelete()
+    pendingDeleteId = id
+    pendingDeleteTimer = setTimeout(() => clearPendingDelete(), 3000)
+  }
+
   $effect(() => {
     // Recompute visibility + reset highlight whenever the suggestion list changes.
     suggestionsOpen = suggestionsShouldBeOpen({ skills, value }, enabled)
     highlightedIndex = 0
+    // The delete prompt belongs to one specific session: drop it when that
+    // session disappears from the list (already deleted or picker re-rendered).
+    if (pendingDeleteId && !sessions.some((s) => s.id === pendingDeleteId)) clearPendingDelete()
+  })
+
+  $effect(() => {
+    return () => { if (pendingDeleteTimer != null) clearTimeout(pendingDeleteTimer) }
   })
 
   $effect(() => {
@@ -103,6 +131,7 @@
     setTimeout(() => {
       suggestionsOpen = false
       sessionPickerOpen = false
+      clearPendingDelete()
     }, 150)
   }
 
@@ -122,7 +151,28 @@
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault()
           const index = Math.min(sessionHighlightedIndex, sessions.length - 1)
-          pickSession(sessions[index].id)
+          const s = sessions[index]
+          // Enter acts as the confirmation for an armed delete prompt.
+          if (onDeleteSession && pendingDeleteId === s.id) {
+            clearPendingDelete()
+            onDeleteSession(s)
+          } else {
+            pickSession(s.id)
+          }
+          return
+        }
+        // Delete / Backspace arms or confirms the highlighted session's delete,
+        // so no native confirm dialog is ever shown.
+        if (onDeleteSession && (e.key === 'Delete' || e.key === 'Backspace')) {
+          e.preventDefault()
+          const index = Math.min(sessionHighlightedIndex, sessions.length - 1)
+          const s = sessions[index]
+          if (pendingDeleteId === s.id) {
+            clearPendingDelete()
+            onDeleteSession(s)
+          } else {
+            armDelete(s.id, s.title)
+          }
           return
         }
       }
@@ -199,6 +249,25 @@
     textarea?.focus()
   }
 
+  function handleDeleteSession(s: SessionSummary) {
+    // Two-step delete: the first click arms the confirmation prompt shown in
+    // place of the row title; a second click on the same row actually deletes.
+    if (pendingDeleteId === s.id) {
+      clearPendingDelete()
+      onDeleteSession?.(s)
+    } else {
+      armDelete(s.id, s.title)
+    }
+    sessionHighlightedIndex = Math.min(sessionHighlightedIndex, sessions.length - 2)
+    if (!sessions.length) sessionPickerOpen = false
+  }
+
+  function handleRowPick(id: string) {
+    // A click while another row's delete prompt is armed just dismisses it.
+    if (pendingDeleteId && pendingDeleteId !== id) clearPendingDelete()
+    pickSession(id)
+  }
+
   function submit() {
     const text = value.trim()
     if (!text || !enabled) return
@@ -234,8 +303,10 @@
       <SessionPicker
         {sessions}
         {activeSessionId}
-        highlightedIndex={sessionHighlightedIndex}
-        onPick={pickSession}
+        highlightedIndex={Math.min(sessionHighlightedIndex, Math.max(0, sessions.length - 1))}
+        onPick={handleRowPick}
+        onDelete={handleDeleteSession}
+        {pendingDeleteId}
       />
     {:else if suggestionsOpen}
       <SlashCommandSuggestions

@@ -60,7 +60,12 @@ export async function refreshContextUsage(
 
   if (!cachedOverhead || cachedOverhead.mode !== mode || options.refreshStatic) {
     try {
-      cachedOverhead = await buildCachedOverhead(mode)
+      // Rebuild the system-prompt/tools/vault-context overhead in the background.
+      // The ring keeps showing its previous value until this settles, so a slow
+      // filesystem scan can never make the UI look frozen or stale.
+      const rebuilt = await buildCachedOverhead(mode)
+      if (version !== refreshVersion) return
+      cachedOverhead = rebuilt
     } catch {
       // Never let a failed overhead build hide the ring; fall back to a
       // minimal overhead so the estimate still reflects history/draft size.

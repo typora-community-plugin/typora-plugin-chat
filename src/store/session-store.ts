@@ -7,6 +7,7 @@
  */
 
 import { derived, get, writable } from 'svelte/store'
+import { t } from '@/i18n'
 import type { ApiMessage, ChatMessage } from '@/config/types'
 
 export interface ChatSession {
@@ -175,3 +176,16 @@ export function updateSessionTitle(id: string, title: string): void {
   sessions.set(next)
   persist(next, get(activeSessionId))
 }
+
+/** Delete a session. The remaining most-recently-used one becomes active. */
+export function deleteSession(id: string): ChatSession | undefined {
+  const current = get(sessions)
+  if (!current.some((s) => s.id === id)) return undefined
+  const next = current.filter((s) => s.id !== id)
+  const fallback = next.length ? next : [createDefaultSession(t.chat.title)]
+  sessions.set(fallback)
+  activeSessionId.set(fallback[0]!.id)
+  persist(fallback, fallback[0]!.id)
+  return fallback[0]
+}
+
