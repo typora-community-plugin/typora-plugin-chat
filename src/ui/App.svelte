@@ -20,7 +20,7 @@
     switchSession,
     deleteSession,
   } from '@/store/session-store'
-  import { getAgentHistory, popLastAgentTurn, setAgentHistory } from '@/agent/history'
+  import { getAgentHistory, setAgentHistory } from '@/agent/history'
   import { refreshContextUsage } from '@/store/context-usage-store'
   import { settings, settingsManager } from '@/config/settings'
   import { writable } from 'svelte/store'
@@ -28,16 +28,13 @@
   import { skills as skillStore } from '@/agent/skills/store'
 
   import { undoStore } from '@/store/undo-store'
-  import { executeUndo } from '@/agent/tools/system/undo'
-  import { replayRedoEntry } from '@/agent/tools/system/redo'
-
+  import { executeSlashCommand } from '@/slash-commands/executor'
   import { t } from '@/i18n'
 
   let {
     onSend,
     onStop,
-    onNew = null,
-    onSkillInvoke = null,
+    runTurn = null,
   } = $props()
 
   const skillNames = $derived($skillStore.map((s) => s.name))
@@ -107,59 +104,12 @@
       chatStore.answerAskUser(text)
       return
     }
-    // /new [rest] — start a fresh conversation; any trailing text is sent as the first turn.
-    const newMatch = text.match(/^\/new\s*([\s\S]*)$/)
-    if (newMatch && onNew) {
-      onNew(newMatch[1]?.trim() ?? '')
-      return
-    }
-    // /undo — reverse ALL write-tool calls from the most recent agent turn in
-    // this session (see undo.ts). No args, no agent loop. On success it also
-    // removes that whole turn from the transcript + agent history and refills
-    // its user message into the input box; on failure only an error is shown.
-    if (/^\/undo\s*$/.test(text)) {
-      const result = await executeUndo()
-      if (result.isError) {
-        chatStore.addError(result.content)
-      } else {
-        // Remove the rolled-back turn from both stores, keeping their removals
-        // in sync so a later /sessions save or reload stays consistent.
-        // Capture removed chat messages for potential /redo re-insertion.
-        const { userText, removedMessages } = chatStore.popLastUserTurnWithMessages()
-        popLastAgentTurn()
-        undoStore.setRedoChatMessages(removedMessages)
-        if (userText) inputPlaceholder.set(userText)
-      }
-      return
-    }
-    // /redo — restore the most recently undone turn: re-insert its messages into
-    // the transcript + agent history and re-execute write-tool calls.
-    if (/^\/redo\s*$/.test(text)) {
-      const entry = undoStore.popRedo()
-      if (!entry) {
-        chatStore.addError('没有可重做的操作')
-        return
-      }
-      // Re-insert the removed chat messages so the turn re-appears in the UI.
-      if (entry.chatMessages && entry.chatMessages.length > 0) {
-        chatStore.appendMessages(entry.chatMessages)
-      }
-      const result = await replayRedoEntry(entry)
-      if (result.isError) {
-        // Surface failures as a redo tool-call block instead of an error bubble.
-        const callId = chatStore.addToolCall('redo', {})
-        chatStore.updateToolResult(callId, result, true)
-      }
-      // On success: no transcript entry — the re-inserted turn already shows it.
-      return
-    }
-    // /skill:<name> [rest] — explicit, user-initiated skill invocation.
-    const match = text.match(/^\/skill:([A-Za-z0-9_-]+)\s*([\s\S]*)$/i)
-    if (match && onSkillInvoke) {
-      onSkillInvoke(match[1], match[2] ?? '')
-      return
-    }
-    onSend(text)
+    if (!runTurn) return
+    await executeSlashCommand(text, {
+      skills: skillNames,
+      runTurn,
+      onSend: (t) => onSend(t),
+    })
   }
 </script>
 

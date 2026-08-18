@@ -5,6 +5,10 @@
  */
 
 import type { SlashCommand } from './types'
+import { chatStore } from '@/store/chat-store'
+import { popLastAgentTurn } from '@/agent/history'
+import { undoStore } from '@/store/undo-store'
+import { executeUndo } from '@/agent/tools/system/undo'
 
 /** The `/undo` built-in command: undo one step of agent file mutations. */
 export const undoCommand: SlashCommand = {
@@ -13,4 +17,18 @@ export const undoCommand: SlashCommand = {
   subcommandPrefix: '/undo:',
   hasSubcommands: false,
   suggestSubcommands: () => [],
+  callback: async () => {
+    const result = await executeUndo()
+    if (result.isError) {
+      chatStore.addError(result.content)
+    } else {
+      // Remove the rolled-back turn from both stores, keeping their removals
+      // in sync so a later /sessions save or reload stays consistent.
+      // Capture removed chat messages for potential /redo re-insertion.
+      const { userText, removedMessages } = chatStore.popLastUserTurnWithMessages()
+      popLastAgentTurn()
+      undoStore.setRedoChatMessages(removedMessages)
+      if (userText) chatStore.inputPlaceholder.set(userText)
+    }
+  },
 }

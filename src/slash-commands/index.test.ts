@@ -13,12 +13,12 @@ describe('computeSuggestions', () => {
     expect(computeSuggestions({ skills: SKILLS, value: 'hello' })).toEqual([])
   })
 
-  it('enters command mode for / and lists all three commands', () => {
-    expect(computeSuggestions({ skills: SKILLS, value: '/' })).toEqual(['/new', '/sessions', '/skill'])
+  it('enters command mode for / and lists all built-in commands', () => {
+    expect(computeSuggestions({ skills: SKILLS, value: '/' })).toEqual(['/new', '/sessions', '/skill', '/undo', '/redo'])
   })
 
-  it('lists all three commands even when no skills are available', () => {
-    expect(computeSuggestions({ skills: [], value: '/' })).toEqual(['/new', '/sessions', '/skill'])
+  it('lists all commands even when no skills are available', () => {
+    expect(computeSuggestions({ skills: [], value: '/' })).toEqual(['/new', '/sessions', '/skill', '/undo', '/redo'])
   })
 
   it('filters commands by prefix', () => {
@@ -26,6 +26,8 @@ describe('computeSuggestions', () => {
     expect(computeSuggestions({ skills: SKILLS, value: '/sk' })).toEqual(['/skill'])
     expect(computeSuggestions({ skills: SKILLS, value: '/n' })).toEqual(['/new'])
     expect(computeSuggestions({ skills: SKILLS, value: '/ne' })).toEqual(['/new'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/u' })).toEqual(['/undo'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/r' })).toEqual(['/redo'])
   })
 
   it('matches command names case-insensitively', () => {

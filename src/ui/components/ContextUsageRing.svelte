@@ -90,18 +90,18 @@
       stroke-dashoffset 0.2s ease,
       stroke 0.2s ease;
     stroke: var(--primary-color, rgb(30, 136, 229));
-  }
 
-  .typ-context-ring.warn .typ-context-ring__bar {
-    stroke: #f5a623;
-  }
+    .typ-context-ring.warn & {
+      stroke: #f5a623;
+    }
 
-  .typ-context-ring.danger .typ-context-ring__bar {
-    stroke: rgb(var(--typ-color-red-3));
-  }
+    .typ-context-ring.danger & {
+      stroke: rgb(var(--typ-color-red-3));
+    }
 
-  .typ-context-ring.unknown .typ-context-ring__bar {
-    stroke: rgb(var(--typ-color-gray-3));
-    opacity: 0.35;
+    .typ-context-ring.unknown & {
+      stroke: rgb(var(--typ-color-gray-3));
+      opacity: 0.35;
+    }
   }
 </style>

@@ -5,13 +5,10 @@ import { chatStore } from './store/chat-store'
 import { refreshContextUsage, setApiInputTokens } from './store/context-usage-store'
 import { settingsManager } from './config/settings'
 import { abortAgentLoop, executeAgentLoop } from './agent/loop'
-import { getAgentHistory, resetAgentHistory, setAgentHistory } from './agent/history'
-import { createSession, getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
+import { getAgentHistory, resetAgentHistory } from './agent/history'
+import { getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
 import { undoStore } from './store/undo-store'
-import { fs } from '@typora-community-plugin/core'
 import { getSelection } from './adapter/editor'
-import { getSkill } from './agent/skills/index'
-import { stripFrontmatter } from './agent/skills/frontmatter'
 import type { AssistantMeta, ToolResult } from './config/types'
 
 
@@ -68,28 +65,8 @@ export class ChatView extends WorkspaceView {
       props: {
         onSend: (text: string) => this.handleSend(text),
         onStop: () => abortAgentLoop(),
-        onNew: (rest: string) => {
-          // Save the current conversation, then start a fresh session so the
-          // previous transcript remains available through the /sessions picker.
-          const current = getActiveSession()
-          if (current && (chatStore.getMessages().length > 0 || getAgentHistory().length > 0)) {
-            saveActiveSession(chatStore.getMessages(), getAgentHistory())
-          }
-          // /undo and /redo are session-scoped: dropping both stacks here
-          // guarantees a new session cannot reach across boundaries.
-          undoStore.clear()
-          undoStore.clearRedo()
-          createSession()
-          chatStore.replaceMessages([])
-          chatStore.clearSelection()
-          setAgentHistory([])
-          void refreshContextUsage({ refreshStatic: true })
-          const seed = rest.trim()
-          if (seed) {
-            void this.handleSend(seed)
-          }
-        },
-        onSkillInvoke: (name: string, rest: string) => void this.handleSkillInvoke(name, rest),
+        runTurn: (options: { displayText: string; expandedMessage: string | null }) =>
+          this.runTurn(options),
       },
     }) as unknown as Record<string, unknown>
   }
@@ -121,47 +98,6 @@ export class ChatView extends WorkspaceView {
    */
   async handleSend(text: string) {
     await this.runTurn({ displayText: text, expandedMessage: null })
-  }
-
-  /**
-   * Entry point for an explicit `/skill:<name>` invocation. The transcript
-   * shows the original command line; internally the skill body is inlined as
-   * an instruction prefix so the model follows it for this turn regardless of
-   * whether it would have called use_skill on its own.
-   */
-  async handleSkillInvoke(skillName: string, rest: string) {
-    const displayText = `/skill:${skillName}${rest ? ` ${rest}` : ''}`
-
-    let skill
-    try {
-      skill = await getSkill(skillName)
-    } catch {
-      /* fall through to error below */
-    }
-    if (!skill) {
-      chatStore.addUserMessage(displayText, null)
-      const callId = chatStore.addToolCall('use_skill', { name: skillName })
-      chatStore.updateToolResult(callId, { content: `Unknown skill "${skillName}".`, isError: true }, true)
-      return
-    }
-
-    let body = ''
-    try {
-      const text = await fs.readText(skill.path)
-      body = stripFrontmatter(text).trim()
-    } catch (error: any) {
-      chatStore.addUserMessage(displayText, null)
-      chatStore.addError(`Failed to read skill "${skillName}": ${error.message || error}`)
-      return
-    }
-
-    const expandedMessage =
-      `Follow the instructions of the skill "${skill.name}" for this turn. ` +
-      `Auxiliary files live under ${skill.dir}; read them if referenced.\n\n` +
-      `${body}\n\n` +
-      (rest.trim() ? `User request: ${rest.trim()}` : 'Apply the skill to the current context.')
-
-    await this.runTurn({ displayText, expandedMessage })
   }
 
   private async runTurn(options: { displayText: string; expandedMessage: string | null }) {
