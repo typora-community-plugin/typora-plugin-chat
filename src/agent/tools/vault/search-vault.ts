@@ -1,10 +1,10 @@
 import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
-import { searchFiles } from '@/adapter/vault'
+import { vaultIndex } from '@/adapter/vault-index'
 
 
 export const searchVaultSchema: ToolDefinition = {
   name: 'search_vault',
-  description: 'Search the vault by file name or file content. Returns matching file paths with snippets.',
+  description: 'Search the vault by file name or file content (served from an in-memory index). Returns matching paths with snippets.',
   parameters: {
     type: 'object',
     properties: {
@@ -41,9 +41,14 @@ export async function executeSearchVault(input: Record<string, unknown>): Promis
   try {
     const searchContent = input.searchContent !== false
     const limit = typeof input.limit === 'number' ? input.limit : 20
-    const results = await searchFiles(query, searchContent, limit)
-    if (!results.length) return { content: `No files found for "${query}".` }
-    return { content: `Found ${results.length} file(s):\n${results.map(f => `- ${f}`).join('\n')}` }
+
+    const matches = await vaultIndex.search(query, searchContent, limit)
+    if (!matches.length) return { content: `No files found for "${query}".` }
+
+    const lines = matches.map(m =>
+      m.snippet ? `- ${m.file} — ${m.snippet}` : `- ${m.file}`,
+    )
+    return { content: `Found ${matches.length} file(s):\n${lines.join('\n')}` }
   } catch (error: any) {
     return { content: `search_vault failed: ${error.message || error}`, isError: true }
   }

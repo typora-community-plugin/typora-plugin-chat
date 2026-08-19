@@ -1,5 +1,6 @@
 import { app, fs, path } from '@typora-community-plugin/core'
 import { isMarkdownFile } from '@/utils/helpers'
+import { vaultIndex } from './vault-index'
 
 
 /**
@@ -49,6 +50,7 @@ export async function writeFile(vaultPath: string, content: string): Promise<voi
   const absolute = resolveVaultPath(vaultPath)
   await ensureParentDir(absolute)
   await fs.writeText(absolute, content)
+  vaultIndex.invalidate(vaultPath)
 }
 
 export async function fileExists(vaultPath: string): Promise<boolean> {
@@ -68,6 +70,7 @@ export async function findReplace(
   }
   const next = current.replace(find, replacement)
   await fs.writeText(absolute, next)
+  vaultIndex.invalidate(vaultPath)
   return next
 }
 
@@ -97,17 +100,20 @@ export async function insertText(
     next = `${current}\n${content}`
   }
   await fs.writeText(absolute, next)
+  vaultIndex.invalidate(vaultPath)
 }
 
 export async function createFile(vaultPath: string, content: string): Promise<void> {
   if (await fileExists(vaultPath)) {
     throw new Error(`create_file failed: ${vaultPath} already exists`)
   }
-  await writeFile(vaultPath, content)
+  await writeFile(vaultPath, content) // invalidate is called inside writeFile
 }
 
 export async function renameFile(vaultPath: string, newPath: string): Promise<void> {
   await fs.move(resolveVaultPath(vaultPath), resolveVaultPath(newPath))
+  vaultIndex.invalidate(vaultPath)
+  vaultIndex.invalidate(newPath)
 }
 
 export async function deleteFile(vaultPath: string): Promise<void> {
@@ -120,40 +126,29 @@ export async function deleteFile(vaultPath: string): Promise<void> {
   } catch {
     await fs.remove(absolute)
   }
+  vaultIndex.invalidate(vaultPath)
 }
 
 export async function listFiles(folder = '', extension?: string): Promise<string[]> {
-  const dir = folder ? resolveVaultPath(folder) : app.vault.path
-  const files = await fs.listFiles(dir, { recursive: true })
-  const root = app.vault.path
-  return files
-    .map(file => file.startsWith(root) ? file.slice(root.length + 1) : file)
-    .filter(file => !extension || file.toLowerCase().endsWith(`.${extension.toLowerCase()}`))
-    .sort()
+  await vaultIndex.ensureFresh()
+  const all = vaultIndex.listAll()
+  let filtered: string[]
+  if (extension) {
+    const ext = `.${extension.toLowerCase()}`
+    filtered = all.filter(f => f.toLowerCase().endsWith(ext))
+  } else {
+    filtered = all
+  }
+  if (!folder) return filtered
+  // Filter to the requested folder (prefix match on vault-relative path).
+  const prefix = folder.replace(/\\/g, '/') + '/'
+  return filtered.filter(f => f.startsWith(prefix) || f === folder)
 }
 
+/** @deprecated Use `vaultIndex.search()` directly — returns richer results with snippets. */
 export async function searchFiles(query: string, searchContent: boolean, limit = 20): Promise<string[]> {
-  const files = await listFiles('', 'md')
-  const needle = query.toLowerCase()
-  const results: string[] = []
-  const cap = Math.min(Math.max(limit, 1), 50)
-
-  for (const file of files) {
-    if (results.length >= cap) break
-    if (file.toLowerCase().includes(needle)) {
-      results.push(file)
-      continue
-    }
-    if (searchContent) {
-      try {
-        const content = await readFile(file)
-        if (content.toLowerCase().includes(needle)) results.push(file)
-      } catch {
-        /* skip unreadable files */
-      }
-    }
-  }
-  return results
+  const matches = await vaultIndex.search(query, searchContent, limit)
+  return matches.map(m => m.file)
 }
 
 export function getCurrentFilePath(): string | null {

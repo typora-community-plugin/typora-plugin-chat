@@ -1,5 +1,5 @@
 import { app } from '@typora-community-plugin/core'
-import { listFiles } from '@/adapter/vault'
+import { vaultIndex } from '@/adapter/vault-index'
 import { basename } from '@/utils/helpers'
 
 
@@ -11,8 +11,8 @@ export async function buildContextMessage(): Promise<string> {
   const vaultName = basename(app.vault.path || 'Vault')
   let fileCount = 0
   try {
-    const files = await listFiles('', 'md')
-    fileCount = files.length
+    await vaultIndex.ensureFresh()
+    fileCount = vaultIndex.count()
   } catch {
     fileCount = 0
   }
