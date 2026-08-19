@@ -12,7 +12,6 @@ import { executeListFiles, listFilesSchema } from './vault/list-files'
 import { executeCreateFile, createFileSchema } from './vault/create-file'
 import { executeDeleteFile, deleteFileSchema } from './vault/delete-file'
 import { executeRenameFile, renameFileSchema } from './vault/rename-file'
-import { executeGetBacklinks, getBacklinksSchema } from './vault/get-backlinks'
 import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './system/get-current-datetime'
 import { executeAskUser, askUserSchema } from './system/ask-user'
 import type { AskUserQuestionItem, AskUserAnswerItem } from './system/ask-user'
@@ -28,7 +27,7 @@ export interface ExecutorContext {
   askUser?: (questions: AskUserQuestionItem[]) => Promise<AskUserAnswerItem[]>
 }
 
-/** All 14 tool schemas — re-exported for registry.ts */
+/** All 13 tool schemas — re-exported for registry.ts */
 export const allToolSchemas = [
   // Editor tools
   readDocumentSchema,
@@ -43,7 +42,6 @@ export const allToolSchemas = [
   createFileSchema,
   deleteFileSchema,
   renameFileSchema,
-  getBacklinksSchema,
   // System tools
   getCurrentDatetimeSchema,
   askUserSchema,
@@ -57,7 +55,6 @@ const OPTIONAL_PATH_TOOLS = new Set([
   'edit_document',
   'get_properties',
   'set_properties',
-  'get_backlinks',
 ])
 
 /**
@@ -107,7 +104,6 @@ async function runTool(
     case 'create_file': return executeCreateFile(input, context.turnId)
     case 'delete_file': return executeDeleteFile(input, context.turnId)
     case 'rename_file': return executeRenameFile(input, context.turnId)
-    case 'get_backlinks': return executeGetBacklinks(input)
     // System tools
     case 'get_current_datetime': return executeGetCurrentDatetime()
     case 'ask_user': return executeAskUser(input, context)

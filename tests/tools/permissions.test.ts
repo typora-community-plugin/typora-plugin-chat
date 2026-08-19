@@ -25,7 +25,6 @@ describe('tool permissions', () => {
       'read_file',
       'search_vault',
       'list_files',
-      'get_backlinks',
       'get_current_datetime',
       'ask_user',
       'use_skill',

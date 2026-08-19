@@ -10,7 +10,6 @@ import { summarizeListFiles } from './vault/list-files'
 import { summarizeCreateFile } from './vault/create-file'
 import { summarizeDeleteFile } from './vault/delete-file'
 import { summarizeRenameFile } from './vault/rename-file'
-import { summarizeGetBacklinks } from './vault/get-backlinks'
 import { summarizeGetCurrentDatetime } from './system/get-current-datetime'
 import { summarizeAskUser } from './system/ask-user'
 import { summarizeUpdateTodo } from './system/update-todo'
@@ -33,7 +32,6 @@ export const toolSummaries: Record<string, ToolSummary> = {
   create_file: summarizeCreateFile,
   delete_file: summarizeDeleteFile,
   rename_file: summarizeRenameFile,
-  get_backlinks: summarizeGetBacklinks,
   // System tools
   get_current_datetime: summarizeGetCurrentDatetime,
   ask_user: summarizeAskUser,
