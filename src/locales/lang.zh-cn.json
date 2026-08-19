@@ -10,6 +10,7 @@
     "title": "Chat",
     "inputPlaceholder": "输入消息...",
     "typeYourAnswer": "输入你的回答...",
+    "askUserSubmit": "提交",
     "compressedHistory": "*(为控制上下文长度，较早的对话已被压缩。)*",
     "summarizeNote": "总结这篇笔记：{file}",
     "clear": "清空",

@@ -10,6 +10,7 @@
     "title": "Chat",
     "inputPlaceholder": "Nachricht eingeben...",
     "typeYourAnswer": "Antwort eingeben...",
+    "askUserSubmit": "Absenden",
     "compressedHistory": "*(Die frühere Unterhaltung wurde gekürzt, um den Kontextumfang handhabbar zu halten.)*",
     "summarizeNote": "Diese Notiz zusammenfassen: {file}",
     "clear": "Löschen",

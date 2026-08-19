@@ -10,6 +10,7 @@
     "title": "Chat",
     "inputPlaceholder": "Type a message...",
     "typeYourAnswer": "Type your answer...",
+    "askUserSubmit": "Submit",
     "compressedHistory": "*(Earlier conversation was compressed to keep the context window manageable.)*",
     "summarizeNote": "Summarize this note: {file}",
     "clear": "Clear",

@@ -15,6 +15,7 @@ import { executeRenameFile, renameFileSchema } from './vault/rename-file'
 import { executeGetBacklinks, getBacklinksSchema } from './vault/get-backlinks'
 import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './system/get-current-datetime'
 import { executeAskUser, askUserSchema } from './system/ask-user'
+import type { AskUserQuestionItem, AskUserAnswerItem } from './system/ask-user'
 import { executeUseSkill, useSkillSchema } from './system/use-skill'
 import { executeUndo } from './system/undo'
 
@@ -23,7 +24,7 @@ export interface ExecutorContext {
   activeFile?: string | null
   /** Agent turn id; stamped onto undo entries so /undo can roll back a whole turn. */
   turnId?: string
-  askUser?: (question: string) => Promise<string>
+  askUser?: (questions: AskUserQuestionItem[]) => Promise<AskUserAnswerItem[]>
 }
 
 /** All 14 tool schemas — re-exported for registry.ts */

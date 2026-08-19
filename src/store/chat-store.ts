@@ -1,5 +1,6 @@
 import { get, writable } from 'svelte/store'
 import type { AssistantMeta, ChatMessage, SelectionScope, ToolResult } from '@/config/types'
+import type { AskUserQuestionItem, AskUserAnswerItem } from '@/agent/tools/system/ask-user'
 import { t } from '@/i18n'
 
 
@@ -42,10 +43,10 @@ export const messages = writable<ChatMessage[]>(loadHistory())
 export const thinking = writable<boolean>(false)
 export const inputEnabled = writable<boolean>(true)
 export const selection = writable<SelectionScope | null>(null)
-export const askUserQuestion = writable<string | null>(null)
+export const askUserQuestion = writable<AskUserQuestionItem[] | null>(null)
 export const inputPlaceholder = writable<string>('')
 
-let askUserResolver: ((answer: string) => void) | null = null
+let askUserResolver: ((answers: AskUserAnswerItem[]) => void) | null = null
 
 function persist() {
   try {
@@ -145,20 +146,20 @@ export const chatStore = {
     }
   },
 
-  showAskUser(question: string): Promise<string> {
-    askUserQuestion.set(question)
+  showAskUser(questions: AskUserQuestionItem[]): Promise<AskUserAnswerItem[]> {
+    askUserQuestion.set(questions)
     inputPlaceholder.set(t.chat.typeYourAnswer)
     return new Promise(resolve => {
       askUserResolver = resolve
     })
   },
 
-  answerAskUser(answer: string) {
+  answerAskUser(answers: AskUserAnswerItem[]) {
     const resolve = askUserResolver
     askUserResolver = null
     askUserQuestion.set(null)
     inputPlaceholder.set(t.chat.inputPlaceholder)
-    if (resolve) resolve(answer)
+    if (resolve) resolve(answers)
   },
 
   setInputEnabled(enabled: boolean) {

@@ -2,6 +2,7 @@
   import Messages from './components/Messages.svelte'
   import SelectionPill from './components/SelectionPill.svelte'
   import InputBar from './components/InputBar.svelte'
+  import AskUserPanel from './components/AskUserPanel.svelte'
   import {
     chatStore,
     messages,
@@ -100,10 +101,7 @@
   }
 
   async function handleMainSend(text: string) {
-    if ($askUserQuestion) {
-      chatStore.answerAskUser(text)
-      return
-    }
+    if ($askUserQuestion) return // AskUserPanel handles its own submit
     if (!runTurn) return
     await executeSlashCommand(text, {
       skills: skillNames,
@@ -117,9 +115,7 @@
   <Messages messages={$messages} thinking={$thinking} />
 
   {#if $askUserQuestion}
-    <div class="typ-ask-user">
-      <div class="typ-ask-user__question">{$askUserQuestion}</div>
-    </div>
+    <AskUserPanel questions={$askUserQuestion} onAnswer={(answers) => chatStore.answerAskUser(answers)} />
   {/if}
 
   {#if $selection}
@@ -158,46 +154,6 @@
       background-color: var(--bg-color, #f5f5f5);
       color: var(--text-color, rgb(var(--typ-text-color)));
       font-size: 14px;
-    }
-
-    .typ-ask-user {
-      flex: 0 0 auto;
-      margin: 0 16px 8px;
-      padding: 10px 14px;
-      border: 1px solid rgb(var(--typ-border-color));
-      border-left: 3px solid var(--primary-color, rgb(30, 136, 229));
-      border-radius: 0 var(--typ-radius-m) var(--typ-radius-m) 0;
-      background-color: var(--bg-color, #fff);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-
-      &__question {
-        font-weight: 500;
-        font-size: 13px;
-        color: var(--text-color, rgb(var(--typ-text-color)));
-      }
-
-      &__row {
-        display: flex;
-        gap: 8px;
-
-        input {
-          flex: 1;
-          height: 32px;
-          padding: 0 12px;
-          border: 1px solid rgb(var(--typ-border-color));
-          border-radius: var(--typ-radius-capsule);
-          font-size: 14px;
-          outline: none;
-          background-color: var(--bg-color, #fff);
-          color: var(--text-color, rgb(var(--typ-text-color)));
-
-          &:focus {
-            border-color: var(--primary-color, rgb(30, 136, 229));
-          }
-        }
-      }
     }
   }
 </style>

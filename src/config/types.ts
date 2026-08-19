@@ -133,8 +133,8 @@ export interface AgentCallbacks {
   onToolCall?: (name: string, input: Record<string, unknown>) => string | void
   onToolResult?: (toolCallId: string, name: string, result: ToolResult) => void
   onError?: (message: string) => void
-  /** resolve when the agent wants the user to answer a question */
-  onAskUser?: (question: string) => Promise<string>
+  /** resolve when the agent wants the user to answer one or more questions */
+  onAskUser?: (questions: import('@/agent/tools/system/ask-user').AskUserQuestionItem[]) => Promise<import('@/agent/tools/system/ask-user').AskUserAnswerItem[]>
   onThinkingChange?: (thinking: boolean) => void
   /** Called with each API response's token usage during an agent loop. */
   onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void

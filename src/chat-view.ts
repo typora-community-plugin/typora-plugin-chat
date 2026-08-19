@@ -132,9 +132,9 @@ export class ChatView extends WorkspaceView {
           onToolCall: (name, input) => chatStore.addToolCall(name, input),
           onToolResult: (id, _name, toolResult) => chatStore.updateToolResult(id, toolResult, toolResult.isError),
           onError: (msg) => chatStore.addError(msg),
-          onAskUser: (question) => {
+          onAskUser: (questions) => {
             chatStore.setInputEnabled(true)
-            return chatStore.showAskUser(question)
+            return chatStore.showAskUser(questions)
           },
           onThinkingChange: (isThinking) => {
             if (isThinking) chatStore.showThinking()
