@@ -6,8 +6,22 @@
   let { message } = $props()
 
   const isCall = $derived(message.type === 'tool_call')
+
+  /** For update_todo: true while any task is still pending / in_progress. */
+  const todoHasRemaining = $derived.by(() => {
+    if (message.toolName !== 'update_todo') return false
+    const todos = message.toolInput?.todos
+    return Array.isArray(todos) && todos.length > 0
+      ? todos.some((t: any) => t.status !== 'completed')
+      : true
+  })
+
   const status = $derived(
-    isCall ? 'loading' : (message.toolResult?.isError || message.isError ? 'error' : 'success')
+    isCall
+      ? 'loading'
+      : (message.toolResult?.isError || message.isError
+          ? 'error'
+          : (todoHasRemaining ? 'partial' : 'success'))
   )
   const summary = $derived(
     message.toolName ? summarizeToolMessage(message.toolName, message) : ''
@@ -48,6 +62,10 @@
       white-space: nowrap;
       color: var(--text-color, rgb(var(--typ-text-color)));
       opacity: 0.75;
+
+      &::before {
+        content: ' · '
+      }
     }
 
     .typ-tool-status {
@@ -59,6 +77,10 @@
 
       &--success {
         background: #27ae60;
+      }
+
+      &--partial {
+        background: #3498db;
       }
 
       &--error {

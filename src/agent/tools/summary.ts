@@ -13,6 +13,7 @@ import { summarizeRenameFile } from './vault/rename-file'
 import { summarizeGetBacklinks } from './vault/get-backlinks'
 import { summarizeGetCurrentDatetime } from './system/get-current-datetime'
 import { summarizeAskUser } from './system/ask-user'
+import { summarizeUpdateTodo } from './system/update-todo'
 
 /**
  * Maps each tool name to its parameter-summary function.
@@ -36,6 +37,7 @@ export const toolSummaries: Record<string, ToolSummary> = {
   // System tools
   get_current_datetime: summarizeGetCurrentDatetime,
   ask_user: summarizeAskUser,
+  update_todo: summarizeUpdateTodo,
 }
 
 export function summarizeToolMessage(

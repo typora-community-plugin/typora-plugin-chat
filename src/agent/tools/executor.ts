@@ -18,6 +18,7 @@ import { executeAskUser, askUserSchema } from './system/ask-user'
 import type { AskUserQuestionItem, AskUserAnswerItem } from './system/ask-user'
 import { executeUseSkill, useSkillSchema } from './system/use-skill'
 import { executeUndo } from './system/undo'
+import { executeUpdateTodo, updateTodoSchema } from './system/update-todo'
 
 
 export interface ExecutorContext {
@@ -47,6 +48,7 @@ export const allToolSchemas = [
   getCurrentDatetimeSchema,
   askUserSchema,
   useSkillSchema,
+  updateTodoSchema,
 ] as const
 
 /** Tools whose `path` parameter is optional; when missing, fall back to the active file for summary display. */
@@ -110,6 +112,7 @@ async function runTool(
     case 'get_current_datetime': return executeGetCurrentDatetime()
     case 'ask_user': return executeAskUser(input, context)
     case 'use_skill': return executeUseSkill(input)
+    case 'update_todo': return executeUpdateTodo(input)
     // UI-only slash command (not exposed to the model); see undo.ts.
     case 'undo': return executeUndo()
     default:
