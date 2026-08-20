@@ -93,7 +93,7 @@
 
     .typ-input-model,
     .typ-input-mode {
-      max-width: 150px;
+      width: calc(var(--typ-sidedock-width) / 3.8);
       padding: 2px 6px 2px 8px;
       border: 1px solid rgb(var(--typ-border-color));
       border-radius: 6px;
