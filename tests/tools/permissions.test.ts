@@ -28,6 +28,7 @@ describe('tool permissions', () => {
       'get_current_datetime',
       'ask_user',
       'use_skill',
+      'web_fetch', // read-only network tool — available in both modes (plan p2-4)
     ]
     for (const name of readOnlyTools) {
       expect(isWriteTool(name)).toBe(false)

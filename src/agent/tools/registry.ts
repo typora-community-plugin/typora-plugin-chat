@@ -3,8 +3,8 @@ import { allToolSchemas } from './executor'
 
 
 /**
- * The 14 vault tools exposed to the AI providers.
- * Schemas are now defined alongside their executors in src/tools/implements/*.ts (kebab-case)
+ * All tool definitions exposed to the AI providers.
+ * Schemas are defined alongside their executors in src/agent/tools/{editor,vault,system}/*.ts (kebab-case).
  */
 export const toolDefinitions: ToolDefinition[] = [...allToolSchemas]
 

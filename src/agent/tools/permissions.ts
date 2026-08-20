@@ -21,6 +21,9 @@ export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set([
   'rename_file',
 ])
 
+// NOTE: `web_fetch` is deliberately NOT a write tool — it only reads remote
+// content and never touches the vault, so it stays available in read-only mode.
+
 /** Resolve the current mode, normalizing any unexpected stored value. */
 export function currentAgentMode(): AgentMode {
   const mode = settingsManager.get().mode

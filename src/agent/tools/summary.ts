@@ -14,6 +14,7 @@ import { summarizeGetCurrentDatetime } from './system/get-current-datetime'
 import { summarizeAskUser } from './system/ask-user'
 import { summarizeUpdateTodo } from './system/update-todo'
 import { summarizeCreateSubagent } from './system/create-subagent'
+import { summarizeWebFetch } from './system/web-fetch'
 
 /**
  * Maps each tool name to its parameter-summary function.
@@ -38,6 +39,7 @@ export const toolSummaries: Record<string, ToolSummary> = {
   ask_user: summarizeAskUser,
   update_todo: summarizeUpdateTodo,
   create_subagent: summarizeCreateSubagent,
+  web_fetch: summarizeWebFetch,
 }
 
 export function summarizeToolMessage(

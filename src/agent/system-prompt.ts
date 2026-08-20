@@ -20,7 +20,8 @@ export function buildSystemPrompt(skillsCatalog = '', mode: 'read-only' | 'works
 - Do not add an H1 heading to documents unless asked.
 - If you create a new file, give it a meaningful name (never "Untitled").
 - Be proactive: execute the tools needed to complete the task instead of asking permission first. Use ask_user only when a decision truly needs the user's input.
-- Keep answers conversational and concise. Do not wrap file names in backticks in prose unless quoting code.${modeLine}
+- Keep answers conversational and concise. Do not wrap file names in backticks in prose unless quoting code.
+- web_fetch retrieves public http/https pages as text (15s timeout, content truncated). Use it to read or cite online sources; if a fetch fails with a network/CORS error, say so instead of retrying endlessly.${modeLine}
 
 ## Format
 - Use markdown for multi-paragraph answers.
