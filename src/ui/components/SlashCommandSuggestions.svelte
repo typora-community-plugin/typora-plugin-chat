@@ -1,22 +1,29 @@
 <script lang="ts">
+  import type { Suggestion } from '@/slash-commands'
+
   let { suggestions, highlightedIndex, onPick }: {
     /** Slash command entries to render (`/new`, `/sessions`, `/skill`, `/skill:<name>`). */
-    suggestions: string[]
+    suggestions: Suggestion[]
     /** Index of the currently highlighted entry. */
     highlightedIndex: number
     /** Called with an entry when it is clicked (mousedown). */
-    onPick: (suggestion: string) => void
+    onPick: (suggestion: Suggestion) => void
   } = $props()
 </script>
 
 <ul class="typ-skill-suggestions" role="listbox">
-  {#each suggestions as s, i (s)}
+  {#each suggestions as s, i (s.text)}
     <li
       role="option"
       aria-selected={i === highlightedIndex}
       class:typ-suggestion-highlighted={i === highlightedIndex}
       onmousedown={(e) => { e.preventDefault(); onPick(s); }}
-    >{s}</li>
+    >
+      <span class="typ-suggestion-text">{s.text}</span>
+      {#if s.description}
+        <span class="typ-suggestion-desc" aria-hidden="true">{s.description}</span>
+      {/if}
+    </li>
   {/each}
 </ul>
 
@@ -39,13 +46,27 @@
       z-index: 20;
 
       li {
-        padding: 6px 10px;
+        padding: 5px 10px;
         border-radius: 4px;
-        font-size: 13px;
         cursor: pointer;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+
+        .typ-suggestion-text {
+          display: block;
+          font-size: 13px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .typ-suggestion-desc {
+          display: block;
+          font-size: 11px;
+          color: rgb(var(--typ-text-color-gray));
+          opacity: 0.7;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
 
         &:hover,
         &.typ-suggestion-highlighted {

@@ -6,7 +6,12 @@ import {
   suggestionsShouldBeOpen,
 } from './index'
 
-const SKILLS = ['alpha', 'beta', 'gamma', 'delta-one']
+const SKILLS = [
+  { name: 'alpha', description: 'First skill' },
+  { name: 'beta', description: 'Second skill' },
+  { name: 'gamma', description: '' },
+  { name: 'delta-one' },
+]
 
 describe('computeSuggestions', () => {
   it('returns [] when the value does not start with /', () => {
@@ -14,26 +19,30 @@ describe('computeSuggestions', () => {
   })
 
   it('enters command mode for / and lists all built-in commands', () => {
-    expect(computeSuggestions({ skills: SKILLS, value: '/' })).toEqual(['/new', '/sessions', '/skill', '/undo', '/redo'])
+    const result = computeSuggestions({ skills: SKILLS, value: '/' })
+    expect(result.map(s => s.text)).toEqual(['/new', '/sessions', '/skill', '/undo', '/redo'])
   })
 
   it('lists all commands even when no skills are available', () => {
-    expect(computeSuggestions({ skills: [], value: '/' })).toEqual(['/new', '/sessions', '/skill', '/undo', '/redo'])
+    const result = computeSuggestions({ skills: [], value: '/' })
+    expect(result.map(s => s.text)).toEqual(['/new', '/sessions', '/skill', '/undo', '/redo'])
   })
 
   it('filters commands by prefix', () => {
-    expect(computeSuggestions({ skills: SKILLS, value: '/s' })).toEqual(['/sessions', '/skill'])
-    expect(computeSuggestions({ skills: SKILLS, value: '/sk' })).toEqual(['/skill'])
-    expect(computeSuggestions({ skills: SKILLS, value: '/n' })).toEqual(['/new'])
-    expect(computeSuggestions({ skills: SKILLS, value: '/ne' })).toEqual(['/new'])
-    expect(computeSuggestions({ skills: SKILLS, value: '/u' })).toEqual(['/undo'])
-    expect(computeSuggestions({ skills: SKILLS, value: '/r' })).toEqual(['/redo'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/s' }).map(s => s.text)).toEqual(['/sessions', '/skill'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/sk' }).map(s => s.text)).toEqual(['/skill'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/n' }).map(s => s.text)).toEqual(['/new'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/ne' }).map(s => s.text)).toEqual(['/new'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/u' }).map(s => s.text)).toEqual(['/undo'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/r' }).map(s => s.text)).toEqual(['/redo'])
   })
 
   it('matches command names case-insensitively', () => {
-    expect(computeSuggestions({ skills: SKILLS, value: '/NE' })).toContain('/new')
-    expect(computeSuggestions({ skills: SKILLS, value: '/SES' })).toContain('/sessions')
-    expect(computeSuggestions({ skills: SKILLS, value: '/SK' })).toEqual(['/skill'])
+    const ne = computeSuggestions({ skills: SKILLS, value: '/NE' })
+    expect(ne.map(s => s.text)).toContain('/new')
+    const ses = computeSuggestions({ skills: SKILLS, value: '/SES' })
+    expect(ses.map(s => s.text)).toContain('/sessions')
+    expect(computeSuggestions({ skills: SKILLS, value: '/SK' }).map(s => s.text)).toEqual(['/skill'])
   })
 
   it('does not directly suggest skills in command mode', () => {
@@ -46,18 +55,19 @@ describe('computeSuggestions', () => {
   })
 
   it('enters subcommand mode after /skill: and filters skills', () => {
-    expect(computeSuggestions({ skills: SKILLS, value: '/skill:' })).toEqual([
+    const all = computeSuggestions({ skills: SKILLS, value: '/skill:' })
+    expect(all.map(s => s.text)).toEqual([
       '/skill:alpha',
       '/skill:beta',
       '/skill:gamma',
       '/skill:delta-one',
     ])
-    expect(computeSuggestions({ skills: SKILLS, value: '/skill:b' })).toEqual(['/skill:beta'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/skill:b' }).map(s => s.text)).toEqual(['/skill:beta'])
   })
 
   it('matches skill names case-insensitively in subcommand mode', () => {
-    expect(computeSuggestions({ skills: SKILLS, value: '/skill:ALP' })).toEqual(['/skill:alpha'])
-    expect(computeSuggestions({ skills: SKILLS, value: '/SKILL:ALP' })).toEqual(['/skill:alpha'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/skill:ALP' }).map(s => s.text)).toEqual(['/skill:alpha'])
+    expect(computeSuggestions({ skills: SKILLS, value: '/SKILL:ALP' }).map(s => s.text)).toEqual(['/skill:alpha'])
   })
 
   it('returns [] for commands without subcommands', () => {
@@ -78,9 +88,29 @@ describe('computeSuggestions', () => {
   })
 
   it('caps the number of suggestions at MAX_SUGGESTIONS', () => {
-    const many = Array.from({ length: MAX_SUGGESTIONS + 5 }, (_, i) => `skill-${i}`)
+    const many = Array.from({ length: MAX_SUGGESTIONS + 5 }, (_, i) => ({ name: `skill-${i}` }))
     const result = computeSuggestions({ skills: many, value: '/skill:' })
     expect(result).toHaveLength(MAX_SUGGESTIONS)
+  })
+
+  it('built-in commands have description field (empty when i18n not initialized)', () => {
+    const cmds = computeSuggestions({ skills: SKILLS, value: '/' })
+    for (const s of cmds) {
+      expect(s.description).toBeDefined()
+    }
+  })
+
+  it('skill suggestions carry description from SkillRef', () => {
+    const result = computeSuggestions({ skills: SKILLS, value: '/skill:' })
+    expect(result[0]!.description).toBe('First skill')
+    expect(result[1]!.description).toBe('Second skill')
+    expect(result[2]!.description).toBeUndefined()
+    expect(result[3]!.text).toBe('/skill:delta-one')
+  })
+
+  it('skill with empty string description omits the field', () => {
+    const result = computeSuggestions({ skills: SKILLS, value: '/skill:g' })
+    expect(result[0]!.description).toBeUndefined()
   })
 })
 
@@ -90,6 +120,12 @@ describe('shouldCompleteSubcommand', () => {
     expect(shouldCompleteSubcommand('/new')).toBe(false)
     expect(shouldCompleteSubcommand('/sessions')).toBe(false)
     expect(shouldCompleteSubcommand('/unknown')).toBe(false)
+  })
+
+  it('accepts Suggestion objects', () => {
+    expect(shouldCompleteSubcommand({ text: '/skill' })).toBe(true)
+    expect(shouldCompleteSubcommand({ text: '/new' })).toBe(false)
+    expect(shouldCompleteSubcommand({ text: '/skill', description: 'Invoke a skill by name' })).toBe(true)
   })
 })
 

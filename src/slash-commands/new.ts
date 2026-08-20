@@ -8,6 +8,7 @@ import { chatStore } from '@/store/chat-store'
 import { getAgentHistory, setAgentHistory } from '@/agent/history'
 import { undoStore } from '@/store/undo-store'
 import { refreshContextUsage } from '@/store/context-usage-store'
+import { t } from '@/i18n'
 
 /** The `/new` built-in command: start a fresh session. */
 export const newCommand: SlashCommand = {
@@ -16,6 +17,7 @@ export const newCommand: SlashCommand = {
   subcommandPrefix: '/new:',
   hasSubcommands: false,
   takesRest: true,
+  description: () => ((t as any).chat?.slash?.new?.description) || '',
   suggestSubcommands: () => [],
   callback: (_sub, rest, context) => {
     // Save the current conversation, then start a fresh session so the

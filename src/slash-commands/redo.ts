@@ -8,6 +8,7 @@ import type { SlashCommand } from './types'
 import { chatStore } from '@/store/chat-store'
 import { undoStore } from '@/store/undo-store'
 import { replayRedoEntry } from '@/agent/tools/system/redo'
+import { t } from '@/i18n'
 
 /** The `/redo` built-in command: redo the last undone agent turn. */
 export const redoCommand: SlashCommand = {
@@ -15,6 +16,7 @@ export const redoCommand: SlashCommand = {
   command: '/redo',
   subcommandPrefix: '/redo:',
   hasSubcommands: false,
+  description: () => ((t as any).chat?.slash?.redo?.description) || '',
   suggestSubcommands: () => [],
   callback: async () => {
     const entry = undoStore.popRedo()

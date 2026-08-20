@@ -16,11 +16,13 @@ import { sessionsCommand } from './sessions'
 import { skillCommand } from './skill'
 import { undoCommand } from './undo'
 import { redoCommand } from './redo'
-import type { SlashCommand } from './types'
+import type { SlashCommand, SkillRef, Suggestion } from './types'
+
+export { Suggestion, type SkillRef }
 
 export interface SlashCommandOptions {
-  /** Discovered skill names used as suggestion candidates. */
-  skills: string[]
+  /** Discovered skill references used as suggestion candidates. */
+  skills: SkillRef[]
   /** Raw textarea value. */
   value: string
 }
@@ -50,7 +52,7 @@ function getBareSlashToken(value: string): string | null {
  *   subcommand suggestions. The command before the colon must match exactly
  *   (case-insensitively). Whitespace after the first token closes the list.
  */
-export function computeSuggestions({ skills, value }: Pick<SlashCommandOptions, 'skills' | 'value'>): string[] {
+export function computeSuggestions({ skills, value }: Pick<SlashCommandOptions, 'skills' | 'value'>): Suggestion[] {
   const token = getBareSlashToken(value)
   if (token === null) return []
 
@@ -59,7 +61,7 @@ export function computeSuggestions({ skills, value }: Pick<SlashCommandOptions, 
     const query = token.slice(1).toLowerCase()
     return SLASH_COMMANDS
       .filter((cmd) => cmd.name.startsWith(query))
-      .map((cmd) => cmd.command)
+      .map((cmd) => ({ text: cmd.command, description: cmd.description?.() }))
       .slice(0, MAX_SUGGESTIONS)
   }
 
@@ -75,8 +77,9 @@ export function computeSuggestions({ skills, value }: Pick<SlashCommandOptions, 
  * Whether picking this command should continue into subcommand mode by
  * appending `:` instead of closing the suggestion list.
  */
-export function shouldCompleteSubcommand(suggestion: string): boolean {
-  return SLASH_COMMANDS.some((cmd) => cmd.hasSubcommands && cmd.command === suggestion)
+export function shouldCompleteSubcommand(suggestion: Suggestion | string): boolean {
+  const text = typeof suggestion === 'string' ? suggestion : suggestion.text
+  return SLASH_COMMANDS.some((cmd) => cmd.hasSubcommands && cmd.command === text)
 }
 
 /** Whether the suggestion list should be open for the given state. */

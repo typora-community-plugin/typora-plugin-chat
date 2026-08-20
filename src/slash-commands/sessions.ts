@@ -6,6 +6,7 @@
  */
 
 import type { SlashCommand } from './types'
+import { t } from '@/i18n'
 
 /** The `/sessions` built-in command: show the session list and switch sessions. */
 export const sessionsCommand: SlashCommand = {
@@ -13,5 +14,6 @@ export const sessionsCommand: SlashCommand = {
   command: '/sessions',
   subcommandPrefix: '/sessions:',
   hasSubcommands: false,
+  description: () => ((t as any).chat?.slash?.sessions?.description) || '',
   suggestSubcommands: () => [],
 }

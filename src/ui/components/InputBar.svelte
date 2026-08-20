@@ -5,6 +5,7 @@
   import SlashCommandSuggestions from './SlashCommandSuggestions.svelte'
   import SessionPicker from './SessionPicker.svelte'
   import { computeSuggestions, shouldCompleteSubcommand, suggestionsShouldBeOpen } from '@/slash-commands'
+  import type { SkillRef, Suggestion } from '@/slash-commands/types'
   import type { SessionSummary } from '@/store/session-store'
 
   let {
@@ -33,7 +34,7 @@
     textAreaEl?: ((el: HTMLTextAreaElement | null) => void) | null
     model?: string
     models?: string[]
-    skills?: string[]
+    skills?: SkillRef[]
     onModelChange?: ((model: string) => void) | null
     onModelRefresh?: (() => void) | null
     sessions?: SessionSummary[]
@@ -148,11 +149,12 @@
   }
 
   // --- actions ----------------------------------------------------------------
-  function applySuggestion(suggested: string) {
-    if (suggested === '/sessions') return openSessionsPicker()
-    if (shouldCompleteSubcommand(suggested)) {
+  function applySuggestion(suggestion: Suggestion) {
+    const text = suggestion.text
+    if (text === '/sessions') return openSessionsPicker()
+    if (shouldCompleteSubcommand(text)) {
       // `/skill` → `/skill:` and keep the list open for skill filtering.
-      value = `${suggested}:`
+      value = `${text}:`
       suggestionsOpen = true
       highlightedIndex = 0
       textarea?.focus()
@@ -160,9 +162,9 @@
     }
     const spaceIndex = value.search(/\s/)
     if (spaceIndex === -1) {
-      value = `${suggested} `
+      value = `${text} `
     } else {
-      value = `${suggested}${value.slice(spaceIndex)}`
+      value = `${text}${value.slice(spaceIndex)}`
     }
     suggestionsOpen = false
     textarea?.focus()

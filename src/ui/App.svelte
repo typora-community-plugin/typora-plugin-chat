@@ -38,7 +38,7 @@
     runTurn = null,
   } = $props()
 
-  const skillNames = $derived($skillStore.map((s) => s.name))
+
 
   // One-shot channel: /undo writes the rolled-back user message here and App's
   // reactive effect hands it to InputBar as editable draft text.
@@ -104,7 +104,7 @@
     if ($askUserQuestion) return // AskUserPanel handles its own submit
     if (!runTurn) return
     await executeSlashCommand(text, {
-      skills: skillNames,
+      skills: $skillStore,
       runTurn,
       onSend: (t) => onSend(t),
     })
@@ -127,7 +127,7 @@
     enabled={$inputEnabled}
     model={$settings.model}
     models={$availableModels}
-    skills={skillNames}
+    skills={$skillStore}
     sessions={sessionList}
     activeSessionId={activeSessionId}
     onSwitchSession={handleSwitchSession}

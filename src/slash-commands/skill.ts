@@ -6,17 +6,20 @@
  */
 
 import { fs } from '@typora-community-plugin/core'
-import { getSkill } from '@/agent/skills/index'
+import { getSkill, type DiscoveredSkill } from '@/agent/skills/index'
 import { stripFrontmatter } from '@/agent/skills/frontmatter'
 import { chatStore } from '@/store/chat-store'
-import type { SlashCommand, SlashCommandContext } from './types'
+import { t } from '@/i18n'
+import type { SlashCommand, SlashCommandContext, Suggestion } from './types'
 
 const SKILL_NAME = 'skill'
 const SKILL_COMMAND = '/skill'
 const SKILL_SUBCOMMAND_PREFIX = '/skill:'
 
-function filterSkills(skills: string[], query: string): string[] {
-  return skills.filter((name) => name.toLowerCase().startsWith(query.toLowerCase()))
+function filterSkills(skills: DiscoveredSkill[], query: string): Suggestion[] {
+  return skills
+    .filter((s) => s.name.toLowerCase().startsWith(query.toLowerCase()))
+    .map((s) => ({ text: `${SKILL_SUBCOMMAND_PREFIX}${s.name}`, description: s.description || undefined }))
 }
 
 /**
@@ -70,8 +73,9 @@ export const skillCommand: SlashCommand = {
   command: SKILL_COMMAND,
   subcommandPrefix: SKILL_SUBCOMMAND_PREFIX,
   hasSubcommands: true,
-  suggestSubcommands: (query: string, { skills }: SlashCommandContext): string[] =>
-    filterSkills(skills, query).map((name) => `${SKILL_SUBCOMMAND_PREFIX}${name}`),
+  description: () => ((t as any).chat?.slash?.skill?.description) || '',
+  suggestSubcommands: (query: string, { skills }: SlashCommandContext): Suggestion[] =>
+    filterSkills(skills as DiscoveredSkill[], query),
   callback: async (subcommand, rest, context) => {
     if (!subcommand || !context.runTurn) return
     await invokeSkill(subcommand, rest.trim(), context.runTurn)

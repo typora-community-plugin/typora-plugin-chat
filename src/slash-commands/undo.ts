@@ -9,6 +9,7 @@ import { chatStore } from '@/store/chat-store'
 import { popLastAgentTurn } from '@/agent/history'
 import { undoStore } from '@/store/undo-store'
 import { executeUndo } from '@/agent/tools/system/undo'
+import { t } from '@/i18n'
 
 /** The `/undo` built-in command: undo one step of agent file mutations. */
 export const undoCommand: SlashCommand = {
@@ -16,6 +17,7 @@ export const undoCommand: SlashCommand = {
   command: '/undo',
   subcommandPrefix: '/undo:',
   hasSubcommands: false,
+  description: () => ((t as any).chat?.slash?.undo?.description) || '',
   suggestSubcommands: () => [],
   callback: async () => {
     const result = await executeUndo()

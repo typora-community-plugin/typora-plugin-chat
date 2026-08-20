@@ -7,11 +7,11 @@
  */
 
 import { SLASH_COMMANDS } from './index'
-import type { SlashCommandContext } from './types'
+import type { SlashCommandContext, SkillRef } from './types'
 
 export interface ExecuteSlashCommandOptions {
-  /** Discovered skill names used as suggestion candidates. */
-  skills: string[]
+  /** Discovered skill references — carries name and optional description. */
+  skills: SkillRef[]
   /** Sends raw text to the agent loop; `/new` uses it for an optional seed message. */
   onSend?: (text: string) => void
   /** Runs one chat turn; `/skill:<name> [rest]` inlines the skill into it. */

@@ -15,6 +15,13 @@
     "summarizeNote": "Summarize this note: {file}",
     "clear": "Clear",
     "clearConversationTitle": "Clear conversation",
+    "slash": {
+      "new": { "description": "Start a new session" },
+      "sessions": { "description": "Switch to another session" },
+      "skill": { "description": "Invoke a skill by name" },
+      "undo": { "description": "Undo the last agent file changes" },
+      "redo": { "description": "Redo the last undone turn" }
+    },
     "newSessionCommand": "/new — start a new session",
     "sessionsCommand": "/sessions — switch session",
     "sessionPickerTitle": "Sessions",
