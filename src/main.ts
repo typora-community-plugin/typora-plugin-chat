@@ -96,6 +96,20 @@ export default class extends Plugin {
           .onClick(() => this.chatAboutNote(path)))
       })
     )
+
+    setTimeout(() => this.setupChatView())
+  }
+
+  private setupChatView() {
+    const { workspace } = this.app
+
+    const tabs = workspace.rightSplit.children.find((child) => child.type === 'tabs') as WorkspaceParent | undefined
+    const leaf = workspace.createLeaf({
+      type: ChatView.type,
+      state: { path: `typ://${ChatView.type}/Chat` },
+    })
+
+    tabs?.appendChild(leaf)
   }
 
   private getChatView(): ChatView | undefined {
@@ -128,21 +142,12 @@ export default class extends Plugin {
     const { workspace } = this.app
 
     const existing = this.getChatView()
-    if (existing) {
-      workspace.rightSplit.expand()
-      return existing
+    if (!existing) {
+      this.setupChatView()
     }
 
     workspace.rightSplit.expand()
 
-    const tabs = workspace.rightSplit.children.find((child) => child.type === 'tabs') as WorkspaceParent | undefined
-    const leaf = workspace.createLeaf({
-      type: ChatView.type,
-      state: { path: `typ://${ChatView.type}/Chat` },
-    })
-
-    tabs?.appendChild(leaf)
-
-    return this.getChatView()
+    return existing ?? this.getChatView()
   }
 }
