@@ -1,3 +1,4 @@
+import './chat-view.scss'
 import { WorkspaceView } from '@typora-community-plugin/core'
 import { mount, unmount } from 'svelte'
 import App from './ui/App.svelte'
@@ -8,7 +9,6 @@ import { abortAgentLoop, executeAgentLoop } from './agent/loop'
 import { getAgentHistory, resetAgentHistory } from './agent/history'
 import { getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
 import { undoStore } from './store/undo-store'
-import { getSelection } from './adapter/editor'
 import type { AssistantMeta, ToolResult } from './config/types'
 
 
@@ -59,6 +59,7 @@ export class ChatView extends WorkspaceView {
 
   onOpen() {
     ensureSvelteDomShims()
+    this.setIcon('typ-icon typ-robot')
     this.containerEl.classList.add('typ-chat-view')
     this.svelteComponent = mount(App, {
       target: this.containerEl,

@@ -144,8 +144,18 @@
 
 <style lang="scss">
   :global {
+    .typ-workspace-sidedock .typ-workspace-tabs,
+    .typ-workspace-sidedock .typ-workspace-tab-content,
+    .typ-workspace-sidedock .typ-workspace-leaf {
+      min-width: 0;
+      max-width: 100%;
+    }
+
     .typ-chat-view {
+      box-sizing: border-box;
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
       height: 100%;
       display: flex;
       flex: 1;

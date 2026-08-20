@@ -1,4 +1,5 @@
 import { Plugin } from '@typora-community-plugin/core'
+import type { WorkspaceParent } from '@typora-community-plugin/core'
 import './ui/variables.scss'
 import { ChatView } from './chat-view'
 import { ChatSettingTab } from './ui/settings/chat-setting-tab'
@@ -39,7 +40,7 @@ export default class extends Plugin {
         title: t.command.chatWithAI,
         scope: 'global',
         callback: () => {
-          app.commands.run('core.workspace:split-right', [`typ://${ChatView.type}/Chat`])
+          this.openChatView()
         }
       })
     )
@@ -98,7 +99,7 @@ export default class extends Plugin {
   }
 
   private getChatView(): ChatView | undefined {
-    const leaf = this.app.workspace.rootSplit.findLeaf(
+    const leaf = this.app.workspace.rightSplit.findLeaf(
       (leaf) => leaf.viewType === ChatView.type
     )
     return leaf?.view instanceof ChatView ? leaf.view : undefined
@@ -124,7 +125,24 @@ export default class extends Plugin {
   }
 
   private openChatView(): ChatView | undefined {
-    this.app.commands.run('core.workspace:split-right', [`typ://${ChatView.type}/Chat`])
+    const { workspace } = this.app
+
+    const existing = this.getChatView()
+    if (existing) {
+      workspace.rightSplit.expand()
+      return existing
+    }
+
+    workspace.rightSplit.expand()
+
+    const tabs = workspace.rightSplit.children.find((child) => child.type === 'tabs') as WorkspaceParent | undefined
+    const leaf = workspace.createLeaf({
+      type: ChatView.type,
+      state: { path: `typ://${ChatView.type}/Chat` },
+    })
+
+    tabs?.appendChild(leaf)
+
     return this.getChatView()
   }
 }
