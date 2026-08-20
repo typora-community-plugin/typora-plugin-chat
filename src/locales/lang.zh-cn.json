@@ -43,6 +43,7 @@
     "metaModel": "模型",
     "metaDuration": "回复时长",
     "metaSpeed": "回复速度",
+    "metaInterrupted": "已中断",
     "speedTokensPerSecond": "tok/s",
     "speedCharsPerSecond": "字符/秒",
     "contextUsage": "上下文占用：{used} / {total} tokens（{percent}%）",

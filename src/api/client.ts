@@ -12,16 +12,21 @@ import { sendOllama } from './ollama-adapter'
 
 const MAX_429_RETRIES = 2
 
-function dispatch(settings: PluginSettings, messages: ApiMessage[], tools: ToolDefinition[]): Promise<UnifiedResponse> {
+function dispatch(
+  settings: PluginSettings,
+  messages: ApiMessage[],
+  tools: ToolDefinition[],
+  signal?: AbortSignal,
+): Promise<UnifiedResponse> {
   switch (settings.provider) {
     case 'anthropic':
-      return sendAnthropic(settings, messages, tools)
+      return sendAnthropic(settings, messages, tools, signal)
     case 'openai':
-      return sendOpenAI(settings, messages, tools)
+      return sendOpenAI(settings, messages, tools, signal)
     case 'ollama':
     case 'custom':
     default:
-      return sendOllama(settings, messages, tools)
+      return sendOllama(settings, messages, tools, signal)
   }
 }
 
@@ -42,12 +47,14 @@ export async function sendMessage(
   settings: PluginSettings,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
+  signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
   let lastError: unknown = null
 
   for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
+    if (signal?.aborted) throw new Error('Aborted')
     try {
-      return await dispatch(settings, messages, tools)
+      return await dispatch(settings, messages, tools, signal)
     } catch (error) {
       lastError = error
       const status = (error as Error & { status?: number }).status

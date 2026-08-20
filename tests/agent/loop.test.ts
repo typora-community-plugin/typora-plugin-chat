@@ -117,6 +117,25 @@ describe('agent loop', () => {
     expect(result.iterations).toBeLessThanOrEqual(2)
   })
 
+  it('interrupts an in-flight API request when aborted', async () => {
+    const onError = vi.fn()
+    vi.mocked(sendMessage).mockImplementation(
+      (_s, _m, _t, signal) => new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      }),
+    )
+
+    const promise = executeAgentLoop('stop me', { onError })
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled())
+
+    abortAgentLoop()
+    const result = await promise
+
+    expect(result.aborted).toBe(true)
+    expect(result.text).toBe('')
+    expect(onError).not.toHaveBeenCalled()
+  })
+
   it('surfaces thinking via onThinking without echoing it into history', async () => {
     vi.mocked(sendMessage)
       .mockResolvedValueOnce({

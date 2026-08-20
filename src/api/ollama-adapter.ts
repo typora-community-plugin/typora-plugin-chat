@@ -100,12 +100,14 @@ export async function sendOllama(
   settings: PluginSettings,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
+  signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
   const baseUrl = normalizeBaseUrl(settings.baseUrl)
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: buildHeaders(settings),
     body: JSON.stringify(buildBody(settings, messages, tools, false)),
+    signal,
   })
 
   if (!response.ok) {

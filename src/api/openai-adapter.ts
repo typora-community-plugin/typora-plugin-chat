@@ -79,6 +79,7 @@ export async function sendOpenAIResponses(
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
   previousResponseId?: string,
+  signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
   const baseUrl = normalizeBaseUrl(settings.baseUrl)
   const systemText = messages
@@ -131,6 +132,7 @@ export async function sendOpenAIResponses(
       ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
     },
     body: JSON.stringify(body),
+    signal,
   })
 
   if (!response.ok) {
@@ -182,6 +184,7 @@ export async function sendOpenAIChat(
   settings: PluginSettings,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
+  signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
   const baseUrl = normalizeBaseUrl(settings.baseUrl)
   const body: Record<string, unknown> = {
@@ -200,6 +203,7 @@ export async function sendOpenAIChat(
       ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
     },
     body: JSON.stringify(body),
+    signal,
   })
 
   if (!response.ok) {
@@ -236,7 +240,8 @@ export async function sendOpenAI(
   settings: PluginSettings,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
+  signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
-  if (settings.openaiApiMode === 'chat') return sendOpenAIChat(settings, messages, tools)
-  return sendOpenAIResponses(settings, messages, tools)
+  if (settings.openaiApiMode === 'chat') return sendOpenAIChat(settings, messages, tools, signal)
+  return sendOpenAIResponses(settings, messages, tools, undefined, signal)
 }

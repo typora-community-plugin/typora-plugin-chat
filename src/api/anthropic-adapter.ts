@@ -52,6 +52,7 @@ export async function sendAnthropic(
   settings: PluginSettings,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
+  signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
   const baseUrl = normalizeBaseUrl(settings.baseUrl)
   const systemText = messages
@@ -84,6 +85,7 @@ export async function sendAnthropic(
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),
+    signal,
   })
 
   if (!response.ok) {

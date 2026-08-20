@@ -43,6 +43,7 @@
     "metaModel": "Modell",
     "metaDuration": "Antwortzeit",
     "metaSpeed": "Antwortgeschwindigkeit",
+    "metaInterrupted": "Unterbrochen",
     "speedTokensPerSecond": "Tok./s",
     "speedCharsPerSecond": "Zeichen/s",
     "contextUsage": "Kontextnutzung: {used} / {total} Tokens ({percent}%)",

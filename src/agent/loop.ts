@@ -18,9 +18,11 @@ import { getAgentHistory, resetAgentHistory, setAgentHistory, popLastAgentTurn, 
 export { resetAgentHistory, popLastAgentTurn, getAgentHistory, setAgentHistory } from './history'
 
 let aborted = false
+let abortController: AbortController | null = null
 
 export function abortAgentLoop(): void {
   aborted = true
+  abortController?.abort()
 }
 
 /**
@@ -33,6 +35,8 @@ export async function executeAgentLoop(
   maxIterations = 20,
 ): Promise<AgentResult> {
   aborted = false
+  abortController = new AbortController()
+  const signal = abortController.signal
   const settings = settingsManager.get()
   // Re-discover skills on every turn so a freshly added SKILL.md is picked up
   // without a plugin restart; with no skills this yields an empty catalog and
@@ -57,7 +61,9 @@ export async function executeAgentLoop(
 
   // Shared live-abort flag: create_subagent (and any nested runSubagent) reads
   // this so the stop button terminates in-flight sub loops as well (p3-5).
-  const abortSignal = { aborted: false }
+  // The `aborted` getter follows the module flag so abortAgentLoop() reaches
+  // sub agents, and `signal` lets them abort their own in-flight API request.
+  const abortSignal = { signal, get aborted() { return aborted } }
 
   let finalText = ''
   const totalUsage = { inputTokens: 0, outputTokens: 0 }
@@ -72,10 +78,11 @@ export async function executeAgentLoop(
     let response: UnifiedResponse
     const requestStartedAt = performance.now()
     try {
-      response = await sendMessage(settings, [systemMessage, contextMessage, ...conversation], allowedTools)
+      response = await sendMessage(settings, [systemMessage, contextMessage, ...conversation], allowedTools, signal)
       apiDurationMs += performance.now() - requestStartedAt
     } catch (error) {
       callbacks.onThinkingChange?.(false)
+      if (aborted) break // user pressed stop mid-request: exit quietly, no error bubble
       callbacks.onError?.(error instanceof Error ? error.message : String(error))
       break
     }

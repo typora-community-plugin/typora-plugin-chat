@@ -25,7 +25,7 @@ export interface SubagentContext {
   /** Access mode inherited from the caller (defaults to the live settings mode). */
   mode?: AgentMode
   /** Abort signal from the outer (main) agent loop. */
-  abortSignal?: { aborted: boolean }
+  abortSignal?: { aborted: boolean; signal?: AbortSignal }
   /** Turn id inherited so sub-agent write ops join the parent's /undo scope. */
   turnId?: string
   /** Parent executor context; activeFile is refreshed, askUser is never forwarded. */
@@ -133,9 +133,10 @@ export async function runSubagent(
 
     let response: UnifiedResponse
     try {
-      response = await send(settings, [systemMessage, ...conversation], tools)
+      response = await send(settings, [systemMessage, ...conversation], tools, context.abortSignal?.signal)
     } catch (error) {
-      errorText = error instanceof Error ? error.message : String(error)
+      if (context.abortSignal?.aborted) aborted = true
+      else errorText = error instanceof Error ? error.message : String(error)
       break
     }
 

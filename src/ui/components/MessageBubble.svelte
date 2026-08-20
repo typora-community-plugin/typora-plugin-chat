@@ -36,6 +36,12 @@
     <div class="typ-message-content" use:markdown={message.text}></div>
     {#if showMeta && message.meta}
       <div class="typ-assistant-meta">
+        {#if message.meta.aborted}
+          <span class="typ-assistant-meta__item" title={t.chat.metaInterrupted}>
+            <span class="typ-assistant-meta__icon" aria-hidden="true">⏸</span>
+            <span>{t.chat.metaInterrupted}</span>
+          </span>
+        {/if}
         <span class="typ-assistant-meta__item" title={t.chat.metaModel}>
           <span class="typ-assistant-meta__icon" aria-hidden="true">🤖</span>
           <span>{message.meta.model}</span>

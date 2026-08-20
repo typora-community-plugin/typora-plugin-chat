@@ -146,25 +146,29 @@ export class ChatView extends WorkspaceView {
         settingsManager.get().maxIterations,
       )
 
-      if (assistantIds.length && !result.aborted) {
+      if (assistantIds.length) {
         const durationMs = performance.now() - startedAt
-        const generationMs = result.apiDurationMs && result.apiDurationMs > 0 ? result.apiDurationMs : durationMs
-        const outputTokens = result.usage?.outputTokens ?? 0
-        const chars = result.text.length
-        const seconds = Math.max(generationMs, 1) / 1000
         const meta: AssistantMeta = {
           model: result.model ?? settingsManager.get().model,
           durationMs: Math.round(durationMs),
-          outputTokens,
-          chars,
+          ...(result.aborted ? { aborted: true } : {}),
         }
 
-        if (outputTokens > 0) {
-          meta.speed = outputTokens / seconds
-          meta.speedUnit = 'tokens'
-        } else if (chars > 0) {
-          meta.speed = chars / seconds
-          meta.speedUnit = 'chars'
+        if (!result.aborted) {
+          const generationMs = result.apiDurationMs && result.apiDurationMs > 0 ? result.apiDurationMs : durationMs
+          const outputTokens = result.usage?.outputTokens ?? 0
+          const chars = result.text.length
+          const seconds = Math.max(generationMs, 1) / 1000
+          meta.outputTokens = outputTokens
+          meta.chars = chars
+
+          if (outputTokens > 0) {
+            meta.speed = outputTokens / seconds
+            meta.speedUnit = 'tokens'
+          } else if (chars > 0) {
+            meta.speed = chars / seconds
+            meta.speedUnit = 'chars'
+          }
         }
 
         chatStore.setAssistantMeta(assistantIds, meta)

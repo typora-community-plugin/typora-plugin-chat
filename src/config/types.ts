@@ -18,6 +18,8 @@ export interface AssistantMeta {
   model: string
   /** Wall-clock time spent on the whole reply, including tool iterations. */
   durationMs: number
+  /** True when the reply was interrupted by the stop button. */
+  aborted?: boolean
   /** Reply speed. Uses tokens/s when token usage is available, else chars/s. */
   speed?: number
   speedUnit?: ReplySpeedUnit

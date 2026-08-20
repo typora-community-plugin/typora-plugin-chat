@@ -22,7 +22,7 @@ export interface ExecutorContext {
   turnId?: string
   askUser?: (questions: AskUserQuestionItem[]) => Promise<AskUserAnswerItem[]>
   /** Live abort flag from the owning agent loop, propagated into sub agents. */
-  abortSignal?: { aborted: boolean }
+  abortSignal?: { aborted: boolean; signal?: AbortSignal }
 }
 
 export type ExecuteToolFn = (
