@@ -1,6 +1,7 @@
 import type { ToolResult } from '@/config/types'
 import { getCurrentFilePath } from '@/adapter/vault'
 import { currentAgentMode, isWriteTool } from './permissions'
+import type { ExecutorContext } from './types'
 import { executeReadDocument, readDocumentSchema } from './editor/read-document'
 import { executeEditDocument, editDocumentSchema } from './editor/edit-document'
 import { executeGetProperties, getPropertiesSchema } from './editor/get-properties'
@@ -18,16 +19,12 @@ import type { AskUserQuestionItem, AskUserAnswerItem } from './system/ask-user'
 import { executeUseSkill, useSkillSchema } from './system/use-skill'
 import { executeUndo } from './system/undo'
 import { executeUpdateTodo, updateTodoSchema } from './system/update-todo'
+import { executeCreateSubagent, createSubagentSchema } from './system/create-subagent'
 
+// Re-export for backward compatibility
+export type { ExecutorContext } from './types'
 
-export interface ExecutorContext {
-  activeFile?: string | null
-  /** Agent turn id; stamped onto undo entries so /undo can roll back a whole turn. */
-  turnId?: string
-  askUser?: (questions: AskUserQuestionItem[]) => Promise<AskUserAnswerItem[]>
-}
-
-/** All 13 tool schemas — re-exported for registry.ts */
+/** All 15 tool schemas — re-exported for registry.ts */
 export const allToolSchemas = [
   // Editor tools
   readDocumentSchema,
@@ -47,6 +44,7 @@ export const allToolSchemas = [
   askUserSchema,
   useSkillSchema,
   updateTodoSchema,
+  createSubagentSchema,
 ] as const
 
 /** Tools whose `path` parameter is optional; when missing, fall back to the active file for summary display. */
@@ -109,6 +107,7 @@ async function runTool(
     case 'ask_user': return executeAskUser(input, context)
     case 'use_skill': return executeUseSkill(input)
     case 'update_todo': return executeUpdateTodo(input)
+    case 'create_subagent': return executeCreateSubagent(input, context)
     // UI-only slash command (not exposed to the model); see undo.ts.
     case 'undo': return executeUndo()
     default:

@@ -55,6 +55,10 @@ export async function executeAgentLoop(
   // calls made during this loop share it so /undo can roll the whole turn back.
   const turnId = `turn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
+  // Shared live-abort flag: create_subagent (and any nested runSubagent) reads
+  // this so the stop button terminates in-flight sub loops as well (p3-5).
+  const abortSignal = { aborted: false }
+
   let finalText = ''
   const totalUsage = { inputTokens: 0, outputTokens: 0 }
   let apiDurationMs = 0
@@ -128,6 +132,7 @@ export async function executeAgentLoop(
           activeFile: getCurrentFilePath(),
           turnId,
           askUser: callbacks.onAskUser,
+          abortSignal,
         })
         callbacks.onToolResult?.(toolCallId, name, result)
         toolResultBlocks.push({

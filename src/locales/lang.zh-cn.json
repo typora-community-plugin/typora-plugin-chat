@@ -54,7 +54,11 @@
     "undoBlockedReadOnly": "Read Only 模式下无法撤销",
     "redoCommand": "/redo — 重做上一次撤销的轮次",
     "redoEmpty": "没有可重做的操作",
-    "redoBlockedReadOnly": "Read Only 模式下无法重做"
+    "redoBlockedReadOnly": "Read Only 模式下无法重做",
+    "subagentTask": "子 Agent 任务：{task}",
+    "subagentRunning": "子 Agent 运行中（第 {n} 轮）",
+    "subagentDone": "子 Agent 已完成，共 {n} 轮迭代",
+    "subagentFailed": "子 Agent 失败或已被中止"
   },
   "settings": {
     "title": "Chat",

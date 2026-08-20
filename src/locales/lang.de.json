@@ -54,7 +54,11 @@
     "undoBlockedReadOnly": "Rückgängig machen im Nur-Lese-Modus nicht möglich",
     "redoCommand": "/redo — letzten Undo erneut ausführen",
     "redoEmpty": "Nichts zum Wiederherstellen",
-    "redoBlockedReadOnly": "Wiederholen im Nur-Lese-Modus nicht möglich"
+    "redoBlockedReadOnly": "Wiederholen im Nur-Lese-Modus nicht möglich",
+    "subagentTask": "Sub-Agent-Aufgabe: {task}",
+    "subagentRunning": "Sub-Agent läuft (Iteration {n})",
+    "subagentDone": "Sub-Agent beendet nach {n} Iteration(en)",
+    "subagentFailed": "Sub-Agent fehlgeschlagen oder abgebrochen"
   },
   "settings": {
     "title": "Chat",

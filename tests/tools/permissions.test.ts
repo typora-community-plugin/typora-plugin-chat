@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { currentAgentMode, isWriteTool, toolAllowed, WRITE_TOOL_NAMES } from '../../src/agent/tools/permissions'
+import { currentAgentMode, isWriteTool, subAgentToolAllowed, SUBAGENT_EXCLUDED_TOOLS, toolAllowed, WRITE_TOOL_NAMES } from '../../src/agent/tools/permissions'
 import { settingsManager } from '../../src/config/settings'
 
 
@@ -53,5 +53,26 @@ describe('tool permissions', () => {
     expect(toolAllowed('edit_document', 'read-only')).toBe(false)
     expect(toolAllowed('create_file', 'read-only')).toBe(false)
     expect(toolAllowed('read_document', 'read-only')).toBe(true)
+  })
+
+  describe('sub-agent helpers (p3-1/p3-2/p3-6)', () => {
+    it('excludes delegation and user-interruption tools for sub agents', () => {
+      expect(SUBAGENT_EXCLUDED_TOOLS.has('create_subagent')).toBe(true)
+      expect(SUBAGENT_EXCLUDED_TOOLS.has('ask_user')).toBe(true)
+      expect(subAgentToolAllowed('create_subagent', 'workspace-write')).toBe(false)
+      expect(subAgentToolAllowed('ask_user', 'workspace-write')).toBe(false)
+    })
+
+    it('still gates write tools for sub agents in read-only mode (inheritance, no escalation)', () => {
+      expect(subAgentToolAllowed('create_file', 'read-only')).toBe(false)
+      expect(subAgentToolAllowed('edit_document', 'read-only')).toBe(false)
+      expect(subAgentToolAllowed('read_document', 'read-only')).toBe(true)
+    })
+
+    it('keeps ordinary tools available to sub agents in workspace-write mode', () => {
+      expect(subAgentToolAllowed('read_document', 'workspace-write')).toBe(true)
+      expect(subAgentToolAllowed('edit_document', 'workspace-write')).toBe(true)
+      expect(subAgentToolAllowed('use_skill', 'workspace-write')).toBe(true)
+    })
   })
 })

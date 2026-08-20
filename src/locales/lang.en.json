@@ -54,7 +54,11 @@
     "undoBlockedReadOnly": "Cannot undo in Read Only mode",
     "redoCommand": "/redo — redo the last undone turn",
     "redoEmpty": "Nothing to redo",
-    "redoBlockedReadOnly": "Cannot redo in Read Only mode"
+    "redoBlockedReadOnly": "Cannot redo in Read Only mode",
+    "subagentTask": "Sub-agent task: {task}",
+    "subagentRunning": "Sub agent running (iteration {n})",
+    "subagentDone": "Sub agent finished after {n} iteration(s)",
+    "subagentFailed": "Sub agent failed or was aborted"
   },
   "settings": {
     "title": "Chat",

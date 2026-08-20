@@ -126,6 +126,30 @@ export interface AgentResult {
   apiDurationMs?: number
 }
 
+/** Options accepted by the `create_subagent` tool. */
+export interface SubagentOptions {
+  /** Independent task description handed to the sub agent (required). */
+  task: string
+  /** Optional extra system prompt appended after the default sub-agent instructions. */
+  system?: string
+  /** Tool whitelist; may only NARROW what the current mode allows, never widen it. */
+  tools?: string[]
+  /** Max tool-call rounds inside the sub loop (default 10). */
+  maxIterations?: number
+  /** Overall wall-clock budget in ms (default 300000 = 5 minutes). */
+  timeoutMs?: number
+}
+
+/** Result returned by `create_subagent` / produced by `runSubagent`. */
+export interface SubagentResult {
+  /** Final assistant text of the sub agent. */
+  text: string
+  iterations: number
+  aborted: boolean
+  usage?: { inputTokens: number; outputTokens: number }
+  isError?: boolean
+}
+
 export interface AgentCallbacks {
   onText?: (text: string) => void
   /** reasoning / chain-of-thought text produced by the model */

@@ -1,24 +1,5 @@
 import type { ToolDefinition, ToolResult } from '@/config/types'
-import type { ExecutorContext } from '@/agent/tools/executor'
-
-
-export interface AskUserOption {
-  label: string
-}
-
-export interface AskUserQuestionItem {
-  id: string
-  question: string
-  options?: AskUserOption[]
-}
-
-export interface AskUserAnswerItem {
-  id: string
-  selected: string[]
-  custom?: string
-}
-
-export type AskUserAnswers = AskUserAnswerItem[]
+import type { ExecutorContext, AskUserQuestionItem, AskUserAnswerItem } from '../types'
 
 
 export const askUserSchema: ToolDefinition = {
@@ -80,7 +61,7 @@ export async function executeAskUser(
       id: typeof obj.id === 'string' && obj.id ? obj.id : String(i + 1),
       question: typeof obj.question === 'string' ? obj.question : '',
       options: Array.isArray(obj.options)
-        ? (obj.options as AskUserOption[]).filter(
+        ? (obj.options as Array<{ label?: string }>).filter(
             (o): o is { label: string } => typeof o?.label === 'string' && !!o.label,
           )
         : undefined,
