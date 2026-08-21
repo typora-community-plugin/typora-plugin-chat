@@ -1,4 +1,4 @@
-import { isReadTool, isWriteTool } from '../tools/permissions'
+import { isReadTool, isWriteTool } from '../tools/tool-groups'
 import type { AgentModeStrategy } from './index'
 
 /** Read-only mode: read tools stay available; write tools are hidden and blocked. */

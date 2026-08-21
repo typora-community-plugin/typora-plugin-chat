@@ -11,7 +11,6 @@ import { settingsManager } from '@/config/settings'
 import { sendMessage } from '@/api/client'
 import type { ExecutorContext, ExecuteToolFn } from './tools/types'
 import { getMode, normalizeMode, subAgentToolAllowed } from './modes'
-import { SUBAGENT_EXCLUDED_TOOLS } from './tools/permissions'
 import { buildSystemPrompt } from './system-prompt'
 import { getCurrentFilePath } from '@/adapter/vault'
 

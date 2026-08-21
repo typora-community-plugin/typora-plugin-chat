@@ -1,6 +1,6 @@
 import type { AgentMode } from '@/config/types'
 import { settingsManager } from '@/config/settings'
-import { SUBAGENT_EXCLUDED_TOOLS, isReadTool, isWriteTool } from '../tools/permissions'
+import { SUBAGENT_EXCLUDED_TOOLS, isReadTool, isWriteTool } from '../tools/tool-groups'
 import { workspaceWriteStrategy } from './workspace-write'
 import { readOnlyStrategy } from './read-only'
 import { chatOnlyStrategy } from './chat-only'

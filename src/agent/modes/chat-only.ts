@@ -1,4 +1,4 @@
-import { isReadTool, isWriteTool } from '../tools/permissions'
+import { isReadTool, isWriteTool } from '../tools/tool-groups'
 import type { AgentModeStrategy } from './index'
 
 /** Chat-only mode: no vault/editor file tools at all; only non-file tools remain. */
