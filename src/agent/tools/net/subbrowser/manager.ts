@@ -1,4 +1,4 @@
-import type { SubBrowserResult } from '@/config/types'
+import type { SubBrowserResult } from './types'
 import { getSubBrowserState, setSubBrowserState } from '@/store/subbrowser-store'
 
 /**

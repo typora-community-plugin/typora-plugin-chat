@@ -1,7 +1,8 @@
-import type { SubBrowserResult, ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
-import { SubBrowserManager } from '@/browser/subbrowser-manager'
+import type { ToolDefinition, ToolResult, ToolSummary } from '@/config/types'
+import type { SubBrowserResult } from './types'
+import { SubBrowserManager } from './manager'
 import { getSubBrowserState, setSubBrowserState } from '@/store/subbrowser-store'
-import { executeWebFetch, normalizeFetchUrl } from './web-fetch'
+import { executeWebFetch, normalizeFetchUrl } from '../web-fetch'
 
 const DEFAULT_MAX_CHARS = 30_000
 const DEFAULT_TIMEOUT_MS = 15_000

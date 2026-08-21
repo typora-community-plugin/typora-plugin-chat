@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { executeTool } from '../../src/agent/tools/executor'
 import { allToolSchemas } from '../../src/agent/tools/executor'
-import { summarizeSubBrowser, executeSubBrowser, normalizeSubBrowserUrl, subbrowserSchema } from '../../src/agent/tools/system/subbrowser'
-import { attachSubBrowser, detachSubBrowser, _resetSubBrowserForTest } from '../../src/agent/tools/system/subbrowser'
-import { SubBrowserManager } from '../../src/browser/subbrowser-manager'
+import { summarizeSubBrowser, executeSubBrowser, normalizeSubBrowserUrl, subbrowserSchema } from '../../src/agent/tools/net/subbrowser'
+import { attachSubBrowser, detachSubBrowser, _resetSubBrowserForTest } from '../../src/agent/tools/net/subbrowser'
+import { SubBrowserManager } from '../../src/agent/tools/net/subbrowser/manager'
 import { filterTools } from '../../src/agent/request'
 
 // ---------------------------------------------------------------------------

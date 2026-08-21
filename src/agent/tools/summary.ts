@@ -14,8 +14,8 @@ import { summarizeGetCurrentDatetime } from './system/get-current-datetime'
 import { summarizeAskUser } from './system/ask-user'
 import { summarizeUpdateTodo } from './system/update-todo'
 import { summarizeCreateSubagent } from './system/create-subagent'
-import { summarizeWebFetch } from './system/web-fetch'
-import { summarizeSubBrowser } from './system/subbrowser'
+import { summarizeWebFetch } from './net/web-fetch'
+import { summarizeSubBrowser } from './net/subbrowser'
 
 /**
  * Maps each tool name to its parameter-summary function.

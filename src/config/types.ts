@@ -1,7 +1,8 @@
+import type { AskUserQuestionItem, AskUserAnswerItem } from '@/agent/tools/types'
+
 /**
  * Shared type definitions for Typora AI Chat plugin.
  */
-
 
 export type ApiProvider = 'anthropic' | 'openai' | 'ollama' | 'custom'
 
@@ -128,38 +129,6 @@ export interface AgentResult {
   apiDurationMs?: number
 }
 
-/** Actions supported by the `subbrowser` tool. */
-export type SubBrowserAction = 'open' | 'extract' | 'status' | 'close'
-
-/** Options accepted by the `subbrowser` tool. */
-export interface SubBrowserOptions {
-  /** Which action to perform (required). */
-  action: SubBrowserAction
-  /** The http(s) URL to open (`open` requires this). */
-  url?: string
-  /** CSS selector for scoped extraction; omitted = whole body (`extract`). */
-  selector?: string
-  /** Max characters returned by `extract` (default 30000, clamped 1..200000). */
-  max_chars?: number
-  /** Load/extract timeout in ms (default 15000). */
-  timeout_ms?: number
-}
-
-/** Structured result of a `subbrowser` call. */
-export interface SubBrowserResult {
-  status: 'idle' | 'loading' | 'loaded' | 'error' | 'closed'
-  title?: string
-  url?: string
-  /** Final URL after redirects (when readable). */
-  finalUrl?: string
-  /** Extracted page body text (whole or selector-scoped), truncated. */
-  content?: string
-  /** Whether the extracted content was truncated to max_chars. */
-  truncated?: boolean
-  isError?: boolean
-  error?: string
-}
-
 /** Options accepted by the `create_subagent` tool. */
 export interface SubagentOptions {
   /** Independent task description handed to the sub agent (required). */
@@ -192,7 +161,7 @@ export interface AgentCallbacks {
   onToolResult?: (toolCallId: string, name: string, result: ToolResult) => void
   onError?: (message: string) => void
   /** resolve when the agent wants the user to answer one or more questions */
-  onAskUser?: (questions: import('@/agent/tools/system/ask-user').AskUserQuestionItem[]) => Promise<import('@/agent/tools/system/ask-user').AskUserAnswerItem[]>
+  onAskUser?: (questions: AskUserQuestionItem[]) => Promise<AskUserAnswerItem[]>
   onThinkingChange?: (thinking: boolean) => void
   /** Called with each API response's token usage during an agent loop. */
   onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void

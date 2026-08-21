@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { executeTool } from '../../src/agent/tools/executor'
 import { allToolSchemas } from '../../src/agent/tools/executor'
-import { summarizeWebFetch, executeWebFetch, normalizeFetchUrl, webFetchSchema } from '../../src/agent/tools/system/web-fetch'
+import { summarizeWebFetch, executeWebFetch, normalizeFetchUrl, webFetchSchema } from '../../src/agent/tools/net/web-fetch'
 import { filterTools } from '../../src/agent/request'
 import { settingsManager } from '../../src/config/settings'
 
