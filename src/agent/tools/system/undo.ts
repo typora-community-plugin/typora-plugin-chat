@@ -14,7 +14,7 @@
 import { app } from '@typora-community-plugin/core'
 import type { ToolDefinition, ToolResult, ApiMessage } from '@/config/types'
 import { deleteFile, writeFile } from '@/adapter/vault'
-import { currentAgentMode } from '../permissions'
+import { currentMode } from '@/agent/modes'
 import { undoStore, type UndoEntry, type RedoToolCall } from '@/store/undo-store'
 import { getAgentHistory } from '@/agent/history'
 
@@ -112,7 +112,7 @@ function extractLastTurnHistory(history: ApiMessage[]): { slice: ApiMessage[]; u
 export async function executeUndo(): Promise<ToolResult> {
   // Defense in depth: undo is a write-back, so it must respect the same mode
   // gate as every other mutating tool.
-  if (currentAgentMode() === 'read-only') {
+  if (!currentMode().canUndoRedo()) {
     return { content: 'Read Only 模式下无法撤销', isError: true }
   }
 

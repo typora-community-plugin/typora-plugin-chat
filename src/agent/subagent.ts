@@ -10,7 +10,8 @@ import type {
 import { settingsManager } from '@/config/settings'
 import { sendMessage } from '@/api/client'
 import type { ExecutorContext, ExecuteToolFn } from './tools/types'
-import { currentAgentMode, SUBAGENT_EXCLUDED_TOOLS, toolAllowed } from './tools/permissions'
+import { getMode, normalizeMode, subAgentToolAllowed } from './modes'
+import { SUBAGENT_EXCLUDED_TOOLS } from './tools/permissions'
 import { buildSystemPrompt } from './system-prompt'
 import { getCurrentFilePath } from '@/adapter/vault'
 
@@ -87,7 +88,8 @@ export async function runSubagent(
     return { text: 'create_subagent failed: "task" is required', iterations: 0, aborted: false, isError: true }
   }
 
-  const mode = context.mode ?? currentAgentMode()
+  // Inherit the caller's mode; an unknown stored/forwarded value normalizes to workspace-write.
+  const mode: AgentMode = context.mode === undefined ? getMode().id : normalizeMode(context.mode)
   // Depth: the caller (main loop or a nested sub agent) reports its own depth;
   // nesting happens through the parent's tool list, which drops create_subagent.
   void context.depth
@@ -95,9 +97,7 @@ export async function runSubagent(
   const { toolDefinitions } = await import('./tools/registry')
   // Inherit the caller's mode: read-only stays read-only (no privilege escalation);
   // additionally strip delegation and user-interruption tools from every sub agent.
-  const baseAllowed = toolDefinitions.filter(
-    (tool) => toolAllowed(tool.name, mode) && !SUBAGENT_EXCLUDED_TOOLS.has(tool.name),
-  )
+  const baseAllowed = toolDefinitions.filter((tool) => subAgentToolAllowed(tool.name, mode))
   const tools = resolveSubagentTools(baseAllowed, options.tools)
 
   const maxIterations = clampInt(options.maxIterations, DEFAULT_SUBAGENT_MAX_ITERATIONS, 1, SUBAGENT_MAX_ITERATION_LIMIT)
@@ -190,7 +190,7 @@ export async function runSubagent(
       }
 
       const name = toolUse.name ?? 'unknown'
-      if (!toolAllowed(name, mode) || SUBAGENT_EXCLUDED_TOOLS.has(name)) {
+      if (!subAgentToolAllowed(name, mode)) {
         toolResultBlocks.push({
           type: 'tool_result',
           tool_use_id: toolUse.id,

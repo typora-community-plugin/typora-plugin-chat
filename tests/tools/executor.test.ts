@@ -82,7 +82,7 @@ describe('tool executor', () => {
       })
 
       expect(result.isError).toBe(true)
-      expect(result.content).toContain('Read Only')
+      expect(result.content).toContain('requires write access (current mode is read-only)')
       expect(mockFs.writeText).not.toHaveBeenCalled()
     })
 
@@ -90,7 +90,7 @@ describe('tool executor', () => {
       const result = await executeTool('create_file', { path: 'notes/new.md', content: 'x' })
 
       expect(result.isError).toBe(true)
-      expect(result.content).toContain('Read Only')
+      expect(result.content).toContain('requires write access (current mode is read-only)')
       expect(mockFs.writeText).not.toHaveBeenCalled()
     })
 

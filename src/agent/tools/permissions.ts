@@ -1,13 +1,14 @@
 import type { AgentMode } from '@/config/types'
-import { settingsManager } from '@/config/settings'
+import * as modes from '@/agent/modes'
 
 
 /**
  * Agent write-permission helpers.
  *
- * Modes:
- * - `read-only`: all file tools (read + write) are hidden from the model and
- *   blocked by the executor (defense in depth).
+ * This module only owns the tool CLASSIFICATION (write vs read) and the
+ * sub-agent exclusion set — the per-mode policy itself lives in the strategy
+ * classes under `@/agent/modes` (Strategy Pattern):
+ * - `read-only`: write tools hidden + blocked; read tools stay available.
  * - `chat-only`: every vault/editor file tool (read + write) is hidden from
  *   the model; only non-file tools remain available.
  * - `workspace-write`: all tools are available (default, preserves legacy
@@ -23,7 +24,7 @@ export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set([
   'rename_file',
 ])
 
-/** Tools that read vault/editor content; blocked only by `read-only`. */
+/** Tools that read vault/editor content; blocked by `chat-only`. */
 export const READ_TOOL_NAMES: ReadonlySet<string> = new Set([
   'read_document',
   'get_properties',
@@ -37,13 +38,6 @@ export const READ_TOOL_NAMES: ReadonlySet<string> = new Set([
 // only read remote content (fetch / embedded iframe) and never touch the
 // vault, so they stay available in every mode.
 
-/** Resolve the current mode, normalizing any unexpected stored value. */
-export function currentAgentMode(): AgentMode {
-  const mode = settingsManager.get().mode
-  if (mode === 'read-only' || mode === 'chat-only') return mode
-  return 'workspace-write'
-}
-
 export function isWriteTool(name: string): boolean {
   return WRITE_TOOL_NAMES.has(name)
 }
@@ -53,11 +47,8 @@ export function isReadTool(name: string): boolean {
 }
 
 /** Whether a tool may run under the given mode (defaults to the live mode). */
-export function toolAllowed(name: string, mode: AgentMode = currentAgentMode()): boolean {
-  if (mode === 'chat-only') return !isWriteTool(name) && !isReadTool(name)
-  if (isWriteTool(name)) return mode === 'workspace-write'
-  if (isReadTool(name)) return mode !== 'read-only'
-  return true
+export function toolAllowed(name: string, mode: AgentMode = modes.getMode().id): boolean {
+  return modes.getMode(mode).toolAllowed(name)
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +66,10 @@ export const SUBAGENT_EXCLUDED_TOOLS: ReadonlySet<string> = new Set([
 ])
 
 /** Whether a tool may be exposed to a SUB agent under the given mode. */
-export function subAgentToolAllowed(name: string, mode: AgentMode = currentAgentMode()): boolean {
-  return toolAllowed(name, mode) && !SUBAGENT_EXCLUDED_TOOLS.has(name)
+export function subAgentToolAllowed(name: string, mode: AgentMode = modes.getMode().id): boolean {
+  return modes.subAgentToolAllowed(name, mode)
 }
 
+// Re-export the strategy layer so existing consumers keep importing from here.
+export const currentAgentMode = (): AgentMode => modes.currentMode().id
+export { getMode, normalizeMode, listModes, currentMode } from '@/agent/modes'

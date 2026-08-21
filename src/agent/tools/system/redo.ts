@@ -13,7 +13,7 @@
 
 import type { ToolResult } from '@/config/types'
 import { executeTool } from '../executor'
-import { currentAgentMode } from '../permissions'
+import { currentMode } from '@/agent/modes'
 import type { RedoEntry } from '@/store/undo-store'
 import { setAgentHistory, getAgentHistory } from '@/agent/history'
 
@@ -23,7 +23,7 @@ import { setAgentHistory, getAgentHistory } from '@/agent/history'
  */
 export async function replayRedoEntry(entry: RedoEntry): Promise<ToolResult> {
   // Defense in depth: redo re-executes write tools, so it must respect the mode gate.
-  if (currentAgentMode() === 'read-only') {
+  if (!currentMode().canUndoRedo()) {
     return { content: 'Read Only 模式下无法重做', isError: true }
   }
 

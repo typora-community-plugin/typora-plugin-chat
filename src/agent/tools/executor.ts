@@ -1,6 +1,6 @@
 import type { ToolResult } from '@/config/types'
 import { getCurrentFilePath } from '@/adapter/vault'
-import { currentAgentMode, isReadTool, isWriteTool } from './permissions'
+import { currentMode } from '@/agent/modes'
 import type { ExecutorContext } from './types'
 import { executeReadDocument, readDocumentSchema } from './editor/read-document'
 import { executeEditDocument, editDocumentSchema } from './editor/edit-document'
@@ -70,18 +70,9 @@ export async function executeTool(
 ): Promise<ToolResult> {
   // Defense in depth: even if a file tool reaches the executor (e.g. a model
   // calling a stale tool id), block it unless the mode allows that access level.
-  const mode = currentAgentMode()
-  if (isWriteTool(name) && mode !== 'workspace-write') {
-    return {
-      content: `Blocked: ${name} requires write access (current mode is ${mode}).`,
-      isError: true,
-    }
-  }
-  if (isReadTool(name) && mode === 'chat-only') {
-    return {
-      content: `Blocked: ${name} is unavailable in chat-only mode.`,
-      isError: true,
-    }
+  const blocked = currentMode().blockReason(name)
+  if (blocked !== null) {
+    return { content: blocked, isError: true }
   }
   const result = await runTool(name, input, context)
   if (OPTIONAL_PATH_TOOLS.has(name)) {

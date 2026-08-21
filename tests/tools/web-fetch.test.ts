@@ -86,11 +86,13 @@ describe('web_fetch schema', () => {
     expect(names).toContain('web_fetch')
   })
 
-  it('hides write and read tools from the model in read-only', () => {
+  it('hides write tools from the model in read-only but keeps read tools visible', () => {
     const names = filterTools('read-only').map((tool) => tool.name)
-    for (const name of ['edit_document', 'create_file', 'read_document']) {
+    for (const name of ['edit_document', 'create_file']) {
       expect(names).not.toContain(name)
     }
+    // read-only stays readable (semantic fix): read tools remain visible and executable.
+    expect(names).toContain('read_document')
   })
 })
 

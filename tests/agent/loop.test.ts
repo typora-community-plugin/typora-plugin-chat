@@ -166,7 +166,7 @@ describe('agent loop', () => {
     expect(blocks.some(b => b.type === 'tool_use')).toBe(true)
   })
 
-  it('omits write tools from the API tool list in read-only mode', async () => {
+  it('omits write tools from the API tool list in read-only mode (read tools stay visible)', async () => {
     settingsState.value = { ...settingsState.value, mode: 'read-only' }
     vi.mocked(sendMessage).mockResolvedValue(textResponse('Done.'))
 
@@ -174,6 +174,16 @@ describe('agent loop', () => {
 
     const tools = vi.mocked(sendMessage).mock.calls[0][2] as ToolDefinition[]
     expect(tools.map((t) => t.name)).toEqual(['read_document'])
+  })
+
+  it('omits both write and read file tools from the API tool list in chat-only mode', async () => {
+    settingsState.value = { ...settingsState.value, mode: 'chat-only' }
+    vi.mocked(sendMessage).mockResolvedValue(textResponse('Done.'))
+
+    await executeAgentLoop('hi')
+
+    const tools = vi.mocked(sendMessage).mock.calls[0][2] as ToolDefinition[]
+    expect(tools.map((t) => t.name)).toEqual([])
   })
 
   it('keeps write tools in the API tool list in workspace-write mode', async () => {

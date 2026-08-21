@@ -1,6 +1,13 @@
 <script lang="ts">
   import type { AgentMode } from '@/config/types'
+  import { listModes } from '@/agent/modes'
   import { t } from '@/i18n'
+
+  const modes = listModes()
+
+  function label(key: string): string {
+    return (t.chat as Record<string, unknown>)[key] as string ?? key
+  }
   import ContextUsageRing from './ContextUsageRing.svelte'
 
   let {
@@ -50,9 +57,9 @@
     title={t.chat.modeTitle}
     disabled={!enabled}
   >
-    <option value="chat-only">{t.chat.modeChatOnly}</option>
-    <option value="read-only">{t.chat.modeReadOnly}</option>
-    <option value="workspace-write">{t.chat.modeWorkspaceWrite}</option>
+    {#each modes as m (m.id)}
+      <option value={m.id}>{label(m.labelKey.split('.').pop()!)}</option>
+    {/each}
   </select>
 
   <select

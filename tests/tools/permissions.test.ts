@@ -71,11 +71,11 @@ describe('tool permissions', () => {
       expect(toolAllowed(name, 'chat-only'), `${name} / chat-only`).toBe(false)
       expect(toolAllowed(name, 'read-only'), `${name} / read-only`).toBe(false)
     }
-    // read tools: blocked by read-only and chat-only
+    // read tools: only chat-only blocks them (read-only stays readable — semantic fix)
     for (const name of READ_TOOL_NAMES) {
       expect(toolAllowed(name, 'workspace-write'), `${name} / workspace-write`).toBe(true)
       expect(toolAllowed(name, 'chat-only'), `${name} / chat-only`).toBe(false)
-      expect(toolAllowed(name, 'read-only'), `${name} / read-only`).toBe(false)
+      expect(toolAllowed(name, 'read-only'), `${name} / read-only`).toBe(true)
     }
     // non-file tools: allowed in every mode
     for (const name of ['get_current_datetime', 'ask_user', 'use_skill', 'update_todo', 'create_subagent', 'web_fetch', 'subbrowser']) {
@@ -85,11 +85,12 @@ describe('tool permissions', () => {
     }
   })
 
-  it('gates write tools in both non-write modes and read tools in chat-only mode', () => {
+  it('gates write tools in both non-write modes, read tools only in chat-only mode', () => {
     expect(toolAllowed('edit_document', 'workspace-write')).toBe(true)
     expect(toolAllowed('edit_document', 'chat-only')).toBe(false)
     expect(toolAllowed('create_file', 'read-only')).toBe(false)
     expect(toolAllowed('read_document', 'chat-only')).toBe(false)
+    expect(toolAllowed('read_document', 'read-only')).toBe(true)
   })
 
   describe('sub-agent helpers (p3-1/p3-2/p3-6)', () => {

@@ -4,7 +4,7 @@ import { settings, settingsManager } from '@/config/settings'
 import { getAgentHistory } from '@/agent/history'
 import { buildContextMessage } from '@/agent/context'
 import { buildSkillsCatalog, discoverSkills } from '@/agent/skills/index'
-import { currentAgentMode } from '@/agent/tools/permissions'
+import { normalizeMode } from '@/agent/modes'
 import { buildSystemMessage, filterTools } from '@/agent/request'
 import { estimateRequestTokens, resolveContextWindow } from '@/agent/context-size'
 
@@ -56,7 +56,7 @@ export async function refreshContextUsage(
   options: { draft?: string; refreshStatic?: boolean } = {},
 ): Promise<void> {
   const version = ++refreshVersion
-  const mode = currentAgentMode()
+  const mode = normalizeMode(settingsManager.get().mode)
 
   if (!cachedOverhead || cachedOverhead.mode !== mode || options.refreshStatic) {
     try {
@@ -129,9 +129,7 @@ export function scheduleContextUsageRefresh(draft = ''): void {
 // Keep the ring aligned with settings changes (mode, model, context window).
 let lastSubscribedMode: AgentMode | null = null
 settings.subscribe(($settings) => {
-  const mode: AgentMode = $settings.mode === 'read-only' || $settings.mode === 'chat-only'
-    ? $settings.mode
-    : 'workspace-write'
+  const mode: AgentMode = normalizeMode($settings.mode)
   const modeChanged = lastSubscribedMode !== null && lastSubscribedMode !== mode
   lastSubscribedMode = mode
   void refreshContextUsage({ refreshStatic: modeChanged })
