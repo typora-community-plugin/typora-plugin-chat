@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseFrontmatter, deriveSkillMeta, stripFrontmatter } from './frontmatter'
+import { parseFrontmatter, deriveSkillMeta, stripFrontmatter } from '../../../src/agent/skills/frontmatter'
 
 
 describe('parseFrontmatter', () => {

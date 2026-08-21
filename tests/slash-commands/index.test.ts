@@ -4,7 +4,7 @@ import {
   MAX_SUGGESTIONS,
   shouldCompleteSubcommand,
   suggestionsShouldBeOpen,
-} from './index'
+} from '../../src/slash-commands/index'
 
 const SKILLS = [
   { name: 'alpha', description: 'First skill' },
