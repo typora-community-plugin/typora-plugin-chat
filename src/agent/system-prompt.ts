@@ -1,3 +1,5 @@
+import type { AgentMode } from '@/config/types'
+
 /**
  * Static system prompt.
  *
@@ -5,11 +7,13 @@
  * identical across requests — this is what makes provider KV-cache
  * prefix matching effective.
  */
-export function buildSystemPrompt(skillsCatalog = '', mode: 'read-only' | 'workspace-write' = 'workspace-write'): string {
+export function buildSystemPrompt(skillsCatalog = '', mode: AgentMode = 'workspace-write'): string {
   const skillsSection = skillsCatalog ? `\n\n${skillsCatalog}` : ''
   const modeLine = mode === 'read-only'
     ? '\n- The current access mode is READ ONLY: do not modify any file; only read tools are available.'
-    : ''
+    : mode === 'chat-only'
+      ? '\n- The current access mode is CHAT ONLY: no vault/editor file tools (read or write) are available; answer conversationally using only the non-file tools.'
+      : ''
   return `You are Typora Chat, an AI assistant embedded in the Typora editor with direct access to the user's vault.
 
 ## Core rules

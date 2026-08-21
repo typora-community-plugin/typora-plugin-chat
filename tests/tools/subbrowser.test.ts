@@ -94,8 +94,8 @@ describe('subbrowser schema and permissions', () => {
     )
   })
 
-  it('is exposed to the model in both modes (not a write tool)', () => {
-    for (const mode of ['read-only', 'workspace-write'] as const) {
+  it('is exposed to the model in all three modes (not a file tool)', () => {
+    for (const mode of ['read-only', 'chat-only', 'workspace-write'] as const) {
       expect(filterTools(mode).map(tool => tool.name)).toContain('subbrowser')
     }
   })

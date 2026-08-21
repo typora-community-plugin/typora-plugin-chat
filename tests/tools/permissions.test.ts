@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { currentAgentMode, isWriteTool, subAgentToolAllowed, SUBAGENT_EXCLUDED_TOOLS, toolAllowed, WRITE_TOOL_NAMES } from '../../src/agent/tools/permissions'
+import { currentAgentMode, isReadTool, isWriteTool, READ_TOOL_NAMES, subAgentToolAllowed, SUBAGENT_EXCLUDED_TOOLS, toolAllowed, WRITE_TOOL_NAMES } from '../../src/agent/tools/permissions'
 import { settingsManager } from '../../src/config/settings'
 
 
@@ -49,11 +49,47 @@ describe('tool permissions', () => {
     expect(currentAgentMode()).toBe('read-only')
   })
 
-  it('gates write tools only in read-only mode', () => {
+  it('reports chat-only when set and preserves it (no collapse)', async () => {
+    await settingsManager.save({ mode: 'chat-only' })
+    expect(currentAgentMode()).toBe('chat-only')
+  })
+
+  it('classifies the six file-reading tools as read tools', () => {
+    expect(isReadTool('read_document')).toBe(true)
+    expect(isReadTool('get_properties')).toBe(true)
+    expect(isReadTool('open_document')).toBe(true)
+    expect(isReadTool('read_file')).toBe(true)
+    expect(isReadTool('search_vault')).toBe(true)
+    expect(isReadTool('list_files')).toBe(true)
+    expect(READ_TOOL_NAMES.size).toBe(6)
+  })
+
+  it('applies the full 3x3 mode/tool-class table', () => {
+    // write tools: only workspace-write allows them
+    for (const name of WRITE_TOOL_NAMES) {
+      expect(toolAllowed(name, 'workspace-write'), `${name} / workspace-write`).toBe(true)
+      expect(toolAllowed(name, 'chat-only'), `${name} / chat-only`).toBe(false)
+      expect(toolAllowed(name, 'read-only'), `${name} / read-only`).toBe(false)
+    }
+    // read tools: blocked by read-only and chat-only
+    for (const name of READ_TOOL_NAMES) {
+      expect(toolAllowed(name, 'workspace-write'), `${name} / workspace-write`).toBe(true)
+      expect(toolAllowed(name, 'chat-only'), `${name} / chat-only`).toBe(false)
+      expect(toolAllowed(name, 'read-only'), `${name} / read-only`).toBe(false)
+    }
+    // non-file tools: allowed in every mode
+    for (const name of ['get_current_datetime', 'ask_user', 'use_skill', 'update_todo', 'create_subagent', 'web_fetch', 'subbrowser']) {
+      expect(toolAllowed(name, 'workspace-write'), `${name} / workspace-write`).toBe(true)
+      expect(toolAllowed(name, 'chat-only'), `${name} / chat-only`).toBe(true)
+      expect(toolAllowed(name, 'read-only'), `${name} / read-only`).toBe(true)
+    }
+  })
+
+  it('gates write tools in both non-write modes and read tools in chat-only mode', () => {
     expect(toolAllowed('edit_document', 'workspace-write')).toBe(true)
-    expect(toolAllowed('edit_document', 'read-only')).toBe(false)
+    expect(toolAllowed('edit_document', 'chat-only')).toBe(false)
     expect(toolAllowed('create_file', 'read-only')).toBe(false)
-    expect(toolAllowed('read_document', 'read-only')).toBe(true)
+    expect(toolAllowed('read_document', 'chat-only')).toBe(false)
   })
 
   describe('sub-agent helpers (p3-1/p3-2/p3-6)', () => {
@@ -74,6 +110,13 @@ describe('tool permissions', () => {
       expect(subAgentToolAllowed('read_document', 'workspace-write')).toBe(true)
       expect(subAgentToolAllowed('edit_document', 'workspace-write')).toBe(true)
       expect(subAgentToolAllowed('use_skill', 'workspace-write')).toBe(true)
+    })
+
+    it('inherits chat-only for sub agents: all file tools dropped, non-file kept (no escalation)', () => {
+      expect(subAgentToolAllowed('create_file', 'chat-only')).toBe(false)
+      expect(subAgentToolAllowed('edit_document', 'chat-only')).toBe(false)
+      expect(subAgentToolAllowed('read_document', 'chat-only')).toBe(false)
+      expect(subAgentToolAllowed('web_fetch', 'chat-only')).toBe(true)
     })
   })
 })

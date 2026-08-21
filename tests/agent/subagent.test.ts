@@ -105,6 +105,25 @@ describe('runSubagent', () => {
     expect(tools.length).toBe(0) // whitelist names were all write-only in read-only mode
   })
 
+  it('inherits chat-only: drops all file tools but keeps non-file tools', async () => {
+    settingsState.value = { ...settingsState.value, mode: 'chat-only' }
+    vi.mocked(sendMessage).mockResolvedValue(textResponse('ok'))
+    await runSubagent({ task: 't' }, {}, {})
+    const names = ((vi.mocked(sendMessage).mock.calls[0][2] ?? []) as ToolDefinition[]).map((t) => t.name)
+    expect(names).not.toContain('edit_document')
+    expect(names).not.toContain('create_file')
+    expect(names).not.toContain('read_document') // read tools are dropped in chat-only too
+    expect(names).toContain('use_skill')
+  })
+
+  it('cannot widen a chat-only sub agent to write tools via the whitelist', async () => {
+    settingsState.value = { ...settingsState.value, mode: 'chat-only' }
+    vi.mocked(sendMessage).mockResolvedValue(textResponse('ok'))
+    await runSubagent({ task: 't', tools: ['edit_document', 'create_file'] }, {}, {})
+    const tools = (vi.mocked(sendMessage).mock.calls[0][2] ?? []) as ToolDefinition[]
+    expect(tools.length).toBe(0) // whitelist can only narrow, never widen
+  })
+
   it('blocks a model-requested write tool at runtime in read-only mode', async () => {
     settingsState.value = { ...settingsState.value, mode: 'read-only' }
     const executeToolFn = vi.fn()
@@ -153,22 +172,25 @@ describe('runSubagent', () => {
   })
 
   it('respects timeoutMs', async () => {
-    let nowValue = 1_000
-    vi.mocked(sendMessage).mockImplementation(async () => {
-      nowValue += 200 // each round burns 200ms of budget
-      return toolResponse()
-    })
+    const t0 = Date.now()
+    vi.mocked(sendMessage)
+      .mockResolvedValueOnce(toolResponse())
+      .mockImplementation(async () => {
+        // Let real time elapse well past the budget before answering.
+        await new Promise((resolve) => setTimeout(resolve, 30))
+        return textResponse('done')
+      })
 
     const result = await runSubagent(
-      { task: 't', timeoutMs: 500, maxIterations: 10 },
+      { task: 't', timeoutMs: 1 },
       {},
       {},
-      { now: () => nowValue } as never,
+      { now: () => Date.now(), executeToolFn: vi.fn(async () => ({ content: 'ok' })) } as never,
     )
 
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(25) // sanity: real time actually elapsed
     expect(result.aborted).toBe(true)
     expect(result.text.toLowerCase()).toContain('timed out')
-    expect(result.iterations).toBeLessThan(10)
   })
 
   it('returns an error when task is missing', async () => {

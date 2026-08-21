@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { AgentMode } from '@/config/types'
   import { t } from '@/i18n'
   import ContextUsageRing from './ContextUsageRing.svelte'
 
@@ -6,7 +7,7 @@
     enabled,
     model = '',
     models = [],
-    mode = 'workspace-write',
+    mode = 'workspace-write' as AgentMode,
     canSend = false,
     onModelChange = null,
     onModelRefresh = null,
@@ -18,12 +19,12 @@
     enabled: boolean
     model?: string
     models?: string[]
-    mode?: 'read-only' | 'workspace-write'
+    mode?: AgentMode
     /** True when the current draft text would submit. */
     canSend?: boolean
     onModelChange?: ((model: string) => void) | null
     onModelRefresh?: (() => void) | null
-    onModeChange?: ((mode: 'read-only' | 'workspace-write') => void) | null
+    onModeChange?: ((mode: AgentMode) => void) | null
     onSend: () => void
     onStop: () => void
   } = $props()
@@ -33,7 +34,7 @@
   }
 
   function handleModeChange(e: Event) {
-    onModeChange?.((e.currentTarget as HTMLSelectElement).value as 'read-only' | 'workspace-write')
+    onModeChange?.((e.currentTarget as HTMLSelectElement).value as AgentMode)
   }
 
   function handleModelClick() {
@@ -49,6 +50,7 @@
     title={t.chat.modeTitle}
     disabled={!enabled}
   >
+    <option value="chat-only">{t.chat.modeChatOnly}</option>
     <option value="read-only">{t.chat.modeReadOnly}</option>
     <option value="workspace-write">{t.chat.modeWorkspaceWrite}</option>
   </select>

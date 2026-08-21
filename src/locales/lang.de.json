@@ -35,6 +35,7 @@
     "selectModelTitle": "Modell auswählen",
     "modeTitle": "Zugriffsmodus",
     "modeReadOnly": "Nur lesen",
+    "modeChatOnly": "Nur chatten",
     "modeWorkspaceWrite": "Arbeitsbereich schreiben",
     "send": "Senden (Enter)",
     "stop": "Stopp",

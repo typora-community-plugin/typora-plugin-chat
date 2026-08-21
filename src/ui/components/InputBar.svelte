@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { AgentMode } from '@/config/types'
   import { t } from '@/i18n'
   import DraftTextarea from './DraftTextarea.svelte'
   import InputToolbar from './InputToolbar.svelte'
@@ -23,7 +24,7 @@
     activeSessionId = null,
     onSwitchSession = null,
     onDeleteSession = null,
-    mode = 'workspace-write',
+    mode = 'workspace-write' as AgentMode,
     onModeChange = null,
     refill = $bindable(null),
   }: {
@@ -41,8 +42,8 @@
     activeSessionId?: string | null
     onSwitchSession?: ((id: string) => void) | null
     onDeleteSession?: ((s: SessionSummary) => void) | null
-    mode?: 'read-only' | 'workspace-write'
-    onModeChange?: ((mode: 'read-only' | 'workspace-write') => void) | null
+    mode?: AgentMode
+    onModeChange?: ((mode: AgentMode) => void) | null
     /** One-shot refill (e.g. /undo): when non-null, becomes editable draft text and is cleared. */
     refill?: string | null
   } = $props()

@@ -101,4 +101,30 @@ describe('tool executor', () => {
       expect(result.content).toBe('# Hello\n\nworld')
     })
   })
+
+  describe('chat-only mode', () => {
+    beforeEach(async () => {
+      await settingsManager.save({ mode: 'chat-only' })
+    })
+
+    it('blocks a stale write-tool call (defense in depth)', async () => {
+      const result = await executeTool('edit_document', {
+        path: 'notes/a.md',
+        operation: 'replace_all',
+        content: 'x',
+      })
+
+      expect(result.isError).toBe(true)
+      expect(result.content).toContain('Blocked')
+      expect(mockFs.writeText).not.toHaveBeenCalled()
+    })
+
+    it('blocks read tools (defense in depth)', async () => {
+      const result = await executeTool('read_document', { path: 'notes/a.md' })
+
+      expect(result.isError).toBe(true)
+      expect(result.content).toContain('Blocked')
+      expect(mockFs.readText).not.toHaveBeenCalled()
+    })
+  })
 })

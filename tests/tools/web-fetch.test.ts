@@ -71,9 +71,25 @@ describe('web_fetch schema', () => {
     expect(webFetchSchema.parameters.properties.max_chars).toBeTruthy()
   })
 
-  it('is exposed to the model in both modes', () => {
-    for (const mode of ['read-only', 'workspace-write'] as const) {
+  it('is exposed to the model in all three modes', () => {
+    for (const mode of ['read-only', 'chat-only', 'workspace-write'] as const) {
       expect(filterTools(mode).map(tool => tool.name)).toContain('web_fetch')
+    }
+  })
+
+  it('hides all file tools from the model in chat-only but keeps non-file tools', () => {
+    const names = filterTools('chat-only').map((tool) => tool.name)
+    for (const name of ['edit_document', 'set_properties', 'create_file', 'delete_file', 'rename_file']) {
+      expect(names).not.toContain(name)
+    }
+    expect(names).not.toContain('read_document')
+    expect(names).toContain('web_fetch')
+  })
+
+  it('hides write and read tools from the model in read-only', () => {
+    const names = filterTools('read-only').map((tool) => tool.name)
+    for (const name of ['edit_document', 'create_file', 'read_document']) {
+      expect(names).not.toContain(name)
     }
   })
 })

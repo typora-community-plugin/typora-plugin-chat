@@ -6,13 +6,15 @@ import { settingsManager } from '@/config/settings'
  * Agent write-permission helpers.
  *
  * Modes:
- * - `read-only`: file-mutating tools are hidden from the model and blocked by
- *   the executor (defense in depth).
+ * - `read-only`: all file tools (read + write) are hidden from the model and
+ *   blocked by the executor (defense in depth).
+ * - `chat-only`: every vault/editor file tool (read + write) is hidden from
+ *   the model; only non-file tools remain available.
  * - `workspace-write`: all tools are available (default, preserves legacy
  *   behavior).
  */
 
-/** Tools that mutate vault/editor content and must be gated in read-only mode. */
+/** Tools that mutate vault/editor content and must be gated in non-write modes. */
 export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set([
   'edit_document',
   'set_properties',
@@ -21,23 +23,41 @@ export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set([
   'rename_file',
 ])
 
-// NOTE: `web_fetch` and `subbrowser` are deliberately NOT write tools — they
+/** Tools that read vault/editor content; blocked only by `read-only`. */
+export const READ_TOOL_NAMES: ReadonlySet<string> = new Set([
+  'read_document',
+  'get_properties',
+  'open_document',
+  'read_file',
+  'search_vault',
+  'list_files',
+])
+
+// NOTE: `web_fetch` and `subbrowser` are deliberately NOT file tools — they
 // only read remote content (fetch / embedded iframe) and never touch the
-// vault, so they stay available in read-only mode.
+// vault, so they stay available in every mode.
 
 /** Resolve the current mode, normalizing any unexpected stored value. */
 export function currentAgentMode(): AgentMode {
   const mode = settingsManager.get().mode
-  return mode === 'read-only' ? 'read-only' : 'workspace-write'
+  if (mode === 'read-only' || mode === 'chat-only') return mode
+  return 'workspace-write'
 }
 
 export function isWriteTool(name: string): boolean {
   return WRITE_TOOL_NAMES.has(name)
 }
 
+export function isReadTool(name: string): boolean {
+  return READ_TOOL_NAMES.has(name)
+}
+
 /** Whether a tool may run under the given mode (defaults to the live mode). */
 export function toolAllowed(name: string, mode: AgentMode = currentAgentMode()): boolean {
-  return mode !== 'read-only' || !isWriteTool(name)
+  if (mode === 'chat-only') return !isWriteTool(name) && !isReadTool(name)
+  if (isWriteTool(name)) return mode === 'workspace-write'
+  if (isReadTool(name)) return mode !== 'read-only'
+  return true
 }
 
 // ---------------------------------------------------------------------------

@@ -140,6 +140,12 @@ export async function runSubagent(
       break
     }
 
+    if (context.abortSignal?.aborted || (timeoutMs > 0 && now() - startedAt >= timeoutMs)) {
+      aborted = true
+      timedOut = !timedOut && timeoutMs > 0
+      break
+    }
+
     if (response.usage) {
       totalUsage.inputTokens += response.usage.inputTokens
       totalUsage.outputTokens += response.usage.outputTokens

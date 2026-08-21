@@ -35,6 +35,7 @@
     "selectModelTitle": "选择模型",
     "modeTitle": "访问模式",
     "modeReadOnly": "只读",
+    "modeChatOnly": "仅聊天",
     "modeWorkspaceWrite": "工作区写",
     "send": "发送 (Enter)",
     "stop": "停止",

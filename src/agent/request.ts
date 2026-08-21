@@ -2,7 +2,7 @@ import type { AgentMode, ApiMessage, ToolDefinition } from '@/config/types'
 import { buildSystemPrompt } from './system-prompt'
 import { buildContextMessage } from './context'
 import { toolDefinitions } from './tools/registry'
-import { isWriteTool } from './tools/permissions'
+import { toolAllowed } from './tools/permissions'
 
 export interface RequestParts {
   systemMessage: ApiMessage
@@ -16,9 +16,7 @@ export function buildSystemMessage(skillsCatalog = '', mode: AgentMode = 'worksp
 }
 
 export function filterTools(mode: AgentMode = 'workspace-write'): ToolDefinition[] {
-  return mode === 'read-only'
-    ? toolDefinitions.filter((tool) => !isWriteTool(tool.name))
-    : toolDefinitions
+  return toolDefinitions.filter((tool) => toolAllowed(tool.name, mode))
 }
 
 /**

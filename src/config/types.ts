@@ -7,7 +7,7 @@ import type { AskUserQuestionItem, AskUserAnswerItem } from '@/agent/tools/types
 export type ApiProvider = 'anthropic' | 'openai' | 'ollama' | 'custom'
 
 /** Agent write-permission mode. */
-export type AgentMode = 'read-only' | 'workspace-write'
+export type AgentMode = 'read-only' | 'chat-only' | 'workspace-write'
 
 export type ChatMessageType = 'user' | 'assistant' | 'tool_call' | 'tool_result' | 'error' | 'thinking'
 
@@ -104,7 +104,7 @@ export interface PluginSettings {
   baseUrl: string
   /** OpenAI adapter mode: `responses` (default) or `chat` fallback */
   openaiApiMode?: 'responses' | 'chat'
-  /** Agent write-permission mode: `read-only` hides/blocks file-mutating tools. */
+  /** Agent write-permission mode: `read-only` blocks all file access, `chat-only` disables every vault/editor file tool (reads and writes), `workspace-write` is full access (default). */
   mode?: AgentMode
   /** Optional model context window in tokens; when unset it is auto-detected. */
   contextWindow?: number

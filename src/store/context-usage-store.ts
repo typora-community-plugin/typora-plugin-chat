@@ -129,7 +129,9 @@ export function scheduleContextUsageRefresh(draft = ''): void {
 // Keep the ring aligned with settings changes (mode, model, context window).
 let lastSubscribedMode: AgentMode | null = null
 settings.subscribe(($settings) => {
-  const mode = $settings.mode === 'read-only' ? 'read-only' : 'workspace-write'
+  const mode: AgentMode = $settings.mode === 'read-only' || $settings.mode === 'chat-only'
+    ? $settings.mode
+    : 'workspace-write'
   const modeChanged = lastSubscribedMode !== null && lastSubscribedMode !== mode
   lastSubscribedMode = mode
   void refreshContextUsage({ refreshStatic: modeChanged })
