@@ -38,8 +38,6 @@
     runTurn = null,
   } = $props()
 
-
-
   // One-shot channel: /undo writes the rolled-back user message here and App's
   // reactive effect hands it to InputBar as editable draft text.
   const inputRefill = writable<string | null>(null)

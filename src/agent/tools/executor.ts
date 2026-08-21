@@ -21,11 +21,12 @@ import { executeUndo } from './system/undo'
 import { executeUpdateTodo, updateTodoSchema } from './system/update-todo'
 import { executeCreateSubagent, createSubagentSchema } from './system/create-subagent'
 import { executeWebFetch, webFetchSchema } from './system/web-fetch'
+import { executeSubBrowser, subbrowserSchema } from './system/subbrowser'
 
 // Re-export for backward compatibility
 export type { ExecutorContext } from './types'
 
-/** All 16 tool schemas — re-exported for registry.ts */
+/** All 17 tool schemas — re-exported for registry.ts */
 export const allToolSchemas = [
   // Editor tools
   readDocumentSchema,
@@ -47,6 +48,7 @@ export const allToolSchemas = [
   updateTodoSchema,
   createSubagentSchema,
   webFetchSchema,
+  subbrowserSchema,
 ] as const
 
 /** Tools whose `path` parameter is optional; when missing, fall back to the active file for summary display. */
@@ -111,6 +113,7 @@ async function runTool(
     case 'update_todo': return executeUpdateTodo(input)
     case 'create_subagent': return executeCreateSubagent(input, context)
     case 'web_fetch': return executeWebFetch(input)
+    case 'subbrowser': return executeSubBrowser(input)
     // UI-only slash command (not exposed to the model); see undo.ts.
     case 'undo': return executeUndo()
     default:

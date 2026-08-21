@@ -15,6 +15,7 @@ import { summarizeAskUser } from './system/ask-user'
 import { summarizeUpdateTodo } from './system/update-todo'
 import { summarizeCreateSubagent } from './system/create-subagent'
 import { summarizeWebFetch } from './system/web-fetch'
+import { summarizeSubBrowser } from './system/subbrowser'
 
 /**
  * Maps each tool name to its parameter-summary function.
@@ -40,6 +41,7 @@ export const toolSummaries: Record<string, ToolSummary> = {
   update_todo: summarizeUpdateTodo,
   create_subagent: summarizeCreateSubagent,
   web_fetch: summarizeWebFetch,
+  subbrowser: summarizeSubBrowser,
 }
 
 export function summarizeToolMessage(
