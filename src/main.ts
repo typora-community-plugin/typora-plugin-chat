@@ -101,15 +101,7 @@ export default class extends Plugin {
   }
 
   private setupChatView() {
-    const { workspace } = this.app
-
-    const tabs = workspace.rightSplit.children.find((child) => child.type === 'tabs') as WorkspaceParent | undefined
-    const leaf = workspace.createLeaf({
-      type: ChatView.type,
-      state: { path: `typ://${ChatView.type}/Chat` },
-    })
-
-    tabs?.appendChild(leaf)
+    this.app.commands.run('core.workspace.right-split:ensure-leaf', [`typ://${ChatView.type}/Chat`])
   }
 
   private getChatView(): ChatView | undefined {
