@@ -1,0 +1,120 @@
+import type { ToolResult } from '@/config/types'
+import { getCurrentFilePath } from '@/adapter/vault'
+import { currentMode } from '@/agent/modes'
+import type { ExecutorContext } from './types'
+import { executeReadDocument, readDocumentSchema } from './editor/read-document'
+import { executeEditDocument, editDocumentSchema } from './editor/edit-document'
+import { executeGetProperties, getPropertiesSchema } from './editor/get-properties'
+import { executeSetProperties, setPropertiesSchema } from './editor/set-properties'
+import { executeOpenDocument, openDocumentSchema } from './editor/open-document'
+import { executeReadFile, readFileSchema } from './vault/read-file'
+import { executeSearchVault, searchVaultSchema } from './vault/search-vault'
+import { executeListFiles, listFilesSchema } from './vault/list-files'
+import { executeCreateFile, createFileSchema } from './vault/create-file'
+import { executeDeleteFile, deleteFileSchema } from './vault/delete-file'
+import { executeRenameFile, renameFileSchema } from './vault/rename-file'
+import { executeGetCurrentDatetime, getCurrentDatetimeSchema } from './system/get-current-datetime'
+import { executeAskUser, askUserSchema } from './system/ask-user'
+import type { AskUserQuestionItem, AskUserAnswerItem } from './types'
+import { executeUseSkill, useSkillSchema } from './system/use-skill'
+import { executeUndo } from './system/undo'
+import { executeUpdateTodo, updateTodoSchema } from './system/update-todo'
+import { executeCreateSubagent, createSubagentSchema } from './system/create-subagent'
+import { executeWebFetch, webFetchSchema } from './net/web-fetch'
+import { executeSubBrowser, subbrowserSchema } from './net/subbrowser'
+
+// Re-export for backward compatibility
+export type { ExecutorContext } from './types'
+
+/** All 17 tool schemas — re-exported for registry.ts */
+export const allToolSchemas = [
+  // Editor tools
+  readDocumentSchema,
+  editDocumentSchema,
+  getPropertiesSchema,
+  setPropertiesSchema,
+  openDocumentSchema,
+  // Vault tools
+  readFileSchema,
+  searchVaultSchema,
+  listFilesSchema,
+  createFileSchema,
+  deleteFileSchema,
+  renameFileSchema,
+  // System tools
+  getCurrentDatetimeSchema,
+  askUserSchema,
+  useSkillSchema,
+  updateTodoSchema,
+  createSubagentSchema,
+  webFetchSchema,
+  subbrowserSchema,
+] as const
+
+/** Tools whose `path` parameter is optional; when missing, fall back to the active file for summary display. */
+const OPTIONAL_PATH_TOOLS = new Set([
+  'read_document',
+  'edit_document',
+  'get_properties',
+  'set_properties',
+])
+
+/**
+ * Execute a tool by name against Typora's vault/editor APIs.
+ * All executors return a `ToolResult`; they never throw.
+ */
+export async function executeTool(
+  name: string,
+  input: Record<string, unknown>,
+  context: ExecutorContext = {},
+): Promise<ToolResult> {
+  // Defense in depth: even if a file tool reaches the executor (e.g. a model
+  // calling a stale tool id), block it unless the mode allows that access level.
+  const blocked = currentMode().blockReason(name)
+  if (blocked !== null) {
+    return { content: blocked, isError: true }
+  }
+  const result = await runTool(name, input, context)
+  if (OPTIONAL_PATH_TOOLS.has(name)) {
+    const path = input.path
+    if (!(typeof path === 'string' && path)) {
+      const activeFile = context.activeFile ?? getCurrentFilePath()
+      if (activeFile) input.path = activeFile
+    }
+  }
+  return result
+}
+
+async function runTool(
+  name: string,
+  input: Record<string, unknown>,
+  context: ExecutorContext,
+): Promise<ToolResult> {
+  switch (name) {
+    // Editor tools
+    case 'read_document': return executeReadDocument(input)
+    case 'edit_document': return executeEditDocument(input, context.turnId)
+    case 'get_properties': return executeGetProperties(input)
+    case 'set_properties': return executeSetProperties(input, context.turnId)
+    case 'open_document': return executeOpenDocument(input)
+    // Vault tools
+    case 'read_file': return executeReadFile(input)
+    case 'search_vault': return executeSearchVault(input)
+    case 'list_files': return executeListFiles(input)
+    case 'create_file': return executeCreateFile(input, context.turnId)
+    case 'delete_file': return executeDeleteFile(input, context.turnId)
+    case 'rename_file': return executeRenameFile(input, context.turnId)
+    // System tools
+    case 'get_current_datetime': return executeGetCurrentDatetime()
+    case 'ask_user': return executeAskUser(input, context)
+    case 'use_skill': return executeUseSkill(input)
+    case 'update_todo': return executeUpdateTodo(input)
+    case 'create_subagent': return executeCreateSubagent(input, context)
+    case 'web_fetch': return executeWebFetch(input)
+    case 'subbrowser': return executeSubBrowser(input)
+    // UI-only slash command (not exposed to the model); see undo.ts.
+    case 'undo': return executeUndo()
+    default:
+      return { content: `Unknown tool: ${name}`, isError: true }
+  }
+}

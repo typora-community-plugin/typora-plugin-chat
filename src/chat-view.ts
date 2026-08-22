@@ -1,109 +1,186 @@
-import { app, WorkspaceView } from "@typora-community-plugin/core"
-import { getAIResponse } from "./ai-proxy"
+import './chat-view.scss'
+import { WorkspaceView } from '@typora-community-plugin/core'
+import { mount, unmount } from 'svelte'
+import App from './ui/App.svelte'
+import { chatStore } from './store/chat-store'
+import { refreshContextUsage, setApiInputTokens } from './store/context-usage-store'
+import { settingsManager } from './config/settings'
+import { abortAgentLoop, executeAgentLoop } from './agent/loop'
+import { getAgentHistory, resetAgentHistory } from './agent/history'
+import { getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
+import { undoStore } from './store/undo-store'
+import type { AssistantMeta, ToolResult } from './config/types'
 
+
+/**
+ * Svelte 5's DOM client caches `Node.prototype.firstChild/nextSibling`
+ * descriptors on first mount. A few Typora renderer variants expose a
+ * `Node` constructor whose prototype lacks these own accessor properties,
+ * which makes `mount()` throw `Cannot read properties of undefined ('get')`.
+ * Define the descriptors if they are missing before the first mount.
+ */
+function ensureSvelteDomShims() {
+  const w = window as unknown as Record<string, unknown>
+  if (!w.Node && w.Element) w.Node = w.Element
+  const nodeCtor = w.Node as { prototype?: object } | undefined
+  const proto = nodeCtor?.prototype as { childNodes?: unknown; parentNode?: unknown } | undefined
+  if (!proto) return
+
+  if (!Object.getOwnPropertyDescriptor(proto, 'firstChild')) {
+    Object.defineProperty(proto, 'firstChild', {
+      configurable: true,
+      get(this: { childNodes?: ArrayLike<ChildNode> | null }) {
+        return this.childNodes?.[0] ?? null
+      },
+    })
+  }
+
+  if (!Object.getOwnPropertyDescriptor(proto, 'nextSibling')) {
+    Object.defineProperty(proto, 'nextSibling', {
+      configurable: true,
+      get(this: { parentNode?: { childNodes: ArrayLike<ChildNode> } | null }) {
+        const siblings = this.parentNode?.childNodes
+        if (!siblings) return null
+        const index = Array.prototype.indexOf.call(siblings, this)
+        return index >= 0 && index < siblings.length - 1 ? siblings[index + 1] : null
+      },
+    })
+  }
+}
 
 export class ChatView extends WorkspaceView {
 
-  containerEl = $(`<div class="typ-chatview">
-<div class="header">
-    <div class="title">AI Copilot</div>
-</div>
-
-<div class="chat-container" id="chatContainer">
-    <div class="typing-indicator" id="typingIndicator">
-        <span class="typing-dot"></span>
-        <span class="typing-dot"></span>
-        <span class="typing-dot"></span>
-    </div>
-</div>
-
-<div class="input-container">
-    <textarea class="input-box" id="messageInput" placeholder="输入消息..." rows="1"></textarea>
-    <select class="model-selector" id="modelSelector">
-        <option value="qwen3.6-35b-a3b">Qwen 3.6 35B A3B</option>
-    </select>
-    <button class="send-button" id="sendButton">发送</button>
-</div>
-</div>`)[0]
-
   static type = 'typora-plugin.chat'
 
+  /** WorkspaceView does not create its own element; the subclass must. */
+  containerEl = document.createElement('div')
+
+  private svelteComponent: Record<string, unknown> | null = null
+
   onOpen() {
-    setTimeout(() => {
-      const chatContainer = document.getElementById('chatContainer')!
-      const messageInput = document.getElementById('messageInput')! as HTMLInputElement
-      const sendButton = document.getElementById('sendButton')!
-      const modelSelector = document.getElementById('modelSelector')! as HTMLSelectElement
-      const typingIndicator = document.getElementById('typingIndicator')!
+    ensureSvelteDomShims()
+    this.setIcon('typ-icon typ-robot')
+    this.containerEl.classList.add('typ-chat-view')
+    this.svelteComponent = mount(App, {
+      target: this.containerEl,
+      props: {
+        onSend: (text: string) => this.handleSend(text),
+        onStop: () => abortAgentLoop(),
+        runTurn: (options: { displayText: string; expandedMessage: string | null }) =>
+          this.runTurn(options),
+      },
+    }) as unknown as Record<string, unknown>
+  }
 
-      // 自动调整输入框高度
-      messageInput.addEventListener('input', function () {
-        this.style.height = 'auto'
-        this.style.height = (this.scrollHeight) + 'px'
-      })
+  onClose() {
+    if (this.svelteComponent) {
+      unmount(this.svelteComponent as Parameters<typeof unmount>[0])
+      this.svelteComponent = null
+    }
+  }
 
-      // 发送消息
-      function sendMessage() {
-        const message = messageInput.value.trim()
-        if (message === '') return
+  clearConversation() {
+    resetAgentHistory()
+    chatStore.clearMessages()
+    chatStore.clearSelection()
+    undoStore.clear()
+    undoStore.clearRedo()
+    void refreshContextUsage({ refreshStatic: true })
+    const current = getActiveSession()
+    if (current) {
+      saveActiveSession([], [])
+    }
+  }
 
-        // 添加用户消息
-        addMessage('user', message)
-        messageInput.value = ''
-        messageInput.style.height = 'auto'
+  /**
+   * Public entry point for a normal user message. The transcript shows the raw
+   * text; any skill expansion happens inside runTurn without touching what is
+   * displayed to the user.
+   */
+  async handleSend(text: string) {
+    await this.runTurn({ displayText: text, expandedMessage: null })
+  }
 
-        // 显示AI正在输入
-        typingIndicator.style.display = 'block'
-        chatContainer.scrollTop = chatContainer.scrollHeight
+  private async runTurn(options: { displayText: string; expandedMessage: string | null }) {
+    const selection = chatStore.getSelection()
+    let userMessage = options.expandedMessage ?? options.displayText
+    if (selection) {
+      const origin = selection.filePath ?? 'the active document'
+      userMessage =
+        `[Selection scope: Work only within this selection from ${origin}.]\n` +
+        `Selected text:\n> ${selection.text}\n\nUser message: ${userMessage}`
+    }
 
-        // 模拟AI回复
-        setTimeout(() => {
-          const el = addMessage('ai')
-          let md = ''
-          el.style.display = 'none'
-          const options = {
-            model: modelSelector.value,
-            callback: (chunck: string) => {
-              typingIndicator.style.display = 'none'
-              el.style.display = 'block'
-              md += chunck
-              app.features.markdownRenderer.renderTo(md, el)
-            },
-          }
-          getAIResponse(message, options)
-        }, 1500)
-      }
+    chatStore.addUserMessage(options.displayText, selection)
+    const active = getActiveSession()
+    if (active && chatStore.getMessages().length === 1) {
+      const title = options.displayText.replace(/\s+/g, ' ').trim().slice(0, 30)
+      if (title) updateSessionTitle(active.id, title)
+    }
+    chatStore.setInputEnabled(false)
 
-      // 添加消息到聊天界面
-      function addMessage(sender: string, content = '') {
-        const messageDiv = document.createElement('div')
-        messageDiv.className = `message ${sender}-message`
+    const startedAt = performance.now()
+    const assistantIds: string[] = []
 
-        const contentDiv = document.createElement('div')
-        contentDiv.className = 'message-content'
-        if (content) contentDiv.textContent = content
+    try {
+      const result = await executeAgentLoop(
+        userMessage,
+        {
+          onText: (t) => {
+            assistantIds.push(chatStore.addAssistantMessage(t))
+          },
+          onThinking: (t) => chatStore.addThinkingMessage(t),
+          onToolCall: (name, input) => chatStore.addToolCall(name, input),
+          onToolResult: (id, _name, toolResult) => chatStore.updateToolResult(id, toolResult, toolResult.isError),
+          onError: (msg) => chatStore.addError(msg),
+          onAskUser: (questions) => {
+            chatStore.setInputEnabled(true)
+            return chatStore.showAskUser(questions)
+          },
+          onThinkingChange: (isThinking) => {
+            if (isThinking) chatStore.showThinking()
+            else chatStore.hideThinking()
+          },
+          onUsage: (usage) => setApiInputTokens(usage.inputTokens),
+        },
+        settingsManager.get().maxIterations,
+      )
 
-        messageDiv.appendChild(contentDiv)
-        chatContainer.insertBefore(messageDiv, typingIndicator)
-
-        // 滚动到底部
-        chatContainer.scrollTop = chatContainer.scrollHeight
-        return contentDiv
-      }
-
-      // 点击发送按钮
-      sendButton.addEventListener('click', sendMessage)
-
-      // 按Enter键发送消息 (Shift+Enter换行)
-      messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault()
-          sendMessage()
+      if (assistantIds.length) {
+        const durationMs = performance.now() - startedAt
+        const meta: AssistantMeta = {
+          model: result.model ?? settingsManager.get().model,
+          durationMs: Math.round(durationMs),
+          ...(result.aborted ? { aborted: true } : {}),
         }
-      })
 
-      // 初始欢迎消息
-      addMessage('ai', '您好！我是AI助手，请问有什么可以帮您的吗？')
-    })
+        if (!result.aborted) {
+          const generationMs = result.apiDurationMs && result.apiDurationMs > 0 ? result.apiDurationMs : durationMs
+          const outputTokens = result.usage?.outputTokens ?? 0
+          const chars = result.text.length
+          const seconds = Math.max(generationMs, 1) / 1000
+          meta.outputTokens = outputTokens
+          meta.chars = chars
+
+          if (outputTokens > 0) {
+            meta.speed = outputTokens / seconds
+            meta.speedUnit = 'tokens'
+          } else if (chars > 0) {
+            meta.speed = chars / seconds
+            meta.speedUnit = 'chars'
+          }
+        }
+
+        chatStore.setAssistantMeta(assistantIds, meta)
+      }
+    } finally {
+      chatStore.setInputEnabled(true)
+      chatStore.hideThinking()
+      void refreshContextUsage({ refreshStatic: true })
+      const current = getActiveSession()
+      if (current) {
+        saveActiveSession(chatStore.getMessages(), getAgentHistory())
+      }
+    }
   }
 }

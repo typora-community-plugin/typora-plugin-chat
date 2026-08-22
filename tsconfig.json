@@ -6,6 +6,11 @@
     ],
     "target": "ESNext",
     "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
     "module": "ESNext",
     "allowJs": true,
     "resolveJsonModule": true,
@@ -13,10 +18,17 @@
     "moduleResolution": "node",
     "importHelpers": true,
     "isolatedModules": true,
+    "verbatimModuleSyntax": true,
     "strictNullChecks": true,
     "skipLibCheck": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.svelte"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test"
   ]
 }
