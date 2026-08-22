@@ -1,5 +1,6 @@
 .opencode/
 references/
+*.apikey
 
 # npm
 node_modules/

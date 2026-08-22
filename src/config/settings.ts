@@ -52,7 +52,7 @@ function deobfuscate(encoded: string): string {
 }
 
 function apiKeyFilePath(): string {
-  const dir = app.vault.configDir || app.vault.dataDir || app.vault.path
+  const dir = app.vault.dataDir
   return `${dir.replace(/[\\/]+$/, '')}/${API_KEY_FILE}`
 }
 
@@ -66,11 +66,11 @@ async function readApiKeyFromFile(): Promise<string> {
 }
 
 async function writeApiKeyToFile(apiKey: string): Promise<void> {
-  try {
-    await fs.writeText(apiKeyFilePath(), obfuscate(apiKey))
-  } catch {
-    /* fall back to localStorage below */
-  }
+  const filePath = apiKeyFilePath()
+  return fs.access(filePath)
+    .catch(() => fs.mkdir(app.vault.dataDir))
+    .then(() => fs.writeText(filePath, obfuscate(apiKey)))
+    .catch(() => {/* fall back to localStorage below */ })
 }
 
 async function readStoredApiKey(): Promise<string> {
