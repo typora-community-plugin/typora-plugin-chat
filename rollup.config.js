@@ -54,7 +54,7 @@ export default defineConfig({
       'process.env.IS_DEV': 'false',
     }),
     virtual(virtualModules),
-    nodeResolve(),
+    nodeResolve({ browser: true }),
     commonjs(),
     rollupSveltePlugin(),
     typescript({
