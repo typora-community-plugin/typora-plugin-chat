@@ -37,7 +37,7 @@
     "esbuild-svelte": "^0.9.5",
     "rollup": "^4.1.4",
     "rollup-plugin-scss": "^4.0.0",
-    "rollup-plugin-typora": "npm:@typora-community-plugin/rollup-plugin-typora@^1.0.4",
+    "rollup-plugin-typora": "npm:@typora-community-plugin/rollup-plugin-typora@^1.1.0",
     "sass": "^1.69.5",
     "svelte": "^5.56.9",
     "svelte-check": "^4.0.0",
