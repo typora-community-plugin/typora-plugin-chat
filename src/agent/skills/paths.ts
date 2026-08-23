@@ -1,5 +1,4 @@
-import * as os from 'os'
-import { app, path } from '@typora-community-plugin/core'
+import { app, path, os } from '@typora-community-plugin/core'
 
 
 /**
