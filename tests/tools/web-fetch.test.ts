@@ -68,7 +68,8 @@ describe('web_fetch schema', () => {
     const entry = allToolSchemas.find(schema => schema.name === 'web_fetch')
     expect(entry).toBe(webFetchSchema)
     expect(webFetchSchema.parameters.required).toEqual(['url'])
-    expect(webFetchSchema.parameters.properties.max_chars).toBeTruthy()
+    expect(webFetchSchema.parameters.properties.limit).toBeTruthy()
+    expect(webFetchSchema.parameters.properties.offset).toBeTruthy()
   })
 
   it('is exposed to the model in all three modes', () => {
@@ -132,25 +133,45 @@ describe('executeWebFetch', () => {
     expect(result.content).toContain('binary')
   })
 
-  it('truncates content at max_chars and marks it', async () => {
+  it('paginates content at limit and marks it', async () => {
     mockFetchResponse({ body: `<html><head><title>T</title></head><body>${'x'.repeat(500)}</body></html>`, contentType: 'text/html' })
-    const result = await executeWebFetch({ url: 'https://example.com', max_chars: 200 })
+    const result = await executeWebFetch({ url: 'https://example.com', limit: 200 })
     expect(result.isError).toBeFalsy()
-    expect(result.content.length).toBeLessThanOrEqual(200)
-    // The notice is "… (truncated — show N of M chars)".
-    expect(result.content).toContain('truncated')
+    // The notice is "… showing N of M chars, starting at offset O".
+    expect(result.content).toContain('showing')
+    expect(result.content).toMatch(/starting at offset 0/)
   })
 
-  it('does not mark short content as truncated', async () => {
+  it('does not mark short content as paginated', async () => {
     mockFetchResponse({ body: `<html><head><title>T</title></head><body>short page</body></html>` })
     const result = await executeWebFetch({ url: 'https://example.com' })
     expect(result.isError).toBeFalsy()
-    expect(result.content).not.toContain('(truncated)')
+    expect(result.content).not.toContain('showing')
   })
 
-  it('clamps out-of-range max_chars values', async () => {
+  it('reads a later window via offset', async () => {
+    mockFetchResponse({ body: `<html><head><title>T</title></head><body>${'a'.repeat(400)}${'b'.repeat(200)}</body></html>`, contentType: 'text/html' })
+    const first = await executeWebFetch({ url: 'https://example.com', limit: 100, offset: 0 })
+    const second = await executeWebFetch({ url: 'https://example.com', limit: 100, offset: 450 })
+    expect(first.isError).toBeFalsy()
+    expect(second.isError).toBeFalsy()
+    expect(second.content).toContain('b')
+    // No overlap between the two windows.
+    const firstBody = first.content.split('\n…')[0]!
+    const secondBody = second.content.split('\n…')[0]!
+    expect(firstBody.repeat(1) === secondBody.repeat(1)).toBe(false)
+  })
+
+  it('errors when offset is beyond the end of the content', async () => {
+    mockFetchResponse({ body: `<html><head><title>T</title></head><body>tiny</body></html>` })
+    const result = await executeWebFetch({ url: 'https://example.com', limit: 100, offset: 999_999 })
+    expect(result.isError).toBe(true)
+    expect(result.content).toContain('no content at offset')
+  })
+
+  it('clamps out-of-range limit values', async () => {
     mockFetchResponse({ body: `<html><head><title>T</title></head><body>${'y'.repeat(10)}</body></html>` })
-    const result = await executeWebFetch({ url: 'https://example.com', max_chars: -5 })
+    const result = await executeWebFetch({ url: 'https://example.com', limit: -5 })
     expect(result.isError).toBeFalsy()
   })
 
@@ -202,13 +223,36 @@ describe('web_fetch permissions and summary', () => {
     vi.unstubAllGlobals()
   })
 
-  it('summarizes calls with the url and char count only', () => {
+  it('surfaces pagination details when present in the result', () => {
     const summary = summarizeWebFetch(
       { url: 'https://example.com/a' },
-      { content: `x`.repeat(120) + '\n… (truncated — show 100 of 5,000 chars)' },
+      { content: `x`.repeat(120) + '\n… showing 100 of 5,000 chars, starting at offset 30,000' },
     )
+    // The fixture is synthetic (real notices use locale-formatted numbers); the
+    // summary surfaces total/offset when it can parse them.
     expect(summary).toContain('https://example.com/a')
     expect(summary).not.toContain('xxxxx')
+  })
+
+  it('summarizes paginated results with showing count and offset', () => {
+    const shown = (100).toLocaleString()
+    const total = (5_000).toLocaleString()
+    const startAt = (30_000).toLocaleString()
+    const notice = `… showing ${shown} of ${total} chars, starting at offset ${startAt}`
+    const summary = summarizeWebFetch(
+      { url: 'https://example.com/a' },
+      { content: `x`.repeat(120) + `\n${notice}` },
+    )
+    expect(summary).toContain(`showing ${shown}`)
+    expect(summary).toContain(`offset ${startAt}`)
+  })
+
+  it('summarizes non-paginated results with the plain char count', () => {
+    const summary = summarizeWebFetch(
+      { url: 'https://example.com/a' },
+      { content: `x`.repeat(120) },
+    )
+    expect(summary).toContain('(120 chars)')
   })
 
   it('marks failed summaries', () => {
