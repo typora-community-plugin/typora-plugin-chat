@@ -4,7 +4,7 @@ import { vaultIndex } from '@/adapter/vault-index'
 
 export const listFilesSchema: ToolDefinition = {
   name: 'list_files',
-  description: 'List files in a vault folder (served from an in-memory index — no disk I/O). Omit `folder` to list the vault root. Set `recursive` to include subfolders.',
+  description: 'List files directly inside one vault folder level (served from an in-memory index — no disk I/O). Only direct children are returned by default, so drill down folder by folder. Omit `folder` to list the vault root. Pass `recursive` only when the user explicitly asks for subfolders or all nested files.',
   parameters: {
     type: 'object',
     properties: {
@@ -12,7 +12,7 @@ export const listFilesSchema: ToolDefinition = {
       extension: { type: 'string', description: 'Optional file extension filter, e.g. "md" (default md).' },
       recursive: {
         type: 'boolean',
-        description: 'Include files from subfolders (default false). When false, only direct children of `folder` are listed.',
+        description: 'Include files from subfolders. Defaults to false — do NOT set unless the user explicitly asks for recursive listing or all nested files; otherwise list one level at a time and drill down as needed.',
         default: false,
       },
     },
