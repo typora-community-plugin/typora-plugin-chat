@@ -100,6 +100,13 @@ export default class extends Plugin {
     setTimeout(() => this.setupChatView())
   }
 
+  onunload() {
+    const leaf = this.app.workspace.rightSplit.findLeaf(
+      (leaf) => leaf.viewType === ChatView.type
+    )
+    if (leaf) leaf.detach()
+  }
+
   private setupChatView() {
     this.app.commands.run('core.workspace.right-split:ensure-leaf', [`typ://${ChatView.type}/Chat`])
   }
