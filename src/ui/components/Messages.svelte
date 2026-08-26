@@ -37,6 +37,17 @@
 </script>
 
 <div class="typ-chat-messages" bind:this={messagesEl}>
+  {#if !messages.length && !thinking}
+    <pre class="typ-placeholder-art">
+    ██████╗██╗  ██╗ █████╗ ████████╗
+   ██╔════╝██║  ██║██╔══██╗╚══██╔══╝
+██║     ███████║███████║   ██║
+██║     ██╔══██║██╔══██║   ██║
+╚██████╗██║  ██║██║  ██║   ██║
+ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝
+    </pre>
+  {/if}
+
   {#each messages as message (message.id)}
     <MessageBubble {message} showMeta={metaMessageIds.has(message.id)} />
   {/each}
@@ -60,6 +71,19 @@
       flex-direction: column;
       gap: 12px;
       scroll-behavior: auto;
+    }
+
+    .typ-placeholder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: stretch;
+      font-family: var(--font-mono, Consolas, monospace);
+      font-size: 10px;
+      line-height: 1.2;
+      color: rgb(var(--typ-color-gray-3));
+      text-align: center;
+      user-select: none;
     }
 
     .typ-thinking {
