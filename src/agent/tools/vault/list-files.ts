@@ -57,12 +57,22 @@ function clampOffset(value: unknown): number {
  * Depth-aware folder filter over the flat index.
  * - folder '.' (or empty → normalized to '.'): direct children of vault root when !recursive, all files when recursive.
  * - other folder: only entries directly inside `folder/` when !recursive; everything under it when recursive.
+ *
+ * Non-recursive mode returns both files and directories (dirs end with `/`).
  */
 function filterByFolder(files: string[], folder: string, recursive: boolean): string[] {
   if (folder === '.' || !folder) {
     if (recursive) return files
     // Root level: keep only top-level files (no `/` in the relative path).
-    return files.filter(f => !f.includes('/'))
+    const topLevelFiles = files.filter(f => !f.includes('/'))
+    // Infer directories from paths that contain a `/`.
+    const dirSet = new Set<string>()
+    for (const f of files) {
+      if (!f.includes('/')) continue
+      const firstSlash = f.indexOf('/')
+      dirSet.add(f.slice(0, firstSlash + 1)) // include the trailing `/`
+    }
+    return [...[...dirSet].sort(), ...topLevelFiles]
   }
 
   const prefix = folder.endsWith('/') ? folder : folder + '/'
@@ -70,11 +80,20 @@ function filterByFolder(files: string[], folder: string, recursive: boolean): st
     return files.filter(f => f.startsWith(prefix))
   }
   // Non-recursive: only direct children — no further `/` after the prefix.
-  return files.filter(f => {
-    if (!f.startsWith(prefix)) return false
+  const childFiles: string[] = []
+  const dirSet = new Set<string>()
+  for (const f of files) {
+    if (!f.startsWith(prefix)) continue
     const rest = f.slice(prefix.length)
-    return !rest.includes('/')
-  })
+    const slashIdx = rest.indexOf('/')
+    if (slashIdx !== -1) {
+      // Sub-file inside a subdirectory → infer the directory.
+      dirSet.add(f.slice(0, prefix.length + slashIdx + 1))
+    } else {
+      childFiles.push(f)
+    }
+  }
+  return [...[...dirSet].sort(), ...childFiles]
 }
 
 export async function executeListFiles(input: Record<string, unknown>): Promise<ToolResult> {
