@@ -21,6 +21,9 @@ await esbuild.build({
   bundle: true,
   minify: IS_PROD,
   sourcemap: IS_DEV,
+  define: {
+    'process.env.IS_DEV': 'true',
+  },
   alias: {
     '@': fileURLToPath(new URL('./src', import.meta.url)),
   },

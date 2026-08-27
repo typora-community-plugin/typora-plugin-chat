@@ -54,6 +54,9 @@ export async function sendMessage(
   for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
     if (signal?.aborted) throw new Error('Aborted')
     try {
+      if (process.env.IS_DEV) {
+        console.log('[chat] messages:', messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : Array.isArray(m.content) ? m.content.map(c => c.type === 'text' ? `{type:text, text:${String(c.text).slice(0, 200)}}` : `{type:${c.type}}`) : '' })))
+      }
       return await dispatch(settings, messages, tools, signal)
     } catch (error) {
       lastError = error
