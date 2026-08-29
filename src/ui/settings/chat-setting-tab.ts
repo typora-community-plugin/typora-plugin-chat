@@ -182,6 +182,19 @@ export class ChatSettingTab extends SettingTab {
     })
 
     this.addSetting((setting) => {
+      setting.addName(t.settings.forbiddenPaths)
+      setting.addDescription(t.settings.forbiddenPathsDesc)
+      setting.addTextArea((textarea) => {
+        textarea.rows = 3
+        textarea.placeholder = t.settings.forbiddenPathsPlaceholder
+        textarea.value = settingsManager.get().forbiddenPaths ?? ''
+        textarea.onchange = () => {
+          void settingsManager.save({ forbiddenPaths: textarea.value })
+        }
+      })
+    })
+
+    this.addSetting((setting) => {
       setting.addName(t.settings.maxIterations)
       setting.addDescription(t.settings.maxIterationsDesc)
       setting.addInput('number', (input) => {

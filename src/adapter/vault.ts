@@ -1,5 +1,6 @@
 import { app, fs, path } from '@typora-community-plugin/core'
 import { isMarkdownFile } from '@/utils/helpers'
+import { isPathForbidden } from '@/agent/tools/path-policy'
 import { vaultIndex } from './vault-index'
 
 
@@ -7,6 +8,13 @@ import { vaultIndex } from './vault-index'
  * Thin wrapper around the Typora community plugin `fs` adapter.
  * All paths are vault-relative unless noted otherwise.
  */
+
+function throwIfForbidden(vaultPath: string): void {
+  const rel = relativePathToRoot(vaultPath)
+  if (isPathForbidden(rel)) {
+    throw new Error(`Forbidden path: ${rel} cannot be listed, read or modified`)
+  }
+}
 
 export function vaultRoot(): string {
   return app.vault.path
@@ -43,10 +51,12 @@ async function ensureParentDir(filepath: string): Promise<void> {
 }
 
 export async function readFile(vaultPath: string): Promise<string> {
+  throwIfForbidden(vaultPath)
   return fs.readText(resolveVaultPath(vaultPath))
 }
 
 export async function writeFile(vaultPath: string, content: string): Promise<void> {
+  throwIfForbidden(vaultPath)
   const absolute = resolveVaultPath(vaultPath)
   await ensureParentDir(absolute)
   await fs.writeText(absolute, content)
@@ -63,6 +73,7 @@ export async function findReplace(
   replacement: string,
   position?: string,
 ): Promise<string> {
+  throwIfForbidden(vaultPath)
   const absolute = resolveVaultPath(vaultPath)
   const current = await fs.readText(absolute)
   if (!current.includes(find)) {
@@ -79,6 +90,7 @@ export async function insertText(
   content: string,
   position: 'beginning' | 'end' | 'after_frontmatter' = 'end',
 ): Promise<void> {
+  throwIfForbidden(vaultPath)
   const absolute = resolveVaultPath(vaultPath)
   const current = await fs.readText(absolute)
   let next: string
@@ -104,6 +116,7 @@ export async function insertText(
 }
 
 export async function createFile(vaultPath: string, content: string): Promise<void> {
+  throwIfForbidden(vaultPath)
   if (await fileExists(vaultPath)) {
     throw new Error(`create_file failed: ${vaultPath} already exists`)
   }
@@ -111,12 +124,15 @@ export async function createFile(vaultPath: string, content: string): Promise<vo
 }
 
 export async function renameFile(vaultPath: string, newPath: string): Promise<void> {
+  throwIfForbidden(vaultPath)
+  throwIfForbidden(newPath)
   await fs.move(resolveVaultPath(vaultPath), resolveVaultPath(newPath))
   vaultIndex.invalidate(vaultPath)
   vaultIndex.invalidate(newPath)
 }
 
 export async function deleteFile(vaultPath: string): Promise<void> {
+  throwIfForbidden(vaultPath)
   const absolute = resolveVaultPath(vaultPath)
   if (!(await fs.exists(absolute))) {
     throw new Error(`delete_file failed: ${vaultPath} does not exist`)
@@ -131,7 +147,7 @@ export async function deleteFile(vaultPath: string): Promise<void> {
 
 export async function listFiles(folder = '', extension?: string): Promise<string[]> {
   await vaultIndex.ensureFresh()
-  const all = vaultIndex.listAll()
+  const all = vaultIndex.listAll().filter(f => !isPathForbidden(f))
   let filtered: string[]
   if (extension) {
     const ext = `.${extension.toLowerCase()}`
@@ -158,12 +174,15 @@ export function getCurrentFilePath(): string | null {
 
 /** Read a vault document or the active editor content when path is omitted. */
 export async function readDocument(path?: string): Promise<string> {
-  return path ? readFile(path) : getActiveDocumentContent()
+  if (!path) return getActiveDocumentContent()
+  throwIfForbidden(path)
+  return readFile(path)
 }
 
 /** Write a vault document or update the active editor when path is omitted. */
 export async function writeDocument(path: string | undefined, content: string): Promise<void> {
   if (path) {
+    throwIfForbidden(path)
     await writeFile(path, content)
     return
   }

@@ -1,6 +1,7 @@
 import { app, fs, path } from '@typora-community-plugin/core'
 import { LRUCache } from '@/utils/lru'
 import { basename, isMarkdownFile } from '@/utils/helpers'
+import { isPathForbidden } from '@/agent/tools/path-policy'
 
 
 /**
@@ -110,12 +111,12 @@ class VaultIndex {
 
   // ── queries ──────────────────────────────────────────────────────────
 
-  /** All indexed vault-relative markdown paths, sorted. */
+  /** All indexed vault-relative markdown paths (forbidden paths are never indexed), sorted. */
   listAll(): string[] {
     return [...this.fileMap.keys()].sort()
   }
 
-  /** Count of indexed markdown files (O(1) — no I/O). */
+  /** Count of indexed markdown files (O(1) — forbidden paths are never indexed). */
   count(): number {
     return this.fileMap.size
   }
@@ -206,10 +207,12 @@ class VaultIndex {
     }
 
     for (const rel of mdFiles) {
+      // Forbidden paths are never indexed, so read queries need no filtering.
+      if (isPathForbidden(rel)) continue
       this.fileMap.set(rel, { nameLower: basename(rel).toLowerCase() })
     }
 
-    // Build backlink graph with bounded concurrency.
+    // Build backlink graph with bounded concurrency (forbidden files already excluded above).
     await mapConcurrent(mdFiles, MAX_CONCURRENCY, async rel => {
       try {
         const abs = resolveVaultPathLocal(rel)
@@ -244,6 +247,7 @@ class VaultIndex {
 
   /** Re-scan a single file after invalidation (write/rename). */
   private async scanSingleFile(rel: string, abs: string): Promise<void> {
+    if (isPathForbidden(rel)) return
     let content: string
     try {
       content = await fs.readText(abs)

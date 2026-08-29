@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   mode: 'workspace-write',
   contextWindow: 128000,
   contextWindows: {},
+  forbiddenPaths: '',
 }
 
 const SETTINGS_KEY = 'typora-plugin-chat.settings'

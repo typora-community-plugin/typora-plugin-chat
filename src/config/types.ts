@@ -110,6 +110,8 @@ export interface PluginSettings {
   contextWindow?: number
   /** Optional per-model context window overrides in tokens. */
   contextWindows?: Record<string, number>
+  /** Simple glob patterns (one per line) for vault paths the agent must never list, read or modify. Built-in rules (.git, node_modules, *.apikey) always apply on top of this. */
+  forbiddenPaths?: string
 }
 
 /** Conversation format used by provider adapters */
