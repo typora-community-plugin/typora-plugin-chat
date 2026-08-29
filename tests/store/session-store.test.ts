@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mockApp } from '../setup'
 
 // The real i18n module reaches for `@typora-community-plugin/core` (`app`,
 // which is `{}` in the test env) — accessing its properties would throw. Stub
@@ -16,13 +17,27 @@ vi.mock('@/i18n', () => ({ t: emptyI18n }))
  * `initSessionStore` restores exactly that persisted state — which doubles as
  * persistence coverage.
  */
-async function freshStore() {
+async function freshStore(vaultPath = '/vault') {
   localStorage.clear()
+  mockApp.vault.path = vaultPath
   vi.resetModules()
   const mod = await import('@/store/session-store')
+  void mod.setVaultScope(mockApp.vault.path)
   void mod.initSessionStore()
   return mod
 }
+
+// Must match the store's key algorithm: `SESSIONS_KEY:<fnv1a hex of path>`.
+function hashPath(path: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < path.length; i++) {
+    h ^= path.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
+}
+
+const scopedKey = (path: string) => `typora-plugin-chat.sessions:${path ? hashPath(path) : 'global'}`
 
 describe('session-store', () => {
   beforeEach(() => localStorage.clear())
@@ -31,7 +46,7 @@ describe('session-store', () => {
     const store = await freshStore()
     expect(store.sessions.get()).toHaveLength(1)
     expect(store.activeSessionId.get()).toBe(store.sessions.get()[0]!.id)
-    const raw = JSON.parse(localStorage.getItem('typora-plugin-chat.sessions') ?? '{}')
+    const raw = JSON.parse(localStorage.getItem(scopedKey('/vault')) ?? '{}')
     expect(raw.sessions).toHaveLength(1)
   })
 
@@ -89,7 +104,7 @@ describe('session-store', () => {
       const store = await freshStore()
       const a = store.createSession('A')
       store.deleteSession(a.id)
-      const raw = JSON.parse(localStorage.getItem('typora-plugin-chat.sessions') ?? '{}')
+      const raw = JSON.parse(localStorage.getItem(scopedKey('/vault')) ?? '{}')
       expect(raw.sessions).toHaveLength(1)
       expect(raw.activeSessionId).toBe(raw.sessions[0].id)
     })
@@ -115,6 +130,103 @@ describe('session-store', () => {
       const [only] = store.sessions.get()!
       expect(store.deleteSession(only!.id)).toBeUndefined()
       expect(store.sessions.get()).toHaveLength(1)
+    })
+  })
+
+  describe('vault isolation', () => {
+    it('persists each vault under its own key and never leaks sessions across vaults', async () => {
+      const storeA = await freshStore('/vault-a')
+      storeA.createSession('OnlyInA')
+
+      // Simulate the plugin switching vaults (main.ts calls setVaultScope + reload).
+      mockApp.vault.path = '/vault-b'
+      void storeA.setVaultScope(mockApp.vault.path)
+      void storeA.reloadSessionStore()
+
+      expect(storeA.sessions.get().map((s) => s.title)).toEqual(['Chat'])
+      const rawB = JSON.parse(localStorage.getItem(scopedKey('/vault-b')) ?? '{}')
+      expect(rawB.sessions.map((s: { title: string }) => s.title)).toEqual(['Chat'])
+
+      // Switch back: vault A's sessions are intact and untouched by B.
+      mockApp.vault.path = '/vault-a'
+      void storeA.setVaultScope(mockApp.vault.path)
+      void storeA.reloadSessionStore()
+      expect(storeA.sessions.get().map((s) => s.title)).toEqual(['Chat', 'OnlyInA'])
+
+      // Both keys coexist in storage.
+      const rawA = JSON.parse(localStorage.getItem(scopedKey('/vault-a')) ?? '{}')
+      expect(rawA.sessions.map((s: { title: string }) => s.title)).toEqual(['Chat', 'OnlyInA'])
+    })
+
+    it('keeps the previous vault\'s active session id when switching back to a vault that has data', async () => {
+      const store = await freshStore('/vault-a')
+      const a = store.createSession('KeepMeActive')
+      expect(store.activeSessionId.get()).toBe(a.id)
+
+      mockApp.vault.path = '/vault-b'
+      void store.setVaultScope(mockApp.vault.path)
+      void store.reloadSessionStore()
+      const bDefault = store.sessions.get()[0]!
+      expect(store.activeSessionId.get()).toBe(bDefault.id)
+
+      mockApp.vault.path = '/vault-a'
+      void store.setVaultScope(mockApp.vault.path)
+      void store.reloadSessionStore()
+      expect(store.activeSessionId.get()).toBe(a.id)
+    })
+
+    it('is a no-op when the vault has not changed', async () => {
+      const store = await freshStore('/vault-a')
+      store.createSession('X')
+      const before = store.sessions.get().length
+      void store.reloadSessionStore()
+      expect(store.sessions.get()).toHaveLength(before)
+    })
+
+    it('migrates legacy unscoped sessions into the current vault key exactly once', async () => {
+      localStorage.clear()
+      mockApp.vault.path = '/vault-legacy'
+      vi.resetModules()
+      const mod = await import('@/store/session-store')
+      // Pre-seed what an older plugin version wrote.
+      localStorage.setItem(
+        'typora-plugin-chat.sessions',
+        JSON.stringify({ sessions: [{ id: 'old1', title: 'Legacy', createdAt: 0, updatedAt: 0, messages: [], history: [] }], activeSessionId: 'old1' }),
+      )
+
+      void mod.setVaultScope(mockApp.vault.path)
+      void mod.initSessionStore()
+
+      expect(mod.sessions.get().map((s) => s.title)).toEqual(['Legacy'])
+      expect(localStorage.getItem('typora-plugin-chat.sessions')).toBeNull()
+      const migrated = JSON.parse(localStorage.getItem(scopedKey('/vault-legacy')) ?? '{}')
+      expect(migrated.sessions.map((s: { title: string }) => s.title)).toEqual(['Legacy'])
+
+      // A second init (fresh module, same storage) must not re-migrate or clobber.
+      vi.resetModules()
+      const mod2 = await import('@/store/session-store')
+      void mod2.setVaultScope(mockApp.vault.path)
+      void mod2.initSessionStore()
+      expect(mod2.sessions.get().map((s) => s.title)).toEqual(['Legacy'])
+    })
+
+    it('migrated legacy data does not leak into other vaults', async () => {
+      localStorage.clear()
+      mockApp.vault.path = '/vault-legacy'
+      vi.resetModules()
+      const mod = await import('@/store/session-store')
+      localStorage.setItem(
+        'typora-plugin-chat.sessions',
+        JSON.stringify({ sessions: [{ id: 'old1', title: 'Legacy', createdAt: 0, updatedAt: 0, messages: [], history: [] }], activeSessionId: 'old1' }),
+      )
+      void mod.setVaultScope(mockApp.vault.path)
+      void mod.initSessionStore()
+
+      // Switch to a different vault: it must start fresh, without the legacy session.
+      mockApp.vault.path = '/vault-other'
+      void mod.setVaultScope(mockApp.vault.path)
+      void mod.reloadSessionStore()
+      expect(mod.sessions.get().map((s) => s.title)).toEqual(['Chat'])
     })
   })
 

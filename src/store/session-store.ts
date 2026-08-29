@@ -7,7 +7,6 @@
  */
 
 import { derived, get, writable } from 'svelte/store'
-import { t } from '@/i18n'
 import type { ApiMessage, ChatMessage } from '@/config/types'
 
 export interface ChatSession {
@@ -27,6 +26,30 @@ export interface SessionSummary {
 
 const SESSIONS_KEY = 'typora-plugin-chat.sessions'
 const LEGACY_HISTORY_KEY = 'typora-plugin-chat.history'
+
+/**
+ * Sessions are scoped per vault: each vault has its own localStorage key so a
+ * vault can only see the sessions created inside it. Legacy data written by
+ * older versions under the unscoped `SESSIONS_KEY` is rekeyed into the current
+ * vault on first load (one-time migration). The path is hashed to keep keys
+ * short and stable regardless of path length or characters.
+ */
+
+/** Deterministic 32-bit FNV-1a hash, rendered as a fixed-width hex string. */
+function hashPath(path: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < path.length; i++) {
+    h ^= path.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(16).padStart(8, '0')
+}
+
+function sessionKey(vaultPath: string): string {
+  return `${SESSIONS_KEY}:${vaultPath ? hashPath(vaultPath) : 'global'}`
+}
+
+let currentVault = ''
 
 function createId(): string {
   try {
@@ -58,7 +81,7 @@ function createDefaultSession(title = 'Chat'): ChatSession {
 
 function readStoredSessions(): { sessions: ChatSession[]; activeSessionId: string | null } | null {
   try {
-    const raw = localStorage.getItem(SESSIONS_KEY)
+    const raw = localStorage.getItem(sessionKey(currentVault))
     if (!raw) return null
     const parsed = JSON.parse(raw) as { sessions?: unknown; activeSessionId?: unknown }
     if (!Array.isArray(parsed.sessions)) return null
@@ -90,9 +113,21 @@ function readLegacyHistory(): ChatMessage[] {
   }
 }
 
+/** Migrate legacy unscoped sessions into the current vault's key exactly once. */
+function migrateLegacySessions(): void {
+  const raw = localStorage.getItem(SESSIONS_KEY)
+  if (!raw) return
+  try {
+    localStorage.setItem(sessionKey(currentVault), raw)
+    localStorage.removeItem(SESSIONS_KEY)
+  } catch {
+    /* storage unavailable — nothing to migrate */
+  }
+}
+
 function persist(sessions: ChatSession[], activeSessionId: string | null) {
   try {
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify({ sessions, activeSessionId }))
+    localStorage.setItem(sessionKey(currentVault), JSON.stringify({ sessions, activeSessionId }))
   } catch {
     /* storage full or unavailable */
   }
@@ -113,6 +148,8 @@ let initialized = false
 export function initSessionStore(): void {
   if (initialized) return
   initialized = true
+  currentVault = vaultPath
+  migrateLegacySessions()
 
   const stored = readStoredSessions()
   if (stored) {
@@ -128,6 +165,42 @@ export function initSessionStore(): void {
   sessions.set([initial])
   activeSessionId.set(initial.id)
   persist([initial], initial.id)
+}
+
+/**
+ * Reload the session store for the current vault. Called from `main.ts` when
+ * the user switches vaults (and from tests to simulate a switch). The previous
+ * vault keeps its persisted data under its own key; if the active session id no
+ * longer exists in this vault's list, it falls back to that vault's most recent
+ * session.
+ */
+export function reloadSessionStore(): void {
+  if (vaultPath === currentVault) return
+  currentVault = vaultPath
+
+  const stored = readStoredSessions()
+  if (stored) {
+    sessions.set(stored.sessions)
+    activeSessionId.set(stored.activeSessionId)
+    return
+  }
+
+  const initial = createDefaultSession(sessionTitle)
+  sessions.set([initial])
+  activeSessionId.set(initial.id)
+  persist([initial], initial.id)
+}
+
+/** Vault path used to scope session storage; falls back to a shared bucket. */
+let vaultPath = ''
+export function setVaultScope(path: string): void {
+  vaultPath = path ?? ''
+}
+
+/** Title for new sessions, with an English fallback when i18n is uninitialized. */
+let sessionTitle = 'Chat'
+export function setSessionTitle(title: string): void {
+  if (title) sessionTitle = title
 }
 
 export function getActiveSession(): ChatSession | undefined {
@@ -182,7 +255,7 @@ export function deleteSession(id: string): ChatSession | undefined {
   const current = get(sessions)
   if (!current.some((s) => s.id === id)) return undefined
   const next = current.filter((s) => s.id !== id)
-  const fallback = next.length ? next : [createDefaultSession(t.chat.title)]
+  const fallback = next.length ? next : [createDefaultSession(sessionTitle)]
   sessions.set(fallback)
   activeSessionId.set(fallback[0]!.id)
   persist(fallback, fallback[0]!.id)

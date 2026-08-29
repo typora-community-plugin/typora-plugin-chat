@@ -4,7 +4,7 @@ import './ui/variables.scss'
 import { ChatView } from './chat-view'
 import { ChatSettingTab } from './ui/settings/chat-setting-tab'
 import { chatStore } from './store/chat-store'
-import { getActiveSession, initSessionStore, saveActiveSession } from './store/session-store'
+import { getActiveSession, initSessionStore, reloadSessionStore, saveActiveSession, setSessionTitle, setVaultScope } from './store/session-store'
 import { getSelection } from './adapter/editor'
 import { getCurrentFilePath } from './adapter/vault'
 import { copyTranscript } from './utils/export'
@@ -20,13 +20,19 @@ export default class extends Plugin {
 
     initI18n(this.manifest.dir!)
     chatStore.inputPlaceholder.set(t.chat.inputPlaceholder)
+    setSessionTitle(t.chat.title)
+    setVaultScope(app.vault.path)
     initSessionStore()
 
     // Skills: initial scan for /skill: autocomplete, plus a rescan whenever the
     // user switches vaults so project-level .agents/skills stay current. The
     // agent loop re-discovers on disk per turn regardless of this cache.
     void rescanSkills()
-    this.register(app.vault.on('change', () => { void rescanSkills() }))
+    this.register(app.vault.on('change', (path) => {
+      setVaultScope(path)
+      reloadSessionStore()
+      void rescanSkills()
+    }))
 
     this.registerSettingTab(new ChatSettingTab(this.app, this))
 
