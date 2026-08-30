@@ -18,7 +18,7 @@ import { undoCommand } from './undo'
 import { redoCommand } from './redo'
 import type { SlashCommand, SkillRef, Suggestion } from './types'
 
-export { Suggestion, type SkillRef }
+export type { Suggestion, SkillRef }
 
 export interface SlashCommandOptions {
   /** Discovered skill references used as suggestion candidates. */

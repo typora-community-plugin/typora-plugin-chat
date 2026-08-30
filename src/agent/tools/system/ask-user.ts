@@ -1,6 +1,8 @@
 import type { ToolDefinition, ToolResult } from '@/config/types'
 import type { ExecutorContext, AskUserQuestionItem, AskUserAnswerItem } from '../types'
 
+export type { AskUserQuestionItem, AskUserAnswerItem } from '../types'
+
 
 export const askUserSchema: ToolDefinition = {
   name: 'ask_user',

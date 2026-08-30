@@ -93,7 +93,7 @@ export async function executeCreateSubagent(
     const executeToolFn = _executeToolOverride ?? (async (name, input, context) => {
       // Lazy import to break the circular dependency at runtime.
       const { executeTool } = await import('../executor')
-      return executeTool(name, input, context) as Awaited<ReturnType<ExecuteToolFn>>
+      return executeTool(name, input, context)
     })
     result = await runSubagent(
       options,
