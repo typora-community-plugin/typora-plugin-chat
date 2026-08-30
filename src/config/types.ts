@@ -6,6 +6,20 @@ import type { AskUserQuestionItem, AskUserAnswerItem } from '@/agent/tools/types
 
 export type ApiProvider = 'anthropic' | 'openai' | 'ollama' | 'custom'
 
+/** Per-provider configuration (model parameters are independent per provider). */
+export interface ProviderConfig {
+  /** Optional API key; omitted when empty to keep persisted settings clean. */
+  apiKey?: string
+  model: string
+  baseUrl: string
+  /** OpenAI adapter mode: `responses` (default) or `chat` fallback. Only meaningful for the `openai` provider. */
+  openaiApiMode?: 'responses' | 'chat'
+  /** Optional model context window in tokens; when unset it is auto-detected. */
+  contextWindow?: number
+  /** Optional per-model context window overrides in tokens. */
+  contextWindows?: Record<string, number>
+}
+
 /** Agent write-permission mode. */
 export type AgentMode = 'read-only' | 'chat-only' | 'workspace-write'
 
@@ -98,20 +112,18 @@ export interface SelectionScope {
 
 export interface PluginSettings {
   provider: ApiProvider
-  apiKey: string
-  model: string
   maxIterations: number
-  baseUrl: string
-  /** OpenAI adapter mode: `responses` (default) or `chat` fallback */
-  openaiApiMode?: 'responses' | 'chat'
   /** Agent write-permission mode: `read-only` blocks all file access, `chat-only` disables every vault/editor file tool (reads and writes), `workspace-write` is full access (default). */
   mode?: AgentMode
-  /** Optional model context window in tokens; when unset it is auto-detected. */
-  contextWindow?: number
-  /** Optional per-model context window overrides in tokens. */
-  contextWindows?: Record<string, number>
+  /** Per-provider configuration; each provider keeps its own model parameters. */
+  providers: Record<ApiProvider, ProviderConfig>
   /** Simple glob patterns (one per line) for vault paths the agent must never list, read or modify. Built-in rules (.git, node_modules, *.apikey) always apply on top of this. */
   forbiddenPaths?: string
+}
+
+/** Returns the configuration of the currently active provider (falls back to `ollama`). */
+export function getActiveConfig(settings: PluginSettings): ProviderConfig {
+  return settings.providers[settings.provider] ?? settings.providers.ollama
 }
 
 /** Conversation format used by provider adapters */

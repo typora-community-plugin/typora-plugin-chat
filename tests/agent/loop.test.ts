@@ -15,11 +15,14 @@ vi.mock('../../src/agent/tools/executor', () => ({
 
 const settingsState = vi.hoisted(() => ({
   value: {
-    provider: 'ollama',
-    apiKey: '',
-    model: 'test-model',
+    provider: 'ollama' as const,
     maxIterations: 20,
-    baseUrl: 'http://localhost/v1',
+    providers: {
+      anthropic: { baseUrl: '', model: '' },
+      openai: { baseUrl: '', model: '', openaiApiMode: 'responses' as const },
+      ollama: { baseUrl: 'http://localhost/v1', model: 'test-model' },
+      custom: { baseUrl: '', model: '' },
+    },
   },
 }))
 
@@ -58,10 +61,13 @@ describe('agent loop', () => {
     resetAgentHistory()
     settingsState.value = {
       provider: 'ollama',
-      apiKey: '',
-      model: 'test-model',
       maxIterations: 20,
-      baseUrl: 'http://localhost/v1',
+      providers: {
+        anthropic: { baseUrl: '', model: '' },
+        openai: { baseUrl: '', model: '', openaiApiMode: 'responses' },
+        ollama: { baseUrl: 'http://localhost/v1', model: 'test-model' },
+        custom: { baseUrl: '', model: '' },
+      },
     }
   })
 

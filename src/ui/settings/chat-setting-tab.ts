@@ -1,10 +1,10 @@
-import { SettingTab } from '@typora-community-plugin/core'
+import { SettingTab, SettingItem } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
-import { settingsManager } from '@/config/settings'
+import { DEFAULT_SETTINGS, settings, settingsManager } from '@/config/settings'
 import { availableModels, modelRefreshMessage, refreshModels } from '@/store/models-store'
 import { globalSkillsDir, vaultSkillsDir } from '@/agent/skills/paths'
 import { rescanSkills } from '@/agent/skills/store'
-import type { ApiProvider, PluginSettings } from '@/config/types'
+import type { ApiProvider, ProviderConfig } from '@/config/types'
 import { t } from '@/i18n'
 
 
@@ -17,8 +17,28 @@ function getProviders(): Array<{ value: ApiProvider; label: string }> {
   ]
 }
 
+const BASE_URL_HINTS: Record<ApiProvider, string> = {
+  anthropic: DEFAULT_SETTINGS.providers.anthropic.baseUrl,
+  openai: DEFAULT_SETTINGS.providers.openai.baseUrl,
+  ollama: DEFAULT_SETTINGS.providers.ollama.baseUrl,
+  custom: '',
+}
+
+const MODEL_HINTS: Record<ApiProvider, string> = {
+  anthropic: DEFAULT_SETTINGS.providers.anthropic.model,
+  openai: DEFAULT_SETTINGS.providers.openai.model,
+  ollama: DEFAULT_SETTINGS.providers.ollama.model,
+  custom: '',
+}
+
 
 export class ChatSettingTab extends SettingTab {
+  private sidebarLayout: { setItems(items: string[]): void } | null = null
+  private lastSidebarItems: string[] | null = null
+  private sidebarUnsub: (() => void) | null = null
+  private providerPanelEl: HTMLElement | null = null
+  private providerUnsubs: Array<() => void> = []
+
   constructor(
     private app: App,
     private plugin: Plugin,
@@ -31,156 +51,42 @@ export class ChatSettingTab extends SettingTab {
     return t.settings.title
   }
 
+  onunload() {
+    this.sidebarUnsub?.()
+    this.sidebarUnsub = null
+    this.providerUnsubs.forEach(u => u())
+    this.providerUnsubs = []
+  }
+
   private render() {
     this.addSettingTitle(t.settings.title)
 
-    this.addSetting((setting) => {
-      setting.addName(t.settings.provider)
-      setting.addDescription(t.settings.providerDesc)
-      setting.addSelect((select) => {
-        for (const { value, label } of getProviders()) {
-          select.append(new Option(label, value))
-        }
-        select.value = settingsManager.get().provider
-        select.onchange = () => {
-          void settingsManager.save({ provider: select.value as ApiProvider })
-        }
-      })
-    })
+    // Provider sidebar + per-provider config panel.
+    const active = settingsManager.get().provider
+    const labels = getProviders().map(p => p.label)
+    this.lastSidebarItems = [...labels]
 
     this.addSetting((setting) => {
-      setting.addName(t.settings.openaiApiMode)
-      setting.addDescription(t.settings.openaiApiModeDesc)
-      setting.addSelect((select) => {
-        select.append(new Option(t.settings.openaiApiModeResponses, 'responses'))
-        select.append(new Option(t.settings.openaiApiModeChat, 'chat'))
-        select.value = settingsManager.get().openaiApiMode ?? 'responses'
-        select.onchange = () => {
-          void settingsManager.save({
-            openaiApiMode: select.value as PluginSettings['openaiApiMode'],
-          })
-        }
-      })
+      this.sidebarLayout = setting.addSidebarLayout(
+        { items: [...labels], initialActive: labels.includes(active) ? active : labels[0] },
+        ({ item, panelEl }) => {
+          const provider = getProviders().find(p => p.label === item)?.value ?? active
+          void settingsManager.save({ provider })
+          this.renderProviderPanel(provider, panelEl)
+        },
+      )
     })
 
-    this.addSetting((setting) => {
-      setting.addName(t.settings.baseUrl)
-      setting.addDescription(t.settings.baseUrlDesc)
-      setting.addText((input) => {
-        input.placeholder = t.settings.baseUrlPlaceholder
-        input.value = settingsManager.get().baseUrl
-        input.onchange = () => {
-          void settingsManager.save({ baseUrl: input.value.trim() })
-        }
-      })
+    // Keep the sidebar labels in sync with i18n changes.
+    this.sidebarUnsub = settings.subscribe(() => {
+      const nextLabels = getProviders().map(p => p.label)
+      if (JSON.stringify(nextLabels) === JSON.stringify(this.lastSidebarItems)) return
+      this.lastSidebarItems = [...nextLabels]
+      this.sidebarLayout?.setItems([...nextLabels])
     })
 
-    this.addSetting((setting) => {
-      setting.addName(t.settings.apiKey)
-      setting.addDescription(t.settings.apiKeyDesc)
-      setting.addInput('password', (input) => {
-        input.placeholder = t.settings.apiKeyPlaceholder
-        input.value = settingsManager.get().apiKey
-        input.onchange = () => {
-          void settingsManager.save({ apiKey: input.value.trim() })
-        }
-      })
-    })
-
-    this.addSetting((setting) => {
-      setting.addName(t.settings.model)
-      setting.addDescription(t.settings.modelDesc)
-
-      const listId = 'typora-plugin-chat-model-list'
-      let statusEl: HTMLElement | null = null
-
-      setting.addDescription((el) => {
-        statusEl = el
-      })
-
-      setting.addText((input) => {
-        input.value = settingsManager.get().model
-        input.setAttribute('list', listId)
-        input.onchange = () => {
-          void settingsManager.save({ model: input.value.trim() })
-        }
-      })
-
-      const datalist = document.createElement('datalist')
-      datalist.id = listId
-      setting.controls.append(datalist)
-
-      const renderOptions = (models: string[]) => {
-        datalist.innerHTML = ''
-        for (const id of models) {
-          const option = document.createElement('option')
-          option.value = id
-          datalist.append(option)
-        }
-      }
-
-      availableModels.subscribe(renderOptions)
-      modelRefreshMessage.subscribe((message) => {
-        if (statusEl) statusEl.textContent = message
-      })
-
-      setting.addButton((button) => {
-        button.textContent = t.settings.refreshModels
-        button.onclick = () => {
-          void refreshModels()
-        }
-      })
-    })
-
-    this.addSetting((setting) => {
-      setting.addName(t.settings.contextWindow)
-      setting.addDescription(t.settings.contextWindowDesc)
-      setting.addInput('number', (input) => {
-        input.min = '0'
-        input.placeholder = t.settings.contextWindowPlaceholder
-        input.value = settingsManager.get().contextWindow ? String(settingsManager.get().contextWindow) : ''
-        input.onchange = () => {
-          const value = input.value.trim()
-          if (!value) {
-            void settingsManager.save({ contextWindow: undefined })
-            return
-          }
-          const contextWindow = Number(value)
-          if (Number.isFinite(contextWindow) && contextWindow > 0) {
-            void settingsManager.save({ contextWindow })
-          }
-        }
-      })
-    })
-
-    this.addSetting((setting) => {
-      setting.addName(t.settings.contextWindows)
-      setting.addDescription(t.settings.contextWindowsDesc)
-      setting.addTextArea((textarea) => {
-        textarea.rows = 5
-        textarea.placeholder = t.settings.contextWindowsPlaceholder
-        const overrides = settingsManager.get().contextWindows ?? {}
-        textarea.value = Object.entries(overrides)
-          .filter(([, value]) => value > 0)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([model, value]) => `${model}: ${value}`)
-          .join('\n')
-        textarea.onchange = () => {
-          const next: Record<string, number> = {}
-          for (const rawLine of textarea.value.split('\n')) {
-            const line = rawLine.trim()
-            if (!line) continue
-            const sep = line.search(/[:=]/)
-            if (sep <= 0) continue
-            const model = line.slice(0, sep).trim()
-            const value = Number(line.slice(sep + 1).trim())
-            if (model && Number.isFinite(value) && value > 0) next[model] = value
-          }
-          void settingsManager.save({ contextWindows: next })
-        }
-      })
-    })
-
+    // Global fields below the provider block.
+    this.addSettingTitle(t.settings.sectionGeneral)
     this.addSetting((setting) => {
       setting.addName(t.settings.forbiddenPaths)
       setting.addDescription(t.settings.forbiddenPathsDesc)
@@ -242,5 +148,160 @@ export class ChatSettingTab extends SettingTab {
         }
       })
     })
+  }
+
+  private saveProvider(provider: ApiProvider, patch: Partial<ProviderConfig>) {
+    const current = settingsManager.get()
+    const config = { ...current.providers[provider], ...patch }
+    void settingsManager.save({ providers: { ...current.providers, [provider]: config } })
+  }
+
+  private renderProviderPanel(provider: ApiProvider, panelEl: HTMLElement) {
+    this.providerUnsubs.forEach(u => u())
+    this.providerUnsubs = []
+    this.providerPanelEl = panelEl
+    panelEl.replaceChildren()
+    this.buildProviderBlock(provider)
+  }
+
+  private buildProviderBlock(provider: ApiProvider) {
+    const config = settingsManager.get().providers[provider]
+
+    // Base URL.
+    const baseUrlItem = new SettingItem()
+    baseUrlItem.addName(t.settings.baseUrl)
+    baseUrlItem.addDescription(t.settings.baseUrlDesc)
+    baseUrlItem.addText((input) => {
+      input.placeholder = BASE_URL_HINTS[provider] || t.settings.baseUrlPlaceholder
+      input.value = config.baseUrl ?? ''
+      input.onchange = () => {
+        this.saveProvider(provider, { baseUrl: input.value.trim() })
+      }
+    })
+    this.providerPanelEl?.append(baseUrlItem.containerEl)
+
+    // API Key.
+    const apiKeyItem = new SettingItem()
+    apiKeyItem.addName(t.settings.apiKey)
+    apiKeyItem.addDescription(t.settings.apiKeyDesc)
+    apiKeyItem.addInput('password', (input) => {
+      input.placeholder = t.settings.apiKeyPlaceholder
+      input.value = config.apiKey ?? ''
+      input.onchange = () => {
+        this.saveProvider(provider, { apiKey: input.value.trim() || undefined })
+      }
+    })
+    this.providerPanelEl?.append(apiKeyItem.containerEl)
+
+    // Model (with datalist + refresh button).
+    const modelItem = new SettingItem()
+    modelItem.addName(t.settings.model)
+    modelItem.addDescription(t.settings.modelDesc)
+
+    const listId = 'typora-plugin-chat-model-list'
+    let statusEl: HTMLElement | null = null
+    modelItem.addDescription((el) => { statusEl = el })
+
+    modelItem.addText((input) => {
+      input.placeholder = MODEL_HINTS[provider] || t.settings.modelDesc
+      input.value = config.model ?? ''
+      input.setAttribute('list', listId)
+      input.onchange = () => {
+        this.saveProvider(provider, { model: input.value.trim() })
+      }
+    })
+
+    const datalist = document.createElement('datalist')
+    datalist.id = listId
+    modelItem.controls.append(datalist)
+
+    const renderOptions = (models: string[]) => {
+      datalist.innerHTML = ''
+      for (const id of models) {
+        const option = document.createElement('option')
+        option.value = id
+        datalist.append(option)
+      }
+    }
+
+    this.providerUnsubs.push(availableModels.subscribe(renderOptions))
+    this.providerUnsubs.push(modelRefreshMessage.subscribe((message) => {
+      if (statusEl) statusEl.textContent = message
+    }))
+
+    modelItem.addButton((button) => {
+      button.textContent = t.settings.refreshModels
+      button.onclick = () => {
+        void refreshModels()
+      }
+    })
+    this.providerPanelEl?.append(modelItem.containerEl)
+
+    // OpenAI API Mode (only for `openai` provider).
+    if (provider === 'openai') {
+      const modeItem = new SettingItem()
+      modeItem.addName(t.settings.openaiApiMode)
+      modeItem.addDescription(t.settings.openaiApiModeDesc)
+      modeItem.addSelect((select) => {
+        select.append(new Option(t.settings.openaiApiModeResponses, 'responses'))
+        select.append(new Option(t.settings.openaiApiModeChat, 'chat'))
+        select.value = config.openaiApiMode ?? 'responses'
+        select.onchange = () => {
+          this.saveProvider(provider, { openaiApiMode: select.value as ProviderConfig['openaiApiMode'] })
+        }
+      })
+      this.providerPanelEl?.append(modeItem.containerEl)
+    }
+
+    // Context window.
+    const ctxItem = new SettingItem()
+    ctxItem.addName(t.settings.contextWindow)
+    ctxItem.addDescription(t.settings.contextWindowDesc)
+    ctxItem.addInput('number', (input) => {
+      input.min = '0'
+      input.placeholder = t.settings.contextWindowPlaceholder
+      input.value = config.contextWindow ? String(config.contextWindow) : ''
+      input.onchange = () => {
+        const value = input.value.trim()
+        if (!value) {
+          this.saveProvider(provider, { contextWindow: undefined })
+          return
+        }
+        const contextWindow = Number(value)
+        if (Number.isFinite(contextWindow) && contextWindow > 0) {
+          this.saveProvider(provider, { contextWindow })
+        }
+      }
+    })
+    this.providerPanelEl?.append(ctxItem.containerEl)
+
+    // Per-model context windows.
+    const ctxMapItem = new SettingItem()
+    ctxMapItem.addName(t.settings.contextWindows)
+    ctxMapItem.addDescription(t.settings.contextWindowsDesc)
+    ctxMapItem.addTextArea((textarea) => {
+      textarea.rows = 5
+      textarea.placeholder = t.settings.contextWindowsPlaceholder
+      const overrides = config.contextWindows ?? {}
+      textarea.value = Object.entries(overrides)
+        .filter(([, value]) => value > 0)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([model, value]) => `${model}: ${value}`)
+        .join('\n')
+      textarea.onchange = () => {
+        const next: Record<string, number> = {}
+        for (const rawLine of textarea.value.split('\n')) {
+          const line = rawLine.trim()
+          if (!line) continue
+          const sep = line.search(/[:=]/)
+          if (sep <= 0) continue
+          const model = line.slice(0, sep).trim()
+          const value = Number(line.slice(sep + 1).trim())
+          if (model && Number.isFinite(value) && value > 0) next[model] = value
+        }
+        this.saveProvider(provider, { contextWindows: next })
+      }
+    })
+    this.providerPanelEl?.append(ctxMapItem.containerEl)
   }
 }

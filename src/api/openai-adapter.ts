@@ -1,7 +1,7 @@
 import type {
   ApiMessage,
   ContentBlock,
-  PluginSettings,
+  ProviderConfig,
   StopReason,
   ToolDefinition,
   UnifiedResponse,
@@ -75,13 +75,13 @@ function parseToolCalls(toolCalls: Record<string, unknown>[] = []): ContentBlock
 }
 
 export async function sendOpenAIResponses(
-  settings: PluginSettings,
+  config: ProviderConfig,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
   previousResponseId?: string,
   signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
-  const baseUrl = normalizeBaseUrl(settings.baseUrl)
+  const baseUrl = normalizeBaseUrl(config.baseUrl)
   const systemText = messages
     .filter(m => m.role === 'system')
     .map(m => (typeof m.content === 'string' ? m.content : ''))
@@ -117,7 +117,7 @@ export async function sendOpenAIResponses(
   }
 
   const body: Record<string, unknown> = {
-    model: settings.model,
+    model: config.model,
     input,
     store: false,
   }
@@ -129,7 +129,7 @@ export async function sendOpenAIResponses(
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
+      ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
     },
     body: JSON.stringify(body),
     signal,
@@ -181,14 +181,14 @@ export async function sendOpenAIResponses(
 }
 
 export async function sendOpenAIChat(
-  settings: PluginSettings,
+  config: ProviderConfig,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
   signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
-  const baseUrl = normalizeBaseUrl(settings.baseUrl)
+  const baseUrl = normalizeBaseUrl(config.baseUrl)
   const body: Record<string, unknown> = {
-    model: settings.model,
+    model: config.model,
     messages: toOpenAIMessages(messages),
   }
   if (tools.length) {
@@ -200,7 +200,7 @@ export async function sendOpenAIChat(
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
+      ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
     },
     body: JSON.stringify(body),
     signal,
@@ -237,11 +237,11 @@ export async function sendOpenAIChat(
 }
 
 export async function sendOpenAI(
-  settings: PluginSettings,
+  config: ProviderConfig,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
   signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
-  if (settings.openaiApiMode === 'chat') return sendOpenAIChat(settings, messages, tools, signal)
-  return sendOpenAIResponses(settings, messages, tools, undefined, signal)
+  if (config.openaiApiMode === 'chat') return sendOpenAIChat(config, messages, tools, signal)
+  return sendOpenAIResponses(config, messages, tools, undefined, signal)
 }

@@ -24,9 +24,13 @@
   import { getAgentHistory, setAgentHistory } from '@/agent/history'
   import { refreshContextUsage } from '@/store/context-usage-store'
   import { settings, settingsManager } from '@/config/settings'
+  import { getActiveConfig } from '@/config/types'
   import { writable } from 'svelte/store'
   import { availableModels, refreshModels } from '@/store/models-store'
+  import { updateActiveConfig } from '@/store/config-store'
   import { skills as skillStore } from '@/agent/skills/store'
+
+  const activeModel = $derived(getActiveConfig($settings).model)
 
   import { undoStore } from '@/store/undo-store'
   import { executeSlashCommand } from '@/slash-commands/executor'
@@ -123,14 +127,14 @@
   <InputBar
     placeholder={$inputPlaceholder}
     enabled={$inputEnabled}
-    model={$settings.model}
+    model={activeModel}
     models={$availableModels}
     skills={$skillStore}
     sessions={sessionList}
     activeSessionId={activeSessionId}
     onSwitchSession={handleSwitchSession}
     onDeleteSession={handleDeleteSession}
-    onModelChange={(model) => settingsManager.save({ model })}
+    onModelChange={(model) => updateActiveConfig({ model })}
     onModelRefresh={() => refreshModels()}
     mode={$settings.mode ?? 'workspace-write'}
     onModeChange={(mode) => settingsManager.save({ mode })}

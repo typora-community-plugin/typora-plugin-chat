@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store'
 import { settings, settingsManager } from '@/config/settings'
 import type { ApiProvider } from '@/config/types'
+import { getActiveConfig } from '@/config/types'
 import { format, t } from '@/i18n'
 
 
@@ -60,7 +61,8 @@ export async function refreshModels(): Promise<ModelRefreshResult> {
 
   const current = settingsManager.get()
   const provider = current.provider
-  const baseUrl = (current.baseUrl || '').replace(/\/+$/, '')
+  const config = getActiveConfig(current)
+  const baseUrl = (config.baseUrl || '').replace(/\/+$/, '')
   const endpoint = `${baseUrl}/models`
 
   modelRefreshLoading.set(true)
@@ -68,10 +70,10 @@ export async function refreshModels(): Promise<ModelRefreshResult> {
 
   const headers: Record<string, string> = {}
   if (provider === 'anthropic') {
-    headers['x-api-key'] = current.apiKey
+    headers['x-api-key'] = config.apiKey ?? ''
     headers['anthropic-version'] = '2023-06-01'
-  } else if (current.apiKey) {
-    headers['Authorization'] = `Bearer ${current.apiKey}`
+  } else if (config.apiKey) {
+    headers['Authorization'] = `Bearer ${config.apiKey}`
   }
 
   try {

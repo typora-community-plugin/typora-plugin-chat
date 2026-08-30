@@ -72,6 +72,7 @@
   "settings": {
     "title": "Chat",
     "provider": "Provider",
+    "providerConfig": "Provider configuration",
     "providerDesc": "API provider used by the chat plugin.",
     "providers": {
       "anthropic": "Anthropic",
@@ -98,6 +99,7 @@
     "contextWindows": "Per-model context windows",
     "contextWindowsDesc": "Optional overrides for specific models. One per line as `model-id: 128000`. These take priority over the global context window.",
     "contextWindowsPlaceholder": "gpt-4o: 128000\nclaude-sonnet-4: 200000",
+    "sectionGeneral": "General",
     "forbiddenPaths": "Forbidden paths",
     "forbiddenPathsDesc": "Simple glob patterns (one per line) for vault paths the agent must never list, read or modify. `.git`, `node_modules` and `*.apikey` are always forbidden.",
     "forbiddenPathsPlaceholder": ".obsidian\n*.private.md\ndrafts/**",

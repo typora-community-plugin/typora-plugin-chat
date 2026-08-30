@@ -4,6 +4,7 @@ import type {
   ToolDefinition,
   UnifiedResponse,
 } from '@/config/types'
+import { getActiveConfig } from '@/config/types'
 import { backoffDelay, sleep } from '@/utils/helpers'
 import { sendAnthropic } from './anthropic-adapter'
 import { sendOpenAI } from './openai-adapter'
@@ -18,15 +19,16 @@ function dispatch(
   tools: ToolDefinition[],
   signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
+  const config = getActiveConfig(settings)
   switch (settings.provider) {
     case 'anthropic':
-      return sendAnthropic(settings, messages, tools, signal)
+      return sendAnthropic(config, messages, tools, signal)
     case 'openai':
-      return sendOpenAI(settings, messages, tools, signal)
+      return sendOpenAI(config, messages, tools, signal)
     case 'ollama':
     case 'custom':
     default:
-      return sendOllama(settings, messages, tools, signal)
+      return sendOllama(config, messages, tools, signal)
   }
 }
 

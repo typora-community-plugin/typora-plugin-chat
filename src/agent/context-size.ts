@@ -1,4 +1,4 @@
-import type { ApiMessage, ContentBlock, PluginSettings, ToolDefinition } from '@/config/types'
+import type { ApiMessage, ContentBlock, ProviderConfig, ToolDefinition } from '@/config/types'
 
 /**
  * Lightweight token estimator used only for the context-usage indicator.
@@ -53,10 +53,10 @@ const DEFAULT_CONTEXT_WINDOW = 128000
  * Priority: user setting > built-in model-name hints > default fallback.
  * The fallback is intentionally conservative for unknown local models.
  */
-export function resolveContextWindow(model: string, settings?: PluginSettings): number {
-  const modelOverride = settings?.contextWindows?.[model]
+export function resolveContextWindow(model: string, config?: ProviderConfig): number {
+  const modelOverride = config?.contextWindows?.[model]
   if (modelOverride && modelOverride > 0) return modelOverride
-  if (settings?.contextWindow && settings.contextWindow > 0) return settings.contextWindow
+  if (config?.contextWindow && config.contextWindow > 0) return config.contextWindow
 
   const id = model.toLowerCase()
   if (id.includes('claude')) return 200000

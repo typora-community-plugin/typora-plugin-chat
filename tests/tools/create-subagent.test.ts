@@ -3,7 +3,7 @@ import type { ToolDefinition, UnifiedResponse } from '../../src/config/types'
 
 vi.mock('../../src/api/client', () => ({ sendMessage: vi.fn() }))
 vi.mock('../../src/config/settings', () => ({
-  settingsManager: { get: () => ({ provider: 'ollama', apiKey: '', model: 'm', maxIterations: 20, baseUrl: '', mode: 'workspace-write' }) },
+  settingsManager: { get: () => ({ provider: 'ollama', maxIterations: 20, mode: 'workspace-write', providers: { anthropic: { baseUrl: '', model: '' }, openai: { baseUrl: '', model: '', openaiApiMode: 'responses' }, ollama: { baseUrl: '', model: 'm' }, custom: { baseUrl: '', model: '' } } }) },
 }))
 vi.mock('../../src/agent/tools/registry', () => ({
   toolDefinitions: [

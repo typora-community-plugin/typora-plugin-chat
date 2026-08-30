@@ -72,6 +72,7 @@
   "settings": {
     "title": "Chat",
     "provider": "Anbieter",
+    "providerConfig": "Anbieter-Konfiguration",
     "providerDesc": "API-Anbieter, der vom Chat-Plugin verwendet wird.",
     "providers": {
       "anthropic": "Anthropic",
@@ -98,6 +99,7 @@
     "contextWindows": "Kontextfenster pro Modell",
     "contextWindowsDesc": "Optionale Überschreibungen für bestimmte Modelle. Eine Zeile pro Modell: `Modell-ID: 128000`. Diese haben Vorrang vor dem globalen Kontextfenster.",
     "contextWindowsPlaceholder": "gpt-4o: 128000\nclaude-sonnet-4: 200000",
+    "sectionGeneral": "Allgemein",
     "forbiddenPaths": "Verbotene Pfade",
     "forbiddenPathsDesc": "Einfache Glob-Muster (eine Zeile pro Muster) für Vault-Pfade, die der Agent niemals auflisten, lesen oder ändern darf. `.git`, `node_modules` und `*.apikey` sind immer verboten.",
     "forbiddenPathsPlaceholder": ".obsidian\n*.private.md\ndrafts/**",

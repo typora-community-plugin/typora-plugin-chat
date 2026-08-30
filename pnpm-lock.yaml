@@ -45,8 +45,8 @@ importers:
         specifier: npm:@typora-community-plugin/typora-types@^1.0.11
         version: '@typora-community-plugin/typora-types@1.0.12'
       '@typora-community-plugin/core':
-        specifier: ^2.10.5
-        version: 2.10.5
+        specifier: ^2.10.6
+        version: 2.10.6
       archiver:
         specifier: ^5.3.2
         version: 5.3.2
@@ -1215,8 +1215,8 @@ packages:
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
-  '@typora-community-plugin/core@2.10.5':
-    resolution: {integrity: sha512-LLRk7Jlj83gwU2J3ugUnsO1Aprr+/tofJxMr+5SepAg+W99Htxyh5ohk0yf8urzNYGnKM9fRITNivcnpxI985A==}
+  '@typora-community-plugin/core@2.10.6':
+    resolution: {integrity: sha512-Ou38bz2BQWavdFnapJ4UmPKn16AGxEogf0QjBMTSYONYTYu1BMlTTNakX81NgnJmclDvEGwjlqvrMy41/YXqdw==}
 
   '@typora-community-plugin/esbuild-plugin-typora@1.0.12':
     resolution: {integrity: sha512-iOEM8e0Y7/83dqVHm2HX9XglL0BD0t4NTbH4PKtea7ohrOxI/frkWb4nHW4iMoxp5mVBdCf5QUpcm3H6DeIfdQ==}
@@ -3055,7 +3055,7 @@ snapshots:
 
   '@types/trusted-types@2.0.7': {}
 
-  '@typora-community-plugin/core@2.10.5':
+  '@typora-community-plugin/core@2.10.6':
     dependencies:
       '@plylrnsdy/decorate.js': 1.0.4
 

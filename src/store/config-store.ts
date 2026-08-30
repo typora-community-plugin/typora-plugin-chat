@@ -1,6 +1,6 @@
 import { derived } from 'svelte/store'
 import { settings, settingsManager } from '@/config/settings'
-import type { PluginSettings } from '@/config/types'
+import type { ApiProvider, ProviderConfig } from '@/config/types'
 
 
 /**
@@ -11,9 +11,14 @@ export const configStore = {
   manager: settingsManager,
 }
 
-export const currentModel = derived(settings, ($settings) => $settings.model)
+export const currentModel = derived(settings, ($settings) => $settings.providers[$settings.provider].model)
 export const currentProvider = derived(settings, ($settings) => $settings.provider)
 
-export function updateConfig(patch: Partial<PluginSettings>) {
-  settingsManager.save(patch)
+/** Update a field of the currently active provider's config. */
+export function updateActiveConfig(patch: Partial<ProviderConfig>) {
+  const current = settingsManager.get()
+  const provider: ApiProvider = current.provider
+  void settingsManager.save({
+    providers: { ...current.providers, [provider]: { ...current.providers[provider], ...patch } },
+  })
 }

@@ -1,7 +1,7 @@
 import type {
   ApiMessage,
   ContentBlock,
-  PluginSettings,
+  ProviderConfig,
   StopReason,
   ToolDefinition,
   UnifiedResponse,
@@ -49,12 +49,12 @@ function mapStopReason(reason: string): StopReason {
 }
 
 export async function sendAnthropic(
-  settings: PluginSettings,
+  config: ProviderConfig,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
   signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
-  const baseUrl = normalizeBaseUrl(settings.baseUrl)
+  const baseUrl = normalizeBaseUrl(config.baseUrl)
   const systemText = messages
     .filter(m => m.role === 'system')
     .map(m => (typeof m.content === 'string' ? m.content : ''))
@@ -68,7 +68,7 @@ export async function sendAnthropic(
   }))
 
   const body: Record<string, unknown> = {
-    model: settings.model,
+    model: config.model,
     max_tokens: 16384,
     messages: convertMessages(messages),
   }
@@ -81,7 +81,7 @@ export async function sendAnthropic(
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': settings.apiKey,
+      'x-api-key': config.apiKey ?? '',
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),

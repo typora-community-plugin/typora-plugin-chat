@@ -5,6 +5,7 @@ import type {
   ContentBlock,
   UnifiedResponse,
 } from '@/config/types'
+import { getActiveConfig } from '@/config/types'
 import { settingsManager } from '@/config/settings'
 import { sendMessage } from '@/api/client'
 import { executeTool } from './tools/executor'
@@ -157,7 +158,7 @@ export async function executeAgentLoop(
   }
 
   commitHistory(conversation)
-  return { text: finalText, iterations, aborted, usage: totalUsage, model: settings.model, apiDurationMs }
+  return { text: finalText, iterations, aborted, usage: totalUsage, model: getActiveConfig(settings).model, apiDurationMs }
 }
 
 /** Trim history to the API-friendly window before building the request. */

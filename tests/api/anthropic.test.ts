@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendAnthropic } from '../../src/api/anthropic-adapter'
-import type { ApiMessage, PluginSettings } from '../../src/config/types'
+import type { ApiMessage, ProviderConfig } from '../../src/config/types'
 
 
-const settings: PluginSettings = {
-  provider: 'anthropic',
+const config: ProviderConfig = {
   apiKey: 'test-key',
   model: 'claude-sonnet-4-6',
-  maxIterations: 20,
   baseUrl: 'https://api.anthropic.com',
 }
 
@@ -37,7 +35,7 @@ describe('anthropic adapter', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const response = await sendAnthropic(settings, messages, [
+    const response = await sendAnthropic(config, messages, [
       { name: 'read_document', description: 'read', parameters: { type: 'object', properties: {} } },
     ])
 
@@ -66,7 +64,7 @@ describe('anthropic adapter', () => {
       }),
     }))
 
-    const response = await sendAnthropic(settings, messages)
+    const response = await sendAnthropic(config, messages)
 
     expect(response.stopReason).toBe('end_turn')
     expect(response.content).toEqual([{ type: 'text', text: 'Done.' }])
@@ -87,7 +85,7 @@ describe('anthropic adapter', () => {
       }),
     }))
 
-    const response = await sendAnthropic(settings, messages)
+    const response = await sendAnthropic(config, messages)
 
     expect(response.content).toEqual([
       { type: 'thinking', text: 'Let me reason about this.' },
@@ -110,7 +108,7 @@ describe('anthropic adapter', () => {
       }),
     }))
 
-    const response = await sendAnthropic(settings, messages)
+    const response = await sendAnthropic(config, messages)
 
     expect(response.content).toEqual([{ type: 'text', text: 'Ok.' }])
   })

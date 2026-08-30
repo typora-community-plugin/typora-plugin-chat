@@ -5,10 +5,13 @@ import type { ApiMessage, PluginSettings } from '../../src/config/types'
 
 const settings: PluginSettings = {
   provider: 'ollama',
-  apiKey: '',
-  model: 'test-model',
   maxIterations: 20,
-  baseUrl: 'http://localhost:11431/v1',
+  providers: {
+    anthropic: { baseUrl: '', model: '' },
+    openai: { baseUrl: '', model: '', openaiApiMode: 'responses' },
+    ollama: { baseUrl: 'http://localhost:11431/v1', model: 'test-model' },
+    custom: { baseUrl: '', model: '' },
+  },
 }
 
 const messages: ApiMessage[] = [{ role: 'user', content: 'Hi' }]

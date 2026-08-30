@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendOpenAIChat, sendOpenAIResponses } from '../../src/api/openai-adapter'
-import type { ApiMessage, PluginSettings } from '../../src/config/types'
+import type { ApiMessage, ProviderConfig } from '../../src/config/types'
 
 
-const settings: PluginSettings = {
-  provider: 'openai',
+const config: ProviderConfig = {
   apiKey: 'test-key',
   model: 'gpt-5.2',
-  maxIterations: 20,
   baseUrl: 'https://api.openai.com',
   openaiApiMode: 'responses',
 }
@@ -37,7 +35,7 @@ describe('openai adapter', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const response = await sendOpenAIResponses(settings, messages, [
+    const response = await sendOpenAIResponses(config, messages, [
       { name: 'list_files', description: 'list', parameters: { type: 'object', properties: {} } },
     ])
 
@@ -68,7 +66,7 @@ describe('openai adapter', () => {
       }),
     }))
 
-    const response = await sendOpenAIChat(settings, messages, [
+    const response = await sendOpenAIChat(config, messages, [
       { name: 'read_document', description: 'read', parameters: { type: 'object', properties: {} } },
     ])
 
@@ -93,7 +91,7 @@ describe('openai adapter', () => {
       }),
     }))
 
-    const response = await sendOpenAIChat(settings, messages)
+    const response = await sendOpenAIChat(config, messages)
 
     expect(response.content).toEqual([
       { type: 'thinking', text: 'First I need to check the file.' },
@@ -121,7 +119,7 @@ describe('openai adapter', () => {
       }),
     }))
 
-    const response = await sendOpenAIChat(settings, messages)
+    const response = await sendOpenAIChat(config, messages)
 
     expect(response.content).toEqual([
       { type: 'thinking', text: 'Step one.\n\nStep two.' },
@@ -143,7 +141,7 @@ describe('openai adapter', () => {
       }),
     }))
 
-    const response = await sendOpenAIResponses(settings, messages)
+    const response = await sendOpenAIResponses(config, messages)
 
     expect(response.content).toEqual([
       { type: 'thinking', text: 'Reasoning summary.' },

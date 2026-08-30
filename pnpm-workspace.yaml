@@ -2,3 +2,5 @@ allowBuilds:
   '@parcel/watcher': false
   esbuild: true
   svelte-preprocess: true
+minimumReleaseAgeExclude:
+  - '@typora-community-plugin/core@2.10.6'

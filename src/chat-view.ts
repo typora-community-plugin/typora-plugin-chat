@@ -10,6 +10,7 @@ import { getAgentHistory, resetAgentHistory } from './agent/history'
 import { getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
 import { undoStore } from './store/undo-store'
 import type { AssistantMeta, ToolResult } from './config/types'
+import { getActiveConfig } from './config/types'
 
 
 /**
@@ -149,7 +150,7 @@ export class ChatView extends WorkspaceView {
       if (assistantIds.length) {
         const durationMs = performance.now() - startedAt
         const meta: AssistantMeta = {
-          model: result.model ?? settingsManager.get().model,
+          model: result.model ?? getActiveConfig(settingsManager.get()).model,
           durationMs: Math.round(durationMs),
           ...(result.aborted ? { aborted: true } : {}),
         }

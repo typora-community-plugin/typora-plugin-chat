@@ -1,5 +1,6 @@
 import { get, writable } from 'svelte/store'
 import type { AgentMode, ApiMessage, ToolDefinition } from '@/config/types'
+import { getActiveConfig } from '@/config/types'
 import { settings, settingsManager } from '@/config/settings'
 import { getAgentHistory } from '@/agent/history'
 import { buildContextMessage } from '@/agent/context'
@@ -89,7 +90,8 @@ export async function refreshContextUsage(
     : history
   const messages: ApiMessage[] = [cachedOverhead.systemMessage, cachedOverhead.contextMessage, ...conversation]
   const usedTokens = estimateRequestTokens(messages, cachedOverhead.tools)
-  const totalTokens = resolveContextWindow(settingsManager.get().model, settingsManager.get())
+  const currentConfig = getActiveConfig(settingsManager.get())
+  const totalTokens = resolveContextWindow(currentConfig.model, currentConfig)
   const totalKnown = totalTokens > 0
 
   contextUsage.set({
@@ -97,7 +99,7 @@ export async function refreshContextUsage(
     totalTokens,
     percent: totalKnown ? Math.min(1, usedTokens / totalTokens) : 0,
     source: 'estimate',
-    model: settingsManager.get().model,
+    model: currentConfig.model,
     totalKnown,
   })
 }
@@ -105,14 +107,15 @@ export async function refreshContextUsage(
 /** Record a real prompt-token count returned by the provider. */
 export function setApiInputTokens(tokens: number): void {
   if (!Number.isFinite(tokens) || tokens < 0) return
-  const totalTokens = resolveContextWindow(settingsManager.get().model, settingsManager.get())
+  const currentConfig = getActiveConfig(settingsManager.get())
+  const totalTokens = resolveContextWindow(currentConfig.model, currentConfig)
   const totalKnown = totalTokens > 0
   contextUsage.set({
     usedTokens: Math.round(tokens),
     totalTokens,
     percent: totalKnown ? Math.min(1, tokens / totalTokens) : 0,
     source: 'api',
-    model: settingsManager.get().model,
+    model: currentConfig.model,
     totalKnown,
   })
 }

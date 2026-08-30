@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendOllama, streamOllama } from '../../src/api/ollama-adapter'
-import type { ApiMessage, PluginSettings } from '../../src/config/types'
+import type { ApiMessage, ProviderConfig } from '../../src/config/types'
 
 
-const settings: PluginSettings = {
-  provider: 'ollama',
-  apiKey: '',
+const config: ProviderConfig = {
   model: 'qwen3.6-35b-a3b',
-  maxIterations: 20,
   baseUrl: 'http://localhost:11431/v1',
 }
 
@@ -39,7 +36,7 @@ describe('ollama adapter', () => {
       }),
     }))
 
-    const response = await sendOllama(settings, messages)
+    const response = await sendOllama(config, messages)
 
     expect(response.stopReason).toBe('end_turn')
     expect(response.content).toEqual([{ type: 'text', text: 'Hello back' }])
@@ -59,7 +56,7 @@ describe('ollama adapter', () => {
       }),
     }))
 
-    const response = await sendOllama(settings, messages)
+    const response = await sendOllama(config, messages)
 
     expect(response.content).toEqual([
       { type: 'thinking', text: 'Thinking step.' },
@@ -79,7 +76,7 @@ describe('ollama adapter', () => {
     }))
 
     const chunks: string[] = []
-    await streamOllama(settings, messages, (chunk) => chunks.push(chunk))
+    await streamOllama(config, messages, (chunk) => chunks.push(chunk))
 
     expect(chunks).toEqual(['Hel', 'lo'])
   })

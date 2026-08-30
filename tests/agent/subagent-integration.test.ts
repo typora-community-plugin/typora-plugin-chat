@@ -8,10 +8,13 @@ vi.mock('../../src/api/client', () => ({ sendMessage: vi.fn() }))
 const settingsState = vi.hoisted(() => ({
   value: {
     provider: 'ollama' as const,
-    apiKey: '',
-    model: 'test-model',
     maxIterations: 20,
-    baseUrl: 'http://localhost/v1',
+    providers: {
+      anthropic: { baseUrl: '', model: '' },
+      openai: { baseUrl: '', model: '', openaiApiMode: 'responses' as const },
+      ollama: { baseUrl: 'http://localhost/v1', model: 'test-model' },
+      custom: { baseUrl: '', model: '' },
+    },
     mode: 'workspace-write' as const,
   },
 }))

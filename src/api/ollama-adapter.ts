@@ -1,7 +1,7 @@
 import type {
   ApiMessage,
   ContentBlock,
-  PluginSettings,
+  ProviderConfig,
   ToolDefinition,
   UnifiedResponse,
 } from '@/config/types'
@@ -75,9 +75,9 @@ function parseToolCalls(toolCalls: Record<string, unknown>[] = []): ContentBlock
   })
 }
 
-function buildBody(settings: PluginSettings, messages: ApiMessage[], tools: ToolDefinition[], stream: boolean) {
+function buildBody(config: ProviderConfig, messages: ApiMessage[], tools: ToolDefinition[], stream: boolean) {
   const body: Record<string, unknown> = {
-    model: settings.model,
+    model: config.model,
     messages: toChatMessages(messages),
     stream,
   }
@@ -88,25 +88,25 @@ function buildBody(settings: PluginSettings, messages: ApiMessage[], tools: Tool
   return body
 }
 
-function buildHeaders(settings: PluginSettings) {
+function buildHeaders(config: ProviderConfig) {
   return {
     'content-type': 'application/json',
-    ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {}),
+    ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
   }
 }
 
 /** Non-streaming request used by the agent loop. */
 export async function sendOllama(
-  settings: PluginSettings,
+  config: ProviderConfig,
   messages: ApiMessage[],
   tools: ToolDefinition[] = [],
   signal?: AbortSignal,
 ): Promise<UnifiedResponse> {
-  const baseUrl = normalizeBaseUrl(settings.baseUrl)
+  const baseUrl = normalizeBaseUrl(config.baseUrl)
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: buildHeaders(settings),
-    body: JSON.stringify(buildBody(settings, messages, tools, false)),
+    headers: buildHeaders(config),
+    body: JSON.stringify(buildBody(config, messages, tools, false)),
     signal,
   })
 
@@ -145,16 +145,16 @@ export async function sendOllama(
  * Parses `data:` frames and invokes `onChunk` for every content delta.
  */
 export async function streamOllama(
-  settings: PluginSettings,
+  config: ProviderConfig,
   messages: ApiMessage[],
   onChunk: (chunk: string) => void,
   tools: ToolDefinition[] = [],
 ): Promise<void> {
-  const baseUrl = normalizeBaseUrl(settings.baseUrl)
+  const baseUrl = normalizeBaseUrl(config.baseUrl)
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: buildHeaders(settings),
-    body: JSON.stringify(buildBody(settings, messages, tools, true)),
+    headers: buildHeaders(config),
+    body: JSON.stringify(buildBody(config, messages, tools, true)),
   })
 
   if (!response.body) {
