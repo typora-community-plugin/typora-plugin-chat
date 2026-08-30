@@ -40,57 +40,47 @@ export default class extends Plugin {
       app.viewManager.registerView(ChatView.type, (leaf) => new ChatView(leaf))
     )
 
-    this.register(
-      app.commands.register({
-        id: 'typora-community-plugin.chat',
-        title: t.command.chatWithAI,
-        scope: 'global',
-        callback: () => {
-          this.openChatView()
-        }
-      })
-    )
+    this.registerCommand({
+      id: 'typora-community-plugin.chat',
+      title: t.command.chatWithAI,
+      scope: 'global',
+      callback: () => {
+        this.openChatView()
+      }
+    })
 
-    this.register(
-      app.commands.register({
-        id: 'typora-community-plugin.chat.chat-about-note',
-        title: t.command.chatAboutNote,
-        scope: 'global',
-        callback: () => this.chatAboutActiveNote()
-      })
-    )
+    this.registerCommand({
+      id: 'typora-community-plugin.chat.chat-about-note',
+      title: t.command.chatAboutNote,
+      scope: 'global',
+      callback: () => this.chatAboutActiveNote()
+    })
 
-    this.register(
-      app.commands.register({
-        id: 'typora-community-plugin.chat.send-selection',
-        title: t.command.sendSelectionToChat,
-        scope: 'global',
-        callback: () => this.sendSelectionToChat()
-      })
-    )
+    this.registerCommand({
+      id: 'typora-community-plugin.chat.send-selection',
+      title: t.command.sendSelectionToChat,
+      scope: 'global',
+      callback: () => this.sendSelectionToChat()
+    })
 
-    this.register(
-      app.commands.register({
-        id: 'typora-community-plugin.chat.copy-transcript',
-        title: t.command.copyTranscript,
-        scope: 'global',
-        callback: () => { void copyTranscript() }
-      })
-    )
+    this.registerCommand({
+      id: 'typora-community-plugin.chat.copy-transcript',
+      title: t.command.copyTranscript,
+      scope: 'global',
+      callback: () => { void copyTranscript() }
+    })
 
-    this.register(
-      app.commands.register({
-        id: 'typora-community-plugin.chat.clear-chat',
-        title: t.command.clearConversation,
-        scope: 'global',
-        callback: () => {
-          chatStore.clearMessages()
-          this.getChatView()?.clearConversation()
-          const current = getActiveSession()
-          if (current) saveActiveSession([], [])
-        }
-      })
-    )
+    this.registerCommand({
+      id: 'typora-community-plugin.chat.clear-chat',
+      title: t.command.clearConversation,
+      scope: 'global',
+      callback: () => {
+        chatStore.clearMessages()
+        this.getChatView()?.clearConversation()
+        const current = getActiveSession()
+        if (current) saveActiveSession([], [])
+      }
+    })
 
     // File explorer context menu: right-click a note → chat about it.
     this.register(
