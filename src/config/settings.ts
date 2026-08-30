@@ -2,6 +2,7 @@ import { writable } from 'svelte/store'
 import { app, fs } from '@typora-community-plugin/core'
 import type { ApiProvider, PluginSettings, ProviderConfig } from './types'
 import { migrateContextWindows } from './models'
+import { BUILTIN_PROVIDERS, isBuiltinProvider } from './providers'
 
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -27,11 +28,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
       contextWindow: 128000,
       models: {},
     },
-    custom: {
-      model: '',
-      baseUrl: '',
-      models: {},
-    },
   },
 }
 
@@ -40,15 +36,16 @@ const API_KEY_KEY = 'typora-plugin-chat.apikey'
 const API_KEY_FILE = 'typora-plugin-chat.apikey'
 const SALT = 'typora-plugin-chat@v1'
 
-/** Built-in base URLs (used to detect a non-builtin legacy `baseUrl` during migration). */
-export const BUILTIN_BASE_URLS: Readonly<Record<ApiProvider, string>> = {
-  anthropic: DEFAULT_SETTINGS.providers.anthropic.baseUrl,
-  openai: DEFAULT_SETTINGS.providers.openai.baseUrl,
-  ollama: DEFAULT_SETTINGS.providers.ollama.baseUrl,
-  custom: '',
-}
+/** Defaults for a newly added custom provider (before its own fields are set). */
+const CUSTOM_DEFAULT: ProviderConfig = { model: '', baseUrl: '', models: {} }
 
-const API_KEY_PROVIDERS: ApiProvider[] = ['anthropic', 'openai', 'ollama', 'custom']
+/** All provider ids that must be merged: built-ins + stored custom ids + the active provider. */
+function allProviderIds(raw?: Partial<PluginSettings>): string[] {
+  const stored = Object.keys((raw?.providers ?? {}) as Record<string, unknown>)
+  const active = raw?.provider
+  const extra = typeof active === 'string' && active ? [active] : []
+  return [...new Set([...BUILTIN_PROVIDERS, ...stored, ...extra])]
+}
 
 /** Merge one provider's stored config over the defaults so every field is present. */
 function mergeProviderConfig(
@@ -102,7 +99,7 @@ export function mergeStoredSettings(raw: Partial<PluginSettings>): PluginSetting
     contextWindows?: Record<string, number>
   }
 
-  for (const provider of API_KEY_PROVIDERS) {
+  for (const provider of allProviderIds(raw)) {
     let stored: (Partial<ProviderConfig> & { contextWindows?: Record<string, number> }) | undefined
     if (raw.providers && typeof raw.providers === 'object') {
       stored = (raw.providers as Record<string, typeof stored>)[provider] ?? undefined
@@ -134,16 +131,8 @@ export function mergeStoredSettings(raw: Partial<PluginSettings>): PluginSetting
         : { ...rest }
     }
 
-    result.providers[provider] = mergeProviderConfig(DEFAULT_SETTINGS.providers[provider], stored)
-  }
-
-  // Legacy non-builtin baseUrl is inherited by the `custom` provider.
-  const legacyBaseUrl = typeof legacy.baseUrl === 'string' ? legacy.baseUrl : ''
-  if (legacyBaseUrl) {
-    const isBuiltin = API_KEY_PROVIDERS.some(
-      p => BUILTIN_BASE_URLS[p] !== '' && legacyBaseUrl.replace(/\/+$/, '') === BUILTIN_BASE_URLS[p].replace(/\/+$/, ''),
-    )
-    if (!isBuiltin) result.providers.custom.baseUrl = legacyBaseUrl
+    const base = DEFAULT_SETTINGS.providers[provider] ?? CUSTOM_DEFAULT
+    result.providers[provider] = mergeProviderConfig(base, stored)
   }
 
   return result
@@ -191,8 +180,7 @@ function parseApiKeyMap(deobfuscated: string): Partial<Record<ApiProvider, strin
     const parsed = JSON.parse(deobfuscated) as unknown
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       const result: Partial<Record<ApiProvider, string>> = {}
-      for (const provider of API_KEY_PROVIDERS) {
-        const value = (parsed as Record<string, unknown>)[provider]
+      for (const [provider, value] of Object.entries(parsed as Record<string, unknown>)) {
         if (typeof value === 'string') result[provider] = value
       }
       return result
@@ -231,8 +219,7 @@ async function readApiKeyMap(): Promise<Partial<Record<ApiProvider, string>>> {
     if (encoded) {
       const localMap = parseApiKeyMap(deobfuscate(encoded))
       if (localMap) {
-        for (const provider of API_KEY_PROVIDERS) {
-          const value = localMap[provider]
+        for (const [provider, value] of Object.entries(localMap)) {
           if (value && !result[provider]) result[provider] = value
         }
       } else if (deobfuscate(encoded)) {
@@ -252,7 +239,7 @@ async function readApiKeyMap(): Promise<Partial<Record<ApiProvider, string>>> {
 /** Persist the per-provider API-key map (only non-empty entries). */
 function writeApiKeyMap(map: Partial<Record<ApiProvider, string>>): void {
   const clean = Object.fromEntries(
-    API_KEY_PROVIDERS.filter(p => map[p]).map(p => [p, map[p]]),
+    Object.entries(map).filter(([, value]) => value),
   ) as Record<string, unknown>
   if (!Object.keys(clean).length) return
   const encoded = obfuscate(JSON.stringify(clean))
@@ -279,7 +266,7 @@ void readApiKeyMap().then(map => {
   settings.update(current => ({
     ...current,
     providers: Object.fromEntries(
-      API_KEY_PROVIDERS.map(p => [p, map[p] ? { ...current.providers[p], apiKey: map[p] } : current.providers[p]]),
+      Object.keys(current.providers).map(p => [p, map[p] ? { ...current.providers[p], apiKey: map[p] } : current.providers[p]]),
     ) as Record<ApiProvider, ProviderConfig>,
   }))
 })
@@ -293,14 +280,11 @@ export const settingsManager = {
 
   async save(next: Partial<PluginSettings>): Promise<void> {
     const current = this.get()
-    // Merge providers key-by-key so a partial `providers` patch never drops others.
+    // A `providers` patch is authoritative: it replaces the whole map, so a
+    // removed custom provider actually disappears (all callers pass the full
+    // map built from `current.providers`).
     const merged: PluginSettings = { ...current, ...next }
-    if (next.providers) {
-      merged.providers = { ...current.providers }
-      for (const p of API_KEY_PROVIDERS) {
-        if (next.providers[p]) merged.providers[p] = next.providers[p]
-      }
-    }
+    if (next.providers) merged.providers = { ...next.providers }
     settings.set(merged)
     try {
       const persisted: Partial<PluginSettings> = {
@@ -309,21 +293,20 @@ export const settingsManager = {
         mode: merged.mode,
         forbiddenPaths: merged.forbiddenPaths,
         providers: Object.fromEntries(
-          API_KEY_PROVIDERS.map(p => [p, { ...merged.providers[p] }]),
+          Object.entries(merged.providers).map(([p, cfg]) => [p, { ...cfg }]),
         ) as Record<ApiProvider, ProviderConfig>,
       }
       // Strip empty apiKeys before persisting (they live in the key vault).
-      for (const p of API_KEY_PROVIDERS) {
-        const provider = persisted.providers![p]
-        if (!provider.apiKey) delete provider.apiKey
+      for (const cfg of Object.values(persisted.providers!)) {
+        if (!cfg.apiKey) delete cfg.apiKey
       }
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(persisted))
 
       // Write-back: merge with the on-disk map and only persist changed keys so a
       // save before async hydration finishes cannot wipe other providers' keys.
       const persistedMap: Partial<Record<ApiProvider, string>> = {}
-      for (const p of API_KEY_PROVIDERS) {
-        if (merged.providers[p].apiKey) persistedMap[p] = merged.providers[p].apiKey as string
+      for (const [p, cfg] of Object.entries(merged.providers)) {
+        if (cfg.apiKey) persistedMap[p] = cfg.apiKey
       }
       const existing = await readApiKeyMap()
       writeApiKeyMap({ ...existing, ...persistedMap })

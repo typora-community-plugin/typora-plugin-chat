@@ -4,7 +4,14 @@ import type { AskUserQuestionItem, AskUserAnswerItem } from '@/agent/tools/types
  * Shared type definitions for Typora AI Chat plugin.
  */
 
-export type ApiProvider = 'anthropic' | 'openai' | 'ollama' | 'custom'
+export type BuiltinProvider = 'anthropic' | 'openai' | 'ollama'
+
+/**
+ * Provider id. Built-in providers use the literals above; custom providers may
+ * use any non-colliding string id (`string & {}` keeps the literal hints while
+ * allowing arbitrary ids).
+ */
+export type ApiProvider = BuiltinProvider | (string & {})
 
 /**
  * Per-model parameters. The structure is open: future knobs such as

@@ -77,9 +77,13 @@
     "providers": {
       "anthropic": "Anthropic",
       "openai": "OpenAI",
-      "ollama": "Ollama / OpenAI 兼容",
-      "custom": "自定义"
+      "ollama": "Ollama / OpenAI 兼容"
     },
+    "providerId": "提供商 ID",
+    "providerIdDesc": "用于存储自定义提供商的唯一 ID。",
+    "providerIdPlaceholder": "例如 my-llm",
+    "addProvider": "添加提供商",
+    "removeProvider": "移除提供商",
     "openaiApiMode": "OpenAI API 模式",
     "openaiApiModeDesc": "仅用于兼容 OpenAI 的提供商。",
     "openaiApiModeResponses": "Responses API（首选）",

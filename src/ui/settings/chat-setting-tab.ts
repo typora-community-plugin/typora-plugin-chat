@@ -6,28 +6,36 @@ import { availableModels, modelRefreshMessage, refreshModels } from '@/store/mod
 import { globalSkillsDir, vaultSkillsDir } from '@/agent/skills/paths'
 import { rescanSkills } from '@/agent/skills/store'
 import { collectModelIds } from '@/config/models'
-import type { ApiProvider, ModelConfig, ProviderConfig } from '@/config/types'
+import { collectProviderIds, isBuiltinProvider } from '@/config/providers'
+import type { ApiProvider, BuiltinProvider, ModelConfig, ProviderConfig } from '@/config/types'
 import { t } from '@/i18n'
 
 
-function getProviders(): Array<{ value: ApiProvider; label: string }> {
-  return [
-    { value: 'anthropic', label: t.settings.providers.anthropic },
-    { value: 'openai', label: t.settings.providers.openai },
-    { value: 'ollama', label: t.settings.providers.ollama },
-    { value: 'custom', label: t.settings.providers.custom },
-  ]
-}
-
-const BASE_URL_HINTS: Record<ApiProvider, string> = {
-  anthropic: DEFAULT_SETTINGS.providers.anthropic.baseUrl,
-  openai: DEFAULT_SETTINGS.providers.openai.baseUrl,
-  ollama: DEFAULT_SETTINGS.providers.ollama.baseUrl,
-  custom: '',
-}
-
-/** Sentinel sidebar item that opens the "add a model" panel. */
+/** Sentinel sidebar item that opens the "add a provider / model" panel. */
 const ADD = '+'
+
+/** Display label for a provider id: localized for built-ins, raw id for customs. */
+function providerLabel(value: string): string {
+  if (isBuiltinProvider(value)) return t.settings.providers[value as BuiltinProvider]
+  return value
+}
+
+/** Provider ids (+ their labels) to list in the provider sidebar. */
+function getProviders(): Array<{ value: string; label: string }> {
+  const current = settingsManager.get()
+  return collectProviderIds(current.providers).map(id => ({ value: id, label: providerLabel(id) }))
+}
+
+/** Full provider sidebar item list (labels + the ADD sentinel). */
+function getSidebarItems(): string[] {
+  return [...getProviders().map(p => p.label), ADD]
+}
+
+/** Placeholder base URL hint for a provider (empty for custom providers). */
+function baseUrlHint(provider: string): string {
+  if (isBuiltinProvider(provider)) return DEFAULT_SETTINGS.providers[provider].baseUrl
+  return ''
+}
 
 
 export class ChatSettingTab extends SettingTab {
@@ -61,26 +69,37 @@ export class ChatSettingTab extends SettingTab {
 
     // Provider sidebar + per-provider config panel.
     const active = settingsManager.get().provider
-    const labels = getProviders().map(p => p.label)
-    this.lastSidebarItems = [...labels]
+    const items = getSidebarItems()
+    const activeLabel = getProviders().find(p => p.value === active)?.label
+    const initial = activeLabel ?? (items[0] ?? ADD)
+    this.lastSidebarItems = [...items]
 
     this.addSetting((setting) => {
       this.sidebarLayout = setting.addSidebarLayout(
-        { items: [...labels], initialActive: labels.includes(active) ? active : labels[0] },
+        { items: [...items], initialActive: initial },
         ({ item, panelEl }) => {
-          const provider = getProviders().find(p => p.label === item)?.value ?? active
+          if (item === ADD) {
+            this.renderProviderPanel(ADD, panelEl)
+            return
+          }
+          const provider = getProviders().find(p => p.label === item)?.value
+          if (!provider) {
+            this.renderProviderPanel(ADD, panelEl)
+            return
+          }
           void settingsManager.save({ provider })
           this.renderProviderPanel(provider, panelEl)
         },
       )
     })
 
-    // Keep the sidebar labels in sync with i18n changes.
+    // Keep the sidebar items in sync with settings changes (i18n relabel or a
+    // custom provider being added/removed).
     this.sidebarUnsub = settings.subscribe(() => {
-      const nextLabels = getProviders().map(p => p.label)
-      if (JSON.stringify(nextLabels) === JSON.stringify(this.lastSidebarItems)) return
-      this.lastSidebarItems = [...nextLabels]
-      this.sidebarLayout?.setItems([...nextLabels])
+      const nextItems = getSidebarItems()
+      if (JSON.stringify(nextItems) === JSON.stringify(this.lastSidebarItems)) return
+      this.lastSidebarItems = [...nextItems]
+      this.sidebarLayout?.setItems([...nextItems])
     })
 
     // Global fields below the provider block.
@@ -150,7 +169,10 @@ export class ChatSettingTab extends SettingTab {
 
   private saveProvider(provider: ApiProvider, patch: Partial<ProviderConfig>) {
     const current = settingsManager.get()
-    const config = { ...current.providers[provider], ...patch }
+    // A provider may be created on the fly (ADD panel): fall back to a blank
+    // config so the required fields are always present.
+    const base = current.providers[provider] ?? { model: '', baseUrl: '', models: {} }
+    const config = { ...base, ...patch }
     void settingsManager.save({ providers: { ...current.providers, [provider]: config } })
   }
 
@@ -159,6 +181,10 @@ export class ChatSettingTab extends SettingTab {
     this.providerUnsubs = []
     this.providerPanelEl = panelEl
     panelEl.replaceChildren()
+    if (provider === ADD) {
+      this.renderAddProviderPanel(panelEl)
+      return
+    }
     this.buildProviderBlock(provider)
   }
 
@@ -167,7 +193,7 @@ export class ChatSettingTab extends SettingTab {
 
     // Provider title.
     const titleItem = new SettingItem()
-    titleItem.addTitle(`${t.settings.providerConfig} · ${t.settings.providers[provider]}`)
+    titleItem.addTitle(`${t.settings.providerConfig} · ${providerLabel(provider)}`)
     this.providerPanelEl?.append(titleItem.containerEl)
 
     // Base URL.
@@ -175,7 +201,7 @@ export class ChatSettingTab extends SettingTab {
     baseUrlItem.addName(t.settings.baseUrl)
     baseUrlItem.addDescription(t.settings.baseUrlDesc)
     baseUrlItem.addText((input) => {
-      input.placeholder = BASE_URL_HINTS[provider] || t.settings.baseUrlPlaceholder
+      input.placeholder = baseUrlHint(provider) || t.settings.baseUrlPlaceholder
       input.value = config.baseUrl ?? ''
       input.onchange = () => {
         this.saveProvider(provider, { baseUrl: input.value.trim() })
@@ -290,6 +316,69 @@ export class ChatSettingTab extends SettingTab {
     )
 
     this.providerPanelEl?.append(modelParamsItem.containerEl)
+
+    // Remove provider — only custom providers are removable. Removing the
+    // active provider falls back to the built-in `ollama`.
+    if (!isBuiltinProvider(provider)) {
+      const removeItem = new SettingItem()
+      removeItem.addButton((button) => {
+        button.textContent = t.settings.removeProvider
+        button.onclick = () => {
+          const current = settingsManager.get()
+          const providers = { ...current.providers }
+          delete providers[provider]
+          void settingsManager.save({
+            providers,
+            ...(current.provider === provider ? { provider: 'ollama' as const } : {}),
+          })
+        }
+      })
+      this.providerPanelEl?.append(removeItem.containerEl)
+    }
+  }
+
+  private renderAddProviderPanel(panelEl: HTMLElement) {
+    let idInput: HTMLInputElement | null = null
+    let urlInput: HTMLInputElement | null = null
+
+    const idItem = new SettingItem()
+    idItem.addName(t.settings.providerId)
+    idItem.addDescription(t.settings.providerIdDesc)
+    idItem.addText((el) => {
+      idInput = el
+      el.placeholder = t.settings.providerIdPlaceholder
+    })
+    panelEl.append(idItem.containerEl)
+
+    const urlItem = new SettingItem()
+    urlItem.addName(t.settings.baseUrl)
+    urlItem.addDescription(t.settings.baseUrlDesc)
+    urlItem.addText((el) => {
+      urlInput = el
+      el.placeholder = t.settings.baseUrlPlaceholder
+    })
+    panelEl.append(urlItem.containerEl)
+
+    const addItem = new SettingItem()
+    addItem.addButton((button) => {
+      button.textContent = t.settings.addProvider
+      button.onclick = () => {
+        const id = idInput?.value.trim() ?? ''
+        if (!id || isBuiltinProvider(id)) return
+        const latest = settingsManager.get()
+        if (latest.providers[id]) return
+        this.saveProvider(id, { baseUrl: (urlInput?.value ?? '').trim() })
+        // Two-step setItems: the first list has no ADD so the active sentinel
+        // falls out and core re-selects the new provider; the second restores
+        // ADD. Both render the same provider panel (no visible flicker). The
+        // labels are read AFTER saveProvider (settings.set is synchronous).
+        const labels = collectProviderIds(settingsManager.get().providers).map(providerLabel)
+        const idLabel = providerLabel(id)
+        this.sidebarLayout?.setItems([idLabel, ...labels.filter(l => l !== idLabel)])
+        this.sidebarLayout?.setItems([...labels, ADD])
+      }
+    })
+    panelEl.append(addItem.containerEl)
   }
 
   private renderModelPanel(

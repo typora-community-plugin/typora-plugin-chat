@@ -77,9 +77,13 @@
     "providers": {
       "anthropic": "Anthropic",
       "openai": "OpenAI",
-      "ollama": "Ollama / OpenAI-kompatibel",
-      "custom": "Benutzerdefiniert"
+      "ollama": "Ollama / OpenAI-kompatibel"
     },
+    "providerId": "Anbieter-ID",
+    "providerIdDesc": "Eindeutige ID zum Speichern des benutzerdefinierten Anbieters.",
+    "providerIdPlaceholder": "z. B. my-llm",
+    "addProvider": "Anbieter hinzufügen",
+    "removeProvider": "Anbieter entfernen",
     "openaiApiMode": "OpenAI-API-Modus",
     "openaiApiModeDesc": "Nur für OpenAI-kompatible Anbieter verwendet.",
     "openaiApiModeResponses": "Responses API (primär)",

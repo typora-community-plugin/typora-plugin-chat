@@ -26,7 +26,6 @@ function dispatch(
     case 'openai':
       return sendOpenAI(config, messages, tools, signal)
     case 'ollama':
-    case 'custom':
     default:
       return sendOllama(config, messages, tools, signal)
   }

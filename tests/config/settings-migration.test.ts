@@ -28,8 +28,7 @@ function parseApiKeyMap(deobfuscated: string): Partial<Record<ApiProvider, strin
     const parsed = JSON.parse(deobfuscated) as unknown
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       const result: Partial<Record<ApiProvider, string>> = {}
-      for (const provider of ['anthropic', 'openai', 'ollama', 'custom'] as ApiProvider[]) {
-        const value = (parsed as Record<string, unknown>)[provider]
+      for (const [provider, value] of Object.entries(parsed as Record<string, unknown>)) {
         if (typeof value === 'string') result[provider] = value
       }
       return result
@@ -59,12 +58,11 @@ function computeKeyMerge(
   if (lsEncoded) {
     const deobfuscated = deobfuscate(lsEncoded.trim())
     const localMap = parseApiKeyMap(deobfuscated)
-    if (localMap) {
-      for (const provider of ['anthropic', 'openai', 'ollama', 'custom'] as ApiProvider[]) {
-        const value = localMap[provider]
-        if (value && !result[provider]) result[provider] = value
-      }
-    } else if (deobfuscated) {
+  if (localMap) {
+    for (const [provider, value] of Object.entries(localMap)) {
+      if (value && !result[provider]) result[provider] = value
+    }
+  } else if (deobfuscated) {
       if (!result[activeProvider]) result[activeProvider] = deobfuscated
     }
   }
@@ -94,18 +92,16 @@ describe('settings migration: legacy flat → providers', () => {
     // active provider).
     expect(merged.providers.anthropic.model).toBe(DEFAULT_SETTINGS.providers.anthropic.model)
     expect(merged.providers.ollama.model).toBe(DEFAULT_SETTINGS.providers.ollama.model)
-    expect(merged.providers.custom.model).toBe('')
 
     // openaiApiMode is an OpenAI-only field and must not leak to other providers.
     expect((merged.providers.anthropic as Record<string, unknown>).openaiApiMode).toBeUndefined()
     expect((merged.providers.ollama as Record<string, unknown>).openaiApiMode).toBeUndefined()
-    expect((merged.providers.custom as Record<string, unknown>).openaiApiMode).toBeUndefined()
 
     // Global fields preserved.
     expect(merged.provider).toBe('openai')
   })
 
-  it('② non-builtin legacy baseUrl is inherited by the custom provider', () => {
+  it('② legacy flat fields on a builtin active provider stay on that provider (no custom slot)', () => {
     const raw = {
       provider: 'anthropic' as const,
       model: 'claude-x',
@@ -113,22 +109,26 @@ describe('settings migration: legacy flat → providers', () => {
     }
     const merged = mergeStoredSettings(raw)
 
-    // Custom inherits the non-builtin URL.
-    expect(merged.providers.custom.baseUrl).toBe('https://my-proxy.example.com/v1')
-
-    // Active provider also gets it (flat backfill).
+    // Active provider gets the flat values via backfill.
     expect(merged.providers.anthropic.baseUrl).toBe('https://my-proxy.example.com/v1')
+    expect(merged.providers.anthropic.model).toBe('claude-x')
+
+    // No dedicated `custom` provider is created unless it was stored / active.
+    expect(merged.providers.custom).toBeUndefined()
+    expect(merged.providers['custom']).toBeUndefined()
   })
 
-  it('② builtin legacy baseUrl is NOT inherited by custom', () => {
+  it('② legacy provider:"custom" with flat fields creates a custom provider entry', () => {
     const raw = {
-      provider: 'anthropic' as const,
-      model: 'claude-x',
-      baseUrl: 'https://api.anthropic.com',
+      provider: 'custom' as const,
+      model: 'my-model',
+      baseUrl: 'https://my-proxy.example.com/v1',
     }
     const merged = mergeStoredSettings(raw)
 
-    expect(merged.providers.custom.baseUrl).toBe('')
+    expect(merged.providers.custom).toBeDefined()
+    expect(merged.providers.custom.baseUrl).toBe('https://my-proxy.example.com/v1')
+    expect(merged.providers.custom.model).toBe('my-model')
   })
 
   it('③ partial providers (missing provider key) merges per-provider with defaults', () => {
@@ -148,7 +148,7 @@ describe('settings migration: legacy flat → providers', () => {
     // Missing providers get full defaults.
     expect(merged.providers.anthropic).toEqual(DEFAULT_SETTINGS.providers.anthropic)
     expect(merged.providers.openai).toEqual(DEFAULT_SETTINGS.providers.openai)
-    expect(merged.providers.custom).toEqual(DEFAULT_SETTINGS.providers.custom)
+    expect(Object.keys(merged.providers)).toEqual(Object.keys(DEFAULT_SETTINGS.providers))
   })
 
   it('④ legacy single-key apiKey is attributed to the active provider', () => {
