@@ -6,6 +6,15 @@ import type { AskUserQuestionItem, AskUserAnswerItem } from '@/agent/tools/types
 
 export type ApiProvider = 'anthropic' | 'openai' | 'ollama' | 'custom'
 
+/**
+ * Per-model parameters. The structure is open: future knobs such as
+ * `temperature` / `maxTokens` can be added without changing the UI contract.
+ */
+export interface ModelConfig {
+  /** Model context window in tokens. When unset the provider-level fallback applies. */
+  contextWindow?: number
+}
+
 /** Per-provider configuration (model parameters are independent per provider). */
 export interface ProviderConfig {
   /** Optional API key; omitted when empty to keep persisted settings clean. */
@@ -14,10 +23,10 @@ export interface ProviderConfig {
   baseUrl: string
   /** OpenAI adapter mode: `responses` (default) or `chat` fallback. Only meaningful for the `openai` provider. */
   openaiApiMode?: 'responses' | 'chat'
-  /** Optional model context window in tokens; when unset it is auto-detected. */
+  /** Provider-level context window in tokens; fallback for models without an explicit per-model config. */
   contextWindow?: number
-  /** Optional per-model context window overrides in tokens. */
-  contextWindows?: Record<string, number>
+  /** Per-model parameters keyed by model id (required, defaults to `{}`). */
+  models: Record<string, ModelConfig>
 }
 
 /** Agent write-permission mode. */

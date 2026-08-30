@@ -1,10 +1,12 @@
 import { SettingTab, SettingItem } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
+import { get } from 'svelte/store'
 import { DEFAULT_SETTINGS, settings, settingsManager } from '@/config/settings'
 import { availableModels, modelRefreshMessage, refreshModels } from '@/store/models-store'
 import { globalSkillsDir, vaultSkillsDir } from '@/agent/skills/paths'
 import { rescanSkills } from '@/agent/skills/store'
-import type { ApiProvider, ProviderConfig } from '@/config/types'
+import { collectModelIds } from '@/config/models'
+import type { ApiProvider, ModelConfig, ProviderConfig } from '@/config/types'
 import { t } from '@/i18n'
 
 
@@ -24,12 +26,8 @@ const BASE_URL_HINTS: Record<ApiProvider, string> = {
   custom: '',
 }
 
-const MODEL_HINTS: Record<ApiProvider, string> = {
-  anthropic: DEFAULT_SETTINGS.providers.anthropic.model,
-  openai: DEFAULT_SETTINGS.providers.openai.model,
-  ollama: DEFAULT_SETTINGS.providers.ollama.model,
-  custom: '',
-}
+/** Sentinel sidebar item that opens the "add a model" panel. */
+const ADD = '+'
 
 
 export class ChatSettingTab extends SettingTab {
@@ -167,6 +165,11 @@ export class ChatSettingTab extends SettingTab {
   private buildProviderBlock(provider: ApiProvider) {
     const config = settingsManager.get().providers[provider]
 
+    // Provider title.
+    const titleItem = new SettingItem()
+    titleItem.addTitle(`${t.settings.providerConfig} · ${t.settings.providers[provider]}`)
+    this.providerPanelEl?.append(titleItem.containerEl)
+
     // Base URL.
     const baseUrlItem = new SettingItem()
     baseUrlItem.addName(t.settings.baseUrl)
@@ -193,50 +196,6 @@ export class ChatSettingTab extends SettingTab {
     })
     this.providerPanelEl?.append(apiKeyItem.containerEl)
 
-    // Model (with datalist + refresh button).
-    const modelItem = new SettingItem()
-    modelItem.addName(t.settings.model)
-    modelItem.addDescription(t.settings.modelDesc)
-
-    const listId = 'typora-plugin-chat-model-list'
-    let statusEl: HTMLElement | null = null
-    modelItem.addDescription((el) => { statusEl = el })
-
-    modelItem.addText((input) => {
-      input.placeholder = MODEL_HINTS[provider] || t.settings.modelDesc
-      input.value = config.model ?? ''
-      input.setAttribute('list', listId)
-      input.onchange = () => {
-        this.saveProvider(provider, { model: input.value.trim() })
-      }
-    })
-
-    const datalist = document.createElement('datalist')
-    datalist.id = listId
-    modelItem.controls.append(datalist)
-
-    const renderOptions = (models: string[]) => {
-      datalist.innerHTML = ''
-      for (const id of models) {
-        const option = document.createElement('option')
-        option.value = id
-        datalist.append(option)
-      }
-    }
-
-    this.providerUnsubs.push(availableModels.subscribe(renderOptions))
-    this.providerUnsubs.push(modelRefreshMessage.subscribe((message) => {
-      if (statusEl) statusEl.textContent = message
-    }))
-
-    modelItem.addButton((button) => {
-      button.textContent = t.settings.refreshModels
-      button.onclick = () => {
-        void refreshModels()
-      }
-    })
-    this.providerPanelEl?.append(modelItem.containerEl)
-
     // OpenAI API Mode (only for `openai` provider).
     if (provider === 'openai') {
       const modeItem = new SettingItem()
@@ -253,7 +212,7 @@ export class ChatSettingTab extends SettingTab {
       this.providerPanelEl?.append(modeItem.containerEl)
     }
 
-    // Context window.
+    // Context window (provider-level fallback for models without a per-model config).
     const ctxItem = new SettingItem()
     ctxItem.addName(t.settings.contextWindow)
     ctxItem.addDescription(t.settings.contextWindowDesc)
@@ -275,33 +234,180 @@ export class ChatSettingTab extends SettingTab {
     })
     this.providerPanelEl?.append(ctxItem.containerEl)
 
-    // Per-model context windows.
-    const ctxMapItem = new SettingItem()
-    ctxMapItem.addName(t.settings.contextWindows)
-    ctxMapItem.addDescription(t.settings.contextWindowsDesc)
-    ctxMapItem.addTextArea((textarea) => {
-      textarea.rows = 5
-      textarea.placeholder = t.settings.contextWindowsPlaceholder
-      const overrides = config.contextWindows ?? {}
-      textarea.value = Object.entries(overrides)
-        .filter(([, value]) => value > 0)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([model, value]) => `${model}: ${value}`)
-        .join('\n')
-      textarea.onchange = () => {
-        const next: Record<string, number> = {}
-        for (const rawLine of textarea.value.split('\n')) {
-          const line = rawLine.trim()
-          if (!line) continue
-          const sep = line.search(/[:=]/)
-          if (sep <= 0) continue
-          const model = line.slice(0, sep).trim()
-          const value = Number(line.slice(sep + 1).trim())
-          if (model && Number.isFinite(value) && value > 0) next[model] = value
+    // Model parameters block: refresh status + nested per-model sidebar.
+    const modelParamsItem = new SettingItem()
+    modelParamsItem.addName(t.settings.modelParameters)
+    modelParamsItem.addDescription(t.settings.modelParametersDesc)
+
+    let statusEl: HTMLElement | null = null
+    modelParamsItem.addDescription((el) => { statusEl = el })
+
+    // The add-model panel's model-id dropdown lives inside the sidebar; keep a
+    // shared reference so a refresh (which happens there) can repopulate it.
+    const modelSelectRef: { el: HTMLSelectElement | null } = { el: null }
+
+    const renderOptions = (models: string[]) => {
+      if (!modelSelectRef.el) return
+      const previous = modelSelectRef.el.value
+      modelSelectRef.el.replaceChildren()
+      const placeholder = new Option(t.settings.modelIdPlaceholder, '')
+      placeholder.disabled = true
+      placeholder.selected = true
+      modelSelectRef.el.append(placeholder)
+      for (const id of models) modelSelectRef.el.append(new Option(id, id))
+      modelSelectRef.el.value = previous
+    }
+
+    this.providerUnsubs.push(availableModels.subscribe(renderOptions))
+    this.providerUnsubs.push(modelRefreshMessage.subscribe((message) => {
+      if (statusEl) statusEl.textContent = message
+    }))
+
+    const ids = collectModelIds(config.model, config.models)
+    const initial = config.model && ids[0] === config.model ? config.model : (ids[0] ?? ADD)
+
+    let layout: { setItems(items: string[]): void } | null = null
+    layout = modelParamsItem.addSidebarLayout(
+      { items: [...ids, ADD], initialActive: initial },
+      ({ item, panelEl: modelPanelEl }) => {
+        if (item === ADD) {
+          this.renderAddModelPanel(provider, modelPanelEl, modelSelectRef, (id, models) => {
+            if (!layout) return
+            // Two-step setItems: the first list has no ADD so the active
+            // sentinel falls out and core re-selects the new model; the second
+            // restores ADD. Both render the same model panel (no visible flicker).
+            layout.setItems([id, ...collectModelIds(config.model, models).filter(m => m !== id)])
+            layout.setItems([...collectModelIds(config.model, models), ADD])
+          })
+        } else {
+          modelSelectRef.el = null
+          this.renderModelPanel(provider, item, modelPanelEl, (models) => {
+            if (!layout) return
+            layout.setItems([...collectModelIds(config.model, models), ADD])
+          })
         }
-        this.saveProvider(provider, { contextWindows: next })
+      },
+    )
+
+    this.providerPanelEl?.append(modelParamsItem.containerEl)
+  }
+
+  private renderModelPanel(
+    provider: ApiProvider,
+    item: string,
+    panelEl: HTMLElement,
+    onListChanged: (models: Record<string, ModelConfig>) => void,
+  ) {
+    // Re-read fresh config on every render: select/setItems rebuild the panel.
+    const config = settingsManager.get().providers[provider]
+    const modelConfig = config.models?.[item]
+
+    const nameItem = new SettingItem()
+    nameItem.addName(item)
+    if (item === config.model) nameItem.addBadge(t.settings.currentModel)
+    panelEl.append(nameItem.containerEl)
+
+    // Per-model context window; empty clears the entry.
+    const ctxItem = new SettingItem()
+    ctxItem.addName(t.settings.contextWindow)
+    ctxItem.addDescription(t.settings.contextWindowDesc)
+    ctxItem.addInput('number', (input) => {
+      input.min = '0'
+      input.placeholder = t.settings.contextWindowPlaceholder
+      input.value = modelConfig?.contextWindow ? String(modelConfig.contextWindow) : ''
+      input.onchange = () => {
+        const value = input.value.trim()
+        // Re-read the latest config: this panel may hold a render-time snapshot
+        // and a prior save in the same panel must not be clobbered.
+        const latest = settingsManager.get().providers[provider]
+        const models = { ...(latest.models ?? {}) }
+        if (!value) {
+          delete models[item]
+        } else {
+          const contextWindow = Number(value)
+          if (!(Number.isFinite(contextWindow) && contextWindow > 0)) return
+          models[item] = { ...(models[item] ?? {}), contextWindow }
+        }
+        this.saveProvider(provider, { models })
       }
     })
-    this.providerPanelEl?.append(ctxMapItem.containerEl)
+    panelEl.append(ctxItem.containerEl)
+
+    // Remove button — only when a stored per-model config exists. Removing the
+    // active model's entry keeps it listed (unconfigured) because the sidebar
+    // always includes the active model.
+    if (modelConfig) {
+      const removeItem = new SettingItem()
+      removeItem.addButton((button) => {
+        button.textContent = t.settings.removeModel
+        button.onclick = () => {
+          const latest = settingsManager.get().providers[provider]
+          const models = { ...(latest.models ?? {}) }
+          delete models[item]
+          this.saveProvider(provider, { models })
+          onListChanged(models)
+        }
+      })
+      panelEl.append(removeItem.containerEl)
+    }
+  }
+
+  private renderAddModelPanel(
+    provider: ApiProvider,
+    panelEl: HTMLElement,
+    selectRef: { el: HTMLSelectElement | null },
+    onAdded: (id: string, models: Record<string, ModelConfig>) => void,
+  ) {
+    let input: HTMLSelectElement | null = null
+
+    const idItem = new SettingItem()
+    idItem.addName(t.settings.modelId)
+    idItem.addSelect((select) => {
+      input = select
+      selectRef.el = select
+      const placeholder = new Option(t.settings.modelIdPlaceholder, '')
+      placeholder.disabled = true
+      placeholder.selected = true
+      select.append(placeholder)
+      for (const id of get(availableModels)) select.append(new Option(id, id))
+    })
+    idItem.addButton((button) => {
+      button.textContent = t.settings.refreshModels
+      button.onclick = () => {
+        void refreshModels()
+      }
+    })
+    panelEl.append(idItem.containerEl)
+
+    let ctxInput: HTMLInputElement | null = null
+    const ctxItem = new SettingItem()
+    ctxItem.addName(t.settings.contextWindow)
+    ctxItem.addDescription(t.settings.contextWindowDesc)
+    ctxItem.addInput('number', (el) => {
+      ctxInput = el
+      el.min = '0'
+      el.placeholder = t.settings.contextWindowPlaceholder
+      el.value = ''
+    })
+    panelEl.append(ctxItem.containerEl)
+
+    const addItem = new SettingItem()
+    addItem.addButton((button) => {
+      button.textContent = t.settings.addModel
+      button.onclick = () => {
+        const id = input?.value.trim() ?? ''
+        if (!id) return
+        const latest = settingsManager.get().providers[provider]
+        if (id === latest.model) return
+        const models = { ...(latest.models ?? {}) }
+        if (models[id]) return
+        const rawCtx = ctxInput?.value.trim() ?? ''
+        const contextWindow = rawCtx ? Number(rawCtx) : 0
+        models[id] = Number.isFinite(contextWindow) && contextWindow > 0 ? { contextWindow } : {}
+        this.saveProvider(provider, { models })
+        onAdded(id, models)
+      }
+    })
+    panelEl.append(addItem.containerEl)
   }
 }

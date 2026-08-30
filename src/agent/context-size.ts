@@ -50,11 +50,12 @@ const DEFAULT_CONTEXT_WINDOW = 128000
 /**
  * Resolve the model's context window in tokens.
  *
- * Priority: user setting > built-in model-name hints > default fallback.
- * The fallback is intentionally conservative for unknown local models.
+ * Priority: per-model config > provider-level fallback > built-in model-name
+ * hints > default fallback.  The fallback is intentionally conservative for
+ * unknown local models.
  */
 export function resolveContextWindow(model: string, config?: ProviderConfig): number {
-  const modelOverride = config?.contextWindows?.[model]
+  const modelOverride = config?.models?.[model]?.contextWindow
   if (modelOverride && modelOverride > 0) return modelOverride
   if (config?.contextWindow && config.contextWindow > 0) return config.contextWindow
 

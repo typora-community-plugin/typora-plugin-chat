@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store'
 import { app, fs } from '@typora-community-plugin/core'
 import type { ApiProvider, PluginSettings, ProviderConfig } from './types'
+import { migrateContextWindows } from './models'
 
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -12,20 +13,24 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     anthropic: {
       model: 'claude-sonnet-4-20250514',
       baseUrl: 'https://api.anthropic.com',
+      models: {},
     },
     openai: {
       model: 'gpt-4o-mini',
       baseUrl: 'https://api.openai.com/v1',
       openaiApiMode: 'responses',
+      models: {},
     },
     ollama: {
       model: 'qwen3.6-35b-a3b',
       baseUrl: 'http://localhost:11431/v1',
       contextWindow: 128000,
+      models: {},
     },
     custom: {
       model: '',
       baseUrl: '',
+      models: {},
     },
   },
 }
@@ -98,16 +103,16 @@ export function mergeStoredSettings(raw: Partial<PluginSettings>): PluginSetting
   }
 
   for (const provider of API_KEY_PROVIDERS) {
-    let stored: Partial<ProviderConfig> | undefined
+    let stored: (Partial<ProviderConfig> & { contextWindows?: Record<string, number> }) | undefined
     if (raw.providers && typeof raw.providers === 'object') {
-      stored = (raw.providers as Record<string, Partial<ProviderConfig>>)[provider] ?? undefined
+      stored = (raw.providers as Record<string, typeof stored>)[provider] ?? undefined
     }
 
     // Legacy flat fields backfill only the active provider's config; other
     // providers keep their defaults.  When a per-provider entry is present it
     // takes precedence over the flat values field-by-field.
     if (provider === legacy.provider) {
-      const backfill: Partial<ProviderConfig> = {}
+      const backfill: Partial<ProviderConfig> & { contextWindows?: Record<string, number> } = {}
       if (legacy.model !== undefined) backfill.model = legacy.model
       if (legacy.baseUrl !== undefined) backfill.baseUrl = legacy.baseUrl
       if (legacy.openaiApiMode !== undefined) backfill.openaiApiMode = legacy.openaiApiMode
@@ -116,6 +121,17 @@ export function mergeStoredSettings(raw: Partial<PluginSettings>): PluginSetting
       }
       if (legacy.contextWindows !== undefined) backfill.contextWindows = legacy.contextWindows
       stored = stored ? { ...backfill, ...stored } : backfill
+    }
+
+    // Double-path migration of the legacy `contextWindows` map into the
+    // structured `models` form (only when no `models` is present yet), then
+    // strip the legacy field so the key-union merge cannot carry it into the
+    // new shape. A fresh object is spread to avoid mutating the caller's raw.
+    if (stored) {
+      const { contextWindows, ...rest } = stored
+      stored = contextWindows !== undefined && !rest.models
+        ? { ...rest, models: migrateContextWindows(contextWindows) }
+        : { ...rest }
     }
 
     result.providers[provider] = mergeProviderConfig(DEFAULT_SETTINGS.providers[provider], stored)
