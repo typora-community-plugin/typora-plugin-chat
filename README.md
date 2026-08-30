@@ -16,7 +16,7 @@ An AI-powered chat assistant embedded in Typora that can access your vault: read
 
 ### Chat & Conversation
 - **AI Chat Panel** — Full conversational UI in Typora's right sidebar with auto-resizing input, model/mode pickers, and slash command autocomplete
-- **Multi-session Management** — Create, switch between, and delete independent chat sessions; transcripts persist across restarts
+- **Multi-session Management** — Create, switch between, and delete independent chat sessions; transcripts persist across restarts; sessions scoped per vault
 - **"Chat About This Note"** — Send the current note's content to the AI for summarization or discussion (also available via right-click in file explorer)
 - **"Send Selection to Chat"** — Send selected text into the chat with a scope constraint ("work only within this selection")
 
@@ -31,6 +31,11 @@ An AI-powered chat assistant embedded in Typora that can access your vault: read
 - **Undo/Redo** — Turn-scoped atomic undo *within the current session*: all file changes from one agent turn are rolled back together
 - **Context Window Usage Ring** — Real-time visual indicator of token usage vs. context window size (estimated or API-reported)
 
+### Tool Enhancements
+- **Pagination Support** — `list_files`, `web_fetch` and other tools support limit/offset pagination to avoid returning too much content at once
+- **Forbidden Path Policy** — Configure glob patterns to block the agent from accessing sensitive directories and files (`.git`, `node_modules`, `*.apikey` are always forbidden)
+- **Directories in list_files** — Non-recursive `list_files` returns both files and directories
+
 ### AI Providers
 - **Anthropic** — `/v1/messages` endpoint with tool use, thinking blocks, and token reporting
 - **OpenAI** — Responses API (default) or Chat Completions fallback
@@ -40,13 +45,10 @@ An AI-powered chat assistant embedded in Typora that can access your vault: read
 
 | Setting | Description |
 |---------|-------------|
-| **Provider** | Anthropic, OpenAI, Ollama/OpenAI-compatible, or Custom |
-| **Base URL** | API endpoint (e.g., `https://api.openai.com/v1`) |
-| **API Key** | Stored obfuscated in vault config / localStorage |
-| **Model** | Model ID with refresh button to fetch from provider's `/models` endpoint |
-| **Context Window** | Token limit for context window estimation (auto-detected if empty) |
-| **Per-model Context Windows** | Override per model: `model-id: 128000` per line |
+| **Provider Configuration** | Anthropic, OpenAI, Ollama/OpenAI-compatible; add/remove custom providers with independent API Key, Base URL, model and context window per provider |
+| **Forbidden Paths** | Glob patterns (one per line) to block the agent from accessing specified vault paths (`.git`, `node_modules`, `*.apikey` are always forbidden) |
 | **Max Tool Iterations** | Max tool-call rounds in one agent loop (default 20, range 1-100) |
+| **Skills** | SKILL.md folders auto-loaded from the directories below; invoke with `/skill:<name>` in chat or let the model match automatically |
 
 ## Install
 
