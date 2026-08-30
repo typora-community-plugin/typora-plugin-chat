@@ -77,7 +77,7 @@
     "providers": {
       "anthropic": "Anthropic",
       "openai": "OpenAI",
-      "ollama": "Ollama / OpenAI 兼容"
+      "ollama": "Ollama"
     },
     "providerId": "提供商 ID",
     "providerIdDesc": "用于存储自定义提供商的唯一 ID。",

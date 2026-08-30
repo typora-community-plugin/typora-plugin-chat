@@ -77,7 +77,7 @@
     "providers": {
       "anthropic": "Anthropic",
       "openai": "OpenAI",
-      "ollama": "Ollama / OpenAI-kompatibel"
+      "ollama": "Ollama"
     },
     "providerId": "Anbieter-ID",
     "providerIdDesc": "Eindeutige ID zum Speichern des benutzerdefinierten Anbieters.",
