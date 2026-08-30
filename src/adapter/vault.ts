@@ -137,11 +137,7 @@ export async function deleteFile(vaultPath: string): Promise<void> {
   if (!(await fs.exists(absolute))) {
     throw new Error(`delete_file failed: ${vaultPath} does not exist`)
   }
-  try {
-    await fs.trash(absolute)
-  } catch {
-    await fs.remove(absolute)
-  }
+  await fs.trash(absolute)
   vaultIndex.invalidate(vaultPath)
 }
 
