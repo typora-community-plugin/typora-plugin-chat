@@ -12,6 +12,7 @@ import { sendMessage } from '@/api/client'
 import type { ExecutorContext, ExecuteToolFn } from './tools/types'
 import { getMode, normalizeMode, subAgentToolAllowed } from './modes'
 import { buildSystemPrompt } from './system-prompt'
+import { appendAgentsMd, loadAgentsMd } from './agents-md'
 import { getCurrentFilePath } from '@/adapter/vault'
 
 export const DEFAULT_SUBAGENT_MAX_ITERATIONS = 10
@@ -112,8 +113,10 @@ export async function runSubagent(
   const now = overrides.now ?? Date.now
   const startedAt = now()
 
+  // Sub agents operate in the same vault, so they inherit AGENTS.md too.
+  const agentsMd = await loadAgentsMd()
   const conversation: ApiMessage[] = [{ role: 'user', content: `[Delegated task from the parent agent]\n${task}` }]
-  const systemMessage: ApiMessage = { role: 'system', content: buildSubagentSystemPrompt(options.system, mode) }
+  const systemMessage: ApiMessage = { role: 'system', content: appendAgentsMd(buildSubagentSystemPrompt(options.system, mode), agentsMd) }
 
   let finalText = ''
   const totalUsage = { inputTokens: 0, outputTokens: 0 }

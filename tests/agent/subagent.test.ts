@@ -36,7 +36,15 @@ vi.mock('../../src/agent/tools/registry', () => ({
   ] as ToolDefinition[],
 }))
 
+vi.mock('../../src/agent/agents-md', async () => {
+  const actual = await vi.importActual<typeof import('../../src/agent/agents-md')>(
+    '../../src/agent/agents-md',
+  )
+  return { ...actual, loadAgentsMd: vi.fn().mockResolvedValue('') }
+})
+
 import { sendMessage } from '../../src/api/client'
+import { loadAgentsMd } from '../../src/agent/agents-md'
 
 function textResponse(text: string): UnifiedResponse {
   return { content: [{ type: 'text', text }], stopReason: 'end_turn', usage: { inputTokens: 1, outputTokens: 2 } }
@@ -53,6 +61,7 @@ function toolResponse(name = 'read_document'): UnifiedResponse {
 describe('runSubagent', () => {
   beforeEach(() => {
     vi.mocked(sendMessage).mockReset()
+    vi.mocked(loadAgentsMd).mockReset().mockResolvedValue('')
     settingsState.value = { ...settingsState.value, mode: 'workspace-write' }
   })
 
@@ -89,6 +98,23 @@ describe('runSubagent', () => {
     const messages = vi.mocked(sendMessage).mock.calls[0][1] as Array<{ role: string; content: unknown }>
     expect(String(messages[0].content)).toContain('You are a SUB-AGENT')
     expect(String(messages[0].content)).toContain('Always be brief.')
+  })
+
+  it('inherits the vault AGENTS.md into the sub agent system prompt', async () => {
+    vi.mocked(loadAgentsMd).mockResolvedValueOnce('- follow repo conventions')
+    vi.mocked(sendMessage).mockResolvedValue(textResponse('ok'))
+    await runSubagent({ task: 't' }, {}, {})
+    const messages = vi.mocked(sendMessage).mock.calls[0][1] as Array<{ role: string; content: unknown }>
+    expect(String(messages[0].content)).toContain('## Project instructions (AGENTS.md)')
+    expect(String(messages[0].content)).toContain('- follow repo conventions')
+  })
+
+  it('omits the AGENTS.md section when the vault has none', async () => {
+    vi.mocked(loadAgentsMd).mockResolvedValueOnce('')
+    vi.mocked(sendMessage).mockResolvedValue(textResponse('ok'))
+    await runSubagent({ task: 't' }, {}, {})
+    const messages = vi.mocked(sendMessage).mock.calls[0][1] as Array<{ role: string; content: unknown }>
+    expect(String(messages[0].content)).not.toContain('Project instructions')
   })
 
   it('never exposes create_subagent or ask_user to the sub agent', async () => {

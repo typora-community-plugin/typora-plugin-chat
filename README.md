@@ -25,6 +25,7 @@ An AI-powered chat assistant embedded in Typora that can access your vault: read
 - **17+ Tools** across 4 categories: Editor, Vault, System, and Network
 - **Sub-Agent System** — Delegate independent tasks to nested agent loops with inherited permissions and turn-scoped undo/redo
 - **Skills System** — Auto-discover and invoke reusable SKILL.md instruction sets from your vault or global directories
+- **AGENTS.md Support** — Vault-root `AGENTS.md` is injected into the system prompt so project conventions apply to every agent turn (main loop + sub-agents)
 
 ### Smart Features
 - **Slash Commands**: `/new`, `/sessions`, `/skill:<name>`, `/undo`, `/redo` with keyboard-navigable autocomplete

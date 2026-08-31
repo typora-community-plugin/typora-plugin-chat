@@ -46,7 +46,7 @@ async function buildCachedOverhead(mode: AgentMode): Promise<CachedOverhead> {
   const skillsCatalog = buildSkillsCatalog(skills)
   return {
     mode,
-    systemMessage: buildSystemMessage(skillsCatalog, mode),
+    systemMessage: await buildSystemMessage(skillsCatalog, mode),
     contextMessage: { role: 'user', content: contextText },
     tools: filterTools(mode),
   }
@@ -73,7 +73,7 @@ export async function refreshContextUsage(
       if (version !== refreshVersion) return
       cachedOverhead = {
         mode,
-        systemMessage: buildSystemMessage('', mode),
+        systemMessage: await buildSystemMessage('', mode).catch(() => ({ role: 'system', content: '' })),
         contextMessage: { role: 'user', content: '' },
         tools: filterTools(mode),
       }
