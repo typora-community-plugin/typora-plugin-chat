@@ -13,13 +13,13 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   providers: {
     anthropic: {
       enabled: true,
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       baseUrl: 'https://api.anthropic.com',
       models: {},
     },
     openai: {
       enabled: true,
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.6-luna',
       baseUrl: 'https://api.openai.com/v1',
       openaiApiMode: 'responses',
       models: {},
@@ -28,7 +28,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
       enabled: true,
       model: 'qwen3.6-35b-a3b',
       baseUrl: 'http://localhost:11431/v1',
-      contextWindow: 128000,
+      contextWindow: 262144,
       models: {},
     },
   },

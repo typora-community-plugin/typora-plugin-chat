@@ -7,9 +7,9 @@ import type { ProviderConfig } from '../../src/config/types'
 
 describe('migrateContextWindows', () => {
   it('converts positive entries into structured ModelConfigs', () => {
-    expect(migrateContextWindows({ 'gpt-4o': 128000, 'claude-sonnet-4': 200000 })).toEqual({
+    expect(migrateContextWindows({ 'gpt-4o': 128000, 'claude-sonnet-5': 200000 })).toEqual({
       'gpt-4o': { contextWindow: 128000 },
-      'claude-sonnet-4': { contextWindow: 200000 },
+      'claude-sonnet-5': { contextWindow: 200000 },
     })
   })
 
@@ -55,8 +55,8 @@ describe('collectSelectableModels', () => {
       provider: 'ollama',
       maxIterations: 20,
       providers: {
-        anthropic: { enabled: true, model: 'claude-sonnet-4', baseUrl: '', models: {} },
-        openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+        anthropic: { enabled: true, model: 'claude-sonnet-5', baseUrl: '', models: {} },
+        openai: { enabled: true, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
         ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
       },
       ...overrides,
@@ -67,16 +67,16 @@ describe('collectSelectableModels', () => {
 
   it('collects the active model of every enabled provider, sorted', () => {
     const ids = collectSelectableModels(makeSettings())
-    expect(ids).toEqual(['claude-sonnet-4', 'gpt-4o-mini', 'qwen3.6-35b-a3b'])
+    expect(ids).toEqual(['claude-sonnet-5', 'gpt-5.6-luna', 'qwen3.6-35b-a3b'])
   })
 
   it('includes configured per-model entries from the model parameters section', () => {
     const ids = collectSelectableModels(makeSettings({}, {
-      anthropic: { enabled: true, model: 'claude-sonnet-4', baseUrl: '', models: { 'claude-opus-4': {}, 'gpt-x': {} } },
-      openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      anthropic: { enabled: true, model: 'claude-sonnet-5', baseUrl: '', models: { 'claude-opus-4': {}, 'gpt-x': {} } },
+      openai: { enabled: true, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
       ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
     }))
-    expect(ids).toEqual(['claude-opus-4', 'claude-sonnet-4', 'gpt-4o-mini', 'gpt-x', 'qwen3.6-35b-a3b'])
+    expect(ids).toEqual(['claude-opus-4', 'claude-sonnet-5', 'gpt-5.6-luna', 'gpt-x', 'qwen3.6-35b-a3b'])
   })
 
   it('de-duplicates ids shared by multiple providers', () => {
@@ -90,25 +90,25 @@ describe('collectSelectableModels', () => {
 
   it('excludes models of disabled providers', () => {
     const ids = collectSelectableModels(makeSettings({}, {
-      anthropic: { enabled: false, model: 'claude-sonnet-4', baseUrl: '', models: { 'claude-opus-4': {} } },
-      openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      anthropic: { enabled: false, model: 'claude-sonnet-5', baseUrl: '', models: { 'claude-opus-4': {} } },
+      openai: { enabled: true, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
       ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
     }))
-    expect(ids).toEqual(['gpt-4o-mini', 'qwen3.6-35b-a3b'])
+    expect(ids).toEqual(['gpt-5.6-luna', 'qwen3.6-35b-a3b'])
   })
 
   it('keeps the active provider model selectable even without a per-model entry', () => {
     const ids = collectSelectableModels(makeSettings({ provider: 'openai' }))
-    expect(ids).toContain('gpt-4o-mini')
+    expect(ids).toContain('gpt-5.6-luna')
   })
 
   it('drops an empty active-provider model instead of adding ""', () => {
     const ids = collectSelectableModels(makeSettings({}, {
       anthropic: { enabled: true, model: '', baseUrl: '', models: {} },
-      openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      openai: { enabled: true, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
       ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
     }))
-    expect(ids).toEqual(['gpt-4o-mini', 'qwen3.6-35b-a3b'])
+    expect(ids).toEqual(['gpt-5.6-luna', 'qwen3.6-35b-a3b'])
   })
 
   it('returns an empty list when every provider is disabled or unconfigured', () => {
@@ -122,12 +122,12 @@ describe('collectSelectableModels', () => {
 
   it('includes configured custom providers', () => {
     const ids = collectSelectableModels(makeSettings({ provider: 'my-api' }, {
-      anthropic: { enabled: true, model: 'claude-sonnet-4', baseUrl: '', models: {} },
-      openai: { enabled: false, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      anthropic: { enabled: true, model: 'claude-sonnet-5', baseUrl: '', models: {} },
+      openai: { enabled: false, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
       ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
       'my-api': { enabled: true, model: 'custom-model', baseUrl: '', models: { 'custom-extra': {} } },
     }))
-    expect(ids).toEqual(['claude-sonnet-4', 'custom-extra', 'custom-model', 'qwen3.6-35b-a3b'])
+    expect(ids).toEqual(['claude-sonnet-5', 'custom-extra', 'custom-model', 'qwen3.6-35b-a3b'])
   })
 })
 
@@ -153,8 +153,8 @@ describe('resolveContextWindow per-model priority', () => {
   })
 
   it('falls back to model-name hints before the default', () => {
-    const config: ProviderConfig = { model: 'claude-sonnet-4', baseUrl: '', models: {} }
-    expect(resolveContextWindow('claude-sonnet-4', config)).toBe(200000)
+    const config: ProviderConfig = { model: 'claude-sonnet-5', baseUrl: '', models: {} }
+    expect(resolveContextWindow('claude-sonnet-5', config)).toBe(1000000)
   })
 
   it('ignores a non-positive per-model override and falls through', () => {
@@ -189,10 +189,10 @@ describe('mergeStoredSettings: legacy contextWindows → models', () => {
   it('backfills the legacy top-level flat contextWindows to the active provider', () => {
     const raw = {
       provider: 'anthropic' as const,
-      contextWindows: { 'claude-sonnet-4': 200000 },
+      contextWindows: { 'claude-sonnet-5': 200000 },
     }
     const merged = mergeStoredSettings(raw)
-    expect(merged.providers.anthropic.models).toEqual({ 'claude-sonnet-4': { contextWindow: 200000 } })
+    expect(merged.providers.anthropic.models).toEqual({ 'claude-sonnet-5': { contextWindow: 200000 } })
   })
 
   it('lets a per-provider contextWindows win over the top-level flat map', () => {

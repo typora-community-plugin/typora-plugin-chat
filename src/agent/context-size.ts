@@ -60,11 +60,18 @@ export function resolveContextWindow(model: string, config?: ProviderConfig): nu
   if (config?.contextWindow && config.contextWindow > 0) return config.contextWindow
 
   const id = model.toLowerCase()
-  if (id.includes('claude')) return 200000
-  if (id.includes('gpt-4') || id.includes('gpt-4o') || id.includes('gpt-4.1') || id.includes('gpt-4.5')) return 128000
-  if (id.includes('gpt-3.5')) return 16385
-  if (id.includes('o1') || id.includes('o3')) return 200000
+  if (id.includes('claude')) return id.includes('haiku') ? 200000 : 1000000
+  if (id.startsWith('gpt-5.4') || id.startsWith('gpt-5.5') || id.startsWith('gpt-5.6') || id.startsWith('gpt-6')) return 1050000
+  if (id.includes('gpt-5')) return 400000
+  if (id.includes('gpt-4.1')) return 1047576
+  if (id.includes('gpt-4o') || id.includes('gpt-4-turbo')) return 128000
+  if (id.startsWith('gpt-3.5')) return 16385
+  if (id.includes('o1') || id.includes('o3') || id.includes('o4')) return 200000
   if (id.includes('gemini')) return 1048576
-  if (id.includes('qwen') || id.includes('deepseek') || id.includes('llama3') || id.includes('mistral')) return 128000
+  if (id.includes('qwen')) return /plus|max|flash|coder/.test(id) ? 1000000 : 262144
+  if (id.includes('deepseek')) return id.startsWith('v4') || id.includes('r2') ? 1048576 : 163840
+  if (id.includes('llama-4')) return 1048576
+  if (id.includes('llama3')) return 131072
+  if (id.includes('mistral')) return 262144
   return DEFAULT_CONTEXT_WINDOW
 }
