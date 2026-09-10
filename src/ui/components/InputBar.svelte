@@ -20,7 +20,6 @@
     modelSelectDisabled = false,
     skills = [],
     onModelChange = null,
-    onModelRefresh = null,
     sessions = [],
     activeSessionId = null,
     onSwitchSession = null,
@@ -40,7 +39,6 @@
     modelSelectDisabled?: boolean
     skills?: SkillRef[]
     onModelChange?: ((model: string) => void) | null
-    onModelRefresh?: (() => void) | null
     sessions?: SessionSummary[]
     activeSessionId?: string | null
     onSwitchSession?: ((id: string) => void) | null
@@ -263,7 +261,6 @@
       {mode}
       canSend={!!value.trim()}
       {onModelChange}
-      {onModelRefresh}
       {onModeChange}
       onSend={submit}
       {onStop}

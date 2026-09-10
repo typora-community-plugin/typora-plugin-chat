@@ -1,4 +1,5 @@
-import type { ModelConfig } from './types'
+import type { ModelConfig, PluginSettings } from './types'
+import { collectProviderIds, isProviderEnabled } from './providers'
 
 /**
  * Pure model-list helpers (no DOM / settings side effects) so they are easy to
@@ -31,4 +32,30 @@ export function collectModelIds(model: string | undefined, models?: Record<strin
   if (!active) return [...new Set(configured)].sort((a, b) => a.localeCompare(b))
   const rest = [...new Set(configured.filter(id => id !== active))].sort((a, b) => a.localeCompare(b))
   return [active, ...rest]
+}
+
+/**
+ * Build the model-id list shown in the chat sidebar's model select.
+ *
+ * Collects every model listed in the "Model parameters" section of all enabled
+ * providers (the active provider first), de-duplicated and sorted with
+ * `localeCompare`. The active provider's current model is always included —
+ * even when it has no per-model entry yet — so it stays selectable. Disabled
+ * providers contribute nothing.
+ */
+export function collectSelectableModels(settings: PluginSettings): string[] {
+  const enabledIds = collectProviderIds(settings.providers)
+    .filter(id => isProviderEnabled(settings.providers[id]))
+  // The active provider (when enabled) comes first so its models lead the list.
+  const ordered = [settings.provider, ...enabledIds]
+    .filter((id, index, arr) => arr.indexOf(id) === index)
+  const ids: string[] = []
+  for (const providerId of ordered) {
+    if (!providerId || !settings.providers[providerId]) continue
+    const config = settings.providers[providerId]
+    for (const id of collectModelIds(config.model, config.models)) {
+      if (!ids.includes(id)) ids.push(id)
+    }
+  }
+  return ids.sort((a, b) => a.localeCompare(b))
 }

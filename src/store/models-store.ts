@@ -13,10 +13,10 @@ export interface ModelRefreshResult {
 }
 
 /**
- * Shared model options source.
- *
- * Both the settings tab datalist and the chat input bar dropdown read from
- * `availableModels`, so they always show exactly the same model list.
+ * Shared model options source for the settings tab's add-model panel: the raw
+ * `/models` endpoint list of the active provider, refreshed on demand. The chat
+ * sidebar's model select does NOT read from here — it lists the configured
+ * per-provider "Model parameters" (see `collectSelectableModels`).
  */
 export const availableModels = writable<string[]>([])
 

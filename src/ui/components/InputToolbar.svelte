@@ -18,7 +18,6 @@
     mode = 'workspace-write' as AgentMode,
     canSend = false,
     onModelChange = null,
-    onModelRefresh = null,
     onModeChange = null,
     onSend,
     onStop,
@@ -33,7 +32,6 @@
     /** True when the current draft text would submit. */
     canSend?: boolean
     onModelChange?: ((model: string) => void) | null
-    onModelRefresh?: (() => void) | null
     onModeChange?: ((mode: AgentMode) => void) | null
     onSend: () => void
     onStop: () => void
@@ -45,10 +43,6 @@
 
   function handleModeChange(e: Event) {
     onModeChange?.((e.currentTarget as HTMLSelectElement).value as AgentMode)
-  }
-
-  function handleModelClick() {
-    onModelRefresh?.()
   }
 </script>
 
@@ -69,7 +63,6 @@
     class="typ-input-model"
     value={model}
     onchange={handleModelChange}
-    onclick={handleModelClick}
     title={t.chat.selectModelTitle}
     disabled={!enabled || modelSelectDisabled}
   >

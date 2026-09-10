@@ -27,13 +27,16 @@
   import { isProviderEnabled } from '@/config/providers'
   import { getActiveConfig } from '@/config/types'
   import { writable } from 'svelte/store'
-  import { availableModels, refreshModels } from '@/store/models-store'
+  import { collectSelectableModels } from '@/config/models'
   import { updateActiveConfig } from '@/store/config-store'
   import { skills as skillStore } from '@/agent/skills/store'
 
   // A disabled provider exposes no model in the selector and the select is off-limits.
   const providerUsable = $derived(isProviderEnabled($settings.providers[$settings.provider]))
-  const activeModel = $derived(providerUsable ? getActiveConfig($settings).model : '')
+  // The model select only lists models from the "Model parameters" section of
+  // every enabled provider — never the raw /models endpoint list.
+  const selectableModels = $derived(providerUsable ? collectSelectableModels($settings) : [])
+  const activeModel = $derived(selectableModels.includes(getActiveConfig($settings).model) ? getActiveConfig($settings).model : '')
 
   import { undoStore } from '@/store/undo-store'
   import { executeSlashCommand } from '@/slash-commands/executor'
@@ -131,7 +134,7 @@
     placeholder={$inputPlaceholder}
     enabled={$inputEnabled}
     model={activeModel}
-    models={$availableModels}
+    models={selectableModels}
     modelSelectDisabled={!providerUsable}
     skills={$skillStore}
     sessions={sessionList}
@@ -139,7 +142,6 @@
     onSwitchSession={handleSwitchSession}
     onDeleteSession={handleDeleteSession}
     onModelChange={(model) => updateActiveConfig({ model })}
-    onModelRefresh={() => refreshModels()}
     mode={$settings.mode ?? 'workspace-write'}
     onModeChange={(mode) => settingsManager.save({ mode })}
     onSend={handleMainSend}

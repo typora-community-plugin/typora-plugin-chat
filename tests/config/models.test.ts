@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectModelIds, migrateContextWindows } from '../../src/config/models'
+import { collectModelIds, collectSelectableModels, migrateContextWindows } from '../../src/config/models'
 import { resolveContextWindow } from '../../src/agent/context-size'
 import { mergeStoredSettings } from '../../src/config/settings'
 import type { ProviderConfig } from '../../src/config/types'
@@ -46,6 +46,88 @@ describe('collectModelIds', () => {
     expect(collectModelIds('', {})).toEqual([])
     expect(collectModelIds(undefined, undefined)).toEqual([])
     expect(collectModelIds('', undefined)).toEqual([])
+  })
+})
+
+describe('collectSelectableModels', () => {
+  function makeSettings(overrides: Partial<PluginSettings> = {}, providersOverride?: Record<string, unknown>) {
+    const settings: PluginSettings = {
+      provider: 'ollama',
+      maxIterations: 20,
+      providers: {
+        anthropic: { enabled: true, model: 'claude-sonnet-4', baseUrl: '', models: {} },
+        openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+        ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
+      },
+      ...overrides,
+    }
+    if (providersOverride) settings.providers = providersOverride as PluginSettings['providers']
+    return settings
+  }
+
+  it('collects the active model of every enabled provider, sorted', () => {
+    const ids = collectSelectableModels(makeSettings())
+    expect(ids).toEqual(['claude-sonnet-4', 'gpt-4o-mini', 'qwen3.6-35b-a3b'])
+  })
+
+  it('includes configured per-model entries from the model parameters section', () => {
+    const ids = collectSelectableModels(makeSettings({}, {
+      anthropic: { enabled: true, model: 'claude-sonnet-4', baseUrl: '', models: { 'claude-opus-4': {}, 'gpt-x': {} } },
+      openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
+    }))
+    expect(ids).toEqual(['claude-opus-4', 'claude-sonnet-4', 'gpt-4o-mini', 'gpt-x', 'qwen3.6-35b-a3b'])
+  })
+
+  it('de-duplicates ids shared by multiple providers', () => {
+    const ids = collectSelectableModels(makeSettings({}, {
+      anthropic: { enabled: true, model: 'shared-model', baseUrl: '', models: {} },
+      openai: { enabled: true, model: 'shared-model', baseUrl: '', models: {} },
+      ollama: { enabled: true, model: 'local-1', baseUrl: '', models: {} },
+    }))
+    expect(ids).toEqual(['local-1', 'shared-model'])
+  })
+
+  it('excludes models of disabled providers', () => {
+    const ids = collectSelectableModels(makeSettings({}, {
+      anthropic: { enabled: false, model: 'claude-sonnet-4', baseUrl: '', models: { 'claude-opus-4': {} } },
+      openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
+    }))
+    expect(ids).toEqual(['gpt-4o-mini', 'qwen3.6-35b-a3b'])
+  })
+
+  it('keeps the active provider model selectable even without a per-model entry', () => {
+    const ids = collectSelectableModels(makeSettings({ provider: 'openai' }))
+    expect(ids).toContain('gpt-4o-mini')
+  })
+
+  it('drops an empty active-provider model instead of adding ""', () => {
+    const ids = collectSelectableModels(makeSettings({}, {
+      anthropic: { enabled: true, model: '', baseUrl: '', models: {} },
+      openai: { enabled: true, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
+    }))
+    expect(ids).toEqual(['gpt-4o-mini', 'qwen3.6-35b-a3b'])
+  })
+
+  it('returns an empty list when every provider is disabled or unconfigured', () => {
+    const ids = collectSelectableModels(makeSettings({}, {
+      anthropic: { enabled: false, model: '', baseUrl: '', models: {} },
+      openai: { enabled: false, model: '', baseUrl: '', models: {} },
+      ollama: { enabled: false, model: '', baseUrl: '', models: {} },
+    }))
+    expect(ids).toEqual([])
+  })
+
+  it('includes configured custom providers', () => {
+    const ids = collectSelectableModels(makeSettings({ provider: 'my-api' }, {
+      anthropic: { enabled: true, model: 'claude-sonnet-4', baseUrl: '', models: {} },
+      openai: { enabled: false, model: 'gpt-4o-mini', baseUrl: '', models: {} },
+      ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
+      'my-api': { enabled: true, model: 'custom-model', baseUrl: '', models: { 'custom-extra': {} } },
+    }))
+    expect(ids).toEqual(['claude-sonnet-4', 'custom-extra', 'custom-model', 'qwen3.6-35b-a3b'])
   })
 })
 
