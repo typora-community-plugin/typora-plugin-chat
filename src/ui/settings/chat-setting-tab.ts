@@ -440,9 +440,28 @@ export class ChatSettingTab extends SettingTab {
     const config = settingsManager.get().providers[provider]
     const modelConfig = config.models?.[item]
 
+    // Remove button — only when a stored per-model config exists. Removing the
+    // active model's entry keeps it listed (unconfigured) because the sidebar
+    // always includes the active model. Shown as a trash icon right of the name.
+    const hasModelConfig = !!modelConfig
+
     const nameItem = new SettingItem()
     nameItem.addTitle(item)
     if (item === config.model) nameItem.addBadge(t.settings.currentModel)
+    if (hasModelConfig) {
+      nameItem.addButton((button) => {
+        button.title = t.settings.removeModel
+        button.innerHTML = '<i class="fa fa-trash-o"></i>'
+        button.classList.add('danger', 'typ-model-remove')
+        button.onclick = () => {
+          const latest = settingsManager.get().providers[provider]
+          const models = { ...(latest.models ?? {}) }
+          delete models[item]
+          this.saveProvider(provider, { models })
+          onListChanged(models)
+        }
+      })
+    }
     panelEl.append(nameItem.containerEl)
 
     // Per-model context window; empty clears the entry.
@@ -470,24 +489,6 @@ export class ChatSettingTab extends SettingTab {
       }
     })
     panelEl.append(ctxItem.containerEl)
-
-    // Remove button — only when a stored per-model config exists. Removing the
-    // active model's entry keeps it listed (unconfigured) because the sidebar
-    // always includes the active model.
-    if (modelConfig) {
-      const removeItem = new SettingItem()
-      removeItem.addButton((button) => {
-        button.textContent = t.settings.removeModel
-        button.onclick = () => {
-          const latest = settingsManager.get().providers[provider]
-          const models = { ...(latest.models ?? {}) }
-          delete models[item]
-          this.saveProvider(provider, { models })
-          onListChanged(models)
-        }
-      })
-      panelEl.append(removeItem.containerEl)
-    }
   }
 
   private renderAddModelPanel(
