@@ -132,24 +132,13 @@ describe('collectSelectableModels', () => {
 })
 
 describe('resolveContextWindow per-model priority', () => {
-  it('prefers models[model] over the provider-level contextWindow', () => {
+  it('honors a positive per-model override', () => {
     const config: ProviderConfig = {
       model: 'gpt-4o',
       baseUrl: '',
-      contextWindow: 90000,
       models: { 'gpt-4o': { contextWindow: 123456 } },
     }
     expect(resolveContextWindow('gpt-4o', config)).toBe(123456)
-  })
-
-  it('falls back to the provider-level contextWindow', () => {
-    const config: ProviderConfig = {
-      model: 'unknown-local',
-      baseUrl: '',
-      contextWindow: 64000,
-      models: {},
-    }
-    expect(resolveContextWindow('unknown-local', config)).toBe(64000)
   })
 
   it('falls back to model-name hints before the default', () => {
@@ -157,14 +146,13 @@ describe('resolveContextWindow per-model priority', () => {
     expect(resolveContextWindow('claude-sonnet-5', config)).toBe(1000000)
   })
 
-  it('ignores a non-positive per-model override and falls through', () => {
+  it('ignores a non-positive per-model override and falls through to name hints', () => {
     const config: ProviderConfig = {
       model: 'gpt-4o',
       baseUrl: '',
-      contextWindow: 8000,
       models: { 'gpt-4o': { contextWindow: 0 } },
     }
-    expect(resolveContextWindow('gpt-4o', config)).toBe(8000)
+    expect(resolveContextWindow('gpt-4o', config)).toBe(128000)
   })
 
   it('handles config being undefined', () => {

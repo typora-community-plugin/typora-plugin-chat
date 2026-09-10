@@ -309,28 +309,6 @@ export class ChatSettingTab extends SettingTab {
       this.providerPanelEl?.append(modeItem.containerEl)
     }
 
-    // Context window (provider-level fallback for models without a per-model config).
-    const ctxItem = new SettingItem()
-    ctxItem.addName(t.settings.contextWindow)
-    ctxItem.addDescription(t.settings.contextWindowDesc)
-    ctxItem.addInput('number', (input) => {
-      input.min = '0'
-      input.placeholder = t.settings.contextWindowPlaceholder
-      input.value = config.contextWindow ? String(config.contextWindow) : ''
-      input.onchange = () => {
-        const value = input.value.trim()
-        if (!value) {
-          this.saveProvider(provider, { contextWindow: undefined })
-          return
-        }
-        const contextWindow = Number(value)
-        if (Number.isFinite(contextWindow) && contextWindow > 0) {
-          this.saveProvider(provider, { contextWindow })
-        }
-      }
-    })
-    this.providerPanelEl?.append(ctxItem.containerEl)
-
     // Model parameters block: refresh status + nested per-model sidebar.
     const modelParamsItem = new SettingItem()
     modelParamsItem.addName(t.settings.modelParameters)
@@ -463,7 +441,7 @@ export class ChatSettingTab extends SettingTab {
     const modelConfig = config.models?.[item]
 
     const nameItem = new SettingItem()
-    nameItem.addName(item)
+    nameItem.addTitle(item)
     if (item === config.model) nameItem.addBadge(t.settings.currentModel)
     panelEl.append(nameItem.containerEl)
 

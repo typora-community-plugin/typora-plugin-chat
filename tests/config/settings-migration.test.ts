@@ -78,7 +78,6 @@ describe('settings migration: legacy flat → providers', () => {
       model: 'gpt-4o-custom',
       baseUrl: 'https://my-proxy.example.com/v1',
       openaiApiMode: 'chat' as const,
-      contextWindow: 90000,
     }
     const merged = mergeStoredSettings(raw)
 
@@ -86,7 +85,6 @@ describe('settings migration: legacy flat → providers', () => {
     expect(merged.providers.openai.model).toBe('gpt-4o-custom')
     expect(merged.providers.openai.baseUrl).toBe('https://my-proxy.example.com/v1')
     expect(merged.providers.openai.openaiApiMode).toBe('chat')
-    expect(merged.providers.openai.contextWindow).toBe(90000)
 
     // Non-active providers keep their defaults (flat fields backfill only the
     // active provider).

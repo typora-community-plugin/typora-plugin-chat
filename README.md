@@ -46,7 +46,7 @@ An AI-powered chat assistant embedded in Typora that can access your vault: read
 
 | Setting | Description |
 |---------|-------------|
-| **Provider Configuration** | Anthropic, OpenAI, Ollama/OpenAI-compatible; add/remove custom providers with independent API Key, Base URL, model and context window per provider |
+| **Provider Configuration** | Anthropic, OpenAI, Ollama/OpenAI-compatible; add/remove custom providers with independent API Key, Base URL, model and per-model parameters per provider |
 | **Forbidden Paths** | Glob patterns (one per line) to block the agent from accessing specified vault paths (`.git`, `node_modules`, `*.apikey` are always forbidden) |
 | **Max Tool Iterations** | Max tool-call rounds in one agent loop (default 20, range 1-100) |
 | **Skills** | SKILL.md folders auto-loaded from the directories below; invoke with `/skill:<name>` in chat or let the model match automatically |

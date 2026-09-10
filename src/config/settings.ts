@@ -28,7 +28,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
       enabled: true,
       model: 'qwen3.6-35b-a3b',
       baseUrl: 'http://localhost:11431/v1',
-      contextWindow: 262144,
       models: {},
     },
   },
@@ -58,7 +57,7 @@ function mergeProviderConfig(
   if (!raw || typeof raw !== 'object') return { ...defaultConfig }
   const merged: ProviderConfig = { ...defaultConfig }
   // Iterate the union of keys so a field absent from defaults but present in `raw`
-  // (e.g. `contextWindow` on openai) is still honored.
+  // is still honored.
   const keys = Array.from(new Set([
     ...Object.keys(defaultConfig),
     ...Object.keys(raw as Record<string, unknown>),
@@ -98,7 +97,6 @@ export function mergeStoredSettings(raw: Partial<PluginSettings>): PluginSetting
     model?: string
     baseUrl?: string
     openaiApiMode?: 'responses' | 'chat'
-    contextWindow?: number
     contextWindows?: Record<string, number>
   }
 
@@ -116,9 +114,6 @@ export function mergeStoredSettings(raw: Partial<PluginSettings>): PluginSetting
       if (legacy.model !== undefined) backfill.model = legacy.model
       if (legacy.baseUrl !== undefined) backfill.baseUrl = legacy.baseUrl
       if (legacy.openaiApiMode !== undefined) backfill.openaiApiMode = legacy.openaiApiMode
-      if (legacy.contextWindow !== undefined && legacy.contextWindow !== null) {
-        backfill.contextWindow = legacy.contextWindow
-      }
       if (legacy.contextWindows !== undefined) backfill.contextWindows = legacy.contextWindows
       stored = stored ? { ...backfill, ...stored } : backfill
     }

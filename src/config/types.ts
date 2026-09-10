@@ -18,7 +18,7 @@ export type ApiProvider = BuiltinProvider | (string & {})
  * `temperature` / `maxTokens` can be added without changing the UI contract.
  */
 export interface ModelConfig {
-  /** Model context window in tokens. When unset the provider-level fallback applies. */
+  /** Model context window in tokens. When unset the built-in model-name hints apply. */
   contextWindow?: number
 }
 
@@ -32,8 +32,6 @@ export interface ProviderConfig {
   baseUrl: string
   /** OpenAI adapter mode: `responses` (default) or `chat` fallback. Only meaningful for the `openai` provider. */
   openaiApiMode?: 'responses' | 'chat'
-  /** Provider-level context window in tokens; fallback for models without an explicit per-model config. */
-  contextWindow?: number
   /** Per-model parameters keyed by model id (required, defaults to `{}`). */
   models: Record<string, ModelConfig>
 }
