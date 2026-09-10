@@ -265,6 +265,25 @@ export class ChatSettingTab extends SettingTab {
         }
       }
     })
+    // Remove provider — only custom providers are removable, shown as an icon
+    // button right of the title row. Removing the active provider falls back
+    // to the built-in `ollama`.
+    if (!isBuiltinProvider(provider)) {
+      titleItem.addButton((button) => {
+        button.title = t.settings.removeProvider
+        button.innerHTML = '<i class="fa fa-trash-o"></i>'
+        button.classList.add('danger', 'typ-provider-remove')
+        button.onclick = () => {
+          const current = settingsManager.get()
+          const providers = { ...current.providers }
+          delete providers[provider]
+          void settingsManager.save({
+            providers,
+            ...(current.provider === provider ? { provider: 'ollama' as const } : {}),
+          })
+        }
+      })
+    }
     this.providerPanelEl?.append(titleItem.containerEl)
 
     // Base URL.
@@ -365,25 +384,6 @@ export class ChatSettingTab extends SettingTab {
     )
 
     this.providerPanelEl?.append(modelParamsItem.containerEl)
-
-    // Remove provider — only custom providers are removable. Removing the
-    // active provider falls back to the built-in `ollama`.
-    if (!isBuiltinProvider(provider)) {
-      const removeItem = new SettingItem()
-      removeItem.addButton((button) => {
-        button.textContent = t.settings.removeProvider
-        button.onclick = () => {
-          const current = settingsManager.get()
-          const providers = { ...current.providers }
-          delete providers[provider]
-          void settingsManager.save({
-            providers,
-            ...(current.provider === provider ? { provider: 'ollama' as const } : {}),
-          })
-        }
-      })
-      this.providerPanelEl?.append(removeItem.containerEl)
-    }
   }
 
   private renderAddProviderPanel(panelEl: HTMLElement) {

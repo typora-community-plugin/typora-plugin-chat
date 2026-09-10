@@ -34,3 +34,29 @@
     }
   }
 }
+
+/*
+ * Remove-provider icon button in the provider title row (see ChatSettingTab).
+ * Red square with a white trash glyph; core's `.typ-button.danger` supplies
+ * the red background, this class sizes it down to the title text.
+ */
+.typ-setting-item:has(.typ-provider-remove) {
+  align-items: center;
+}
+
+.typ-provider-remove {
+  flex: 0 0 auto;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: 0.75rem;
+
+  > i {
+    color: #fff;
+    font-size: 0.8rem;
+    line-height: 1;
+  }
+}
