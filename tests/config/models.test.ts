@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectModelIds, collectSelectableModels, migrateContextWindows } from '../../src/config/models'
+import { collectModelIds, collectSelectableModelGroups, migrateContextWindows } from '../../src/config/models'
 import { resolveContextWindow } from '../../src/agent/context-size'
 import { mergeStoredSettings } from '../../src/config/settings'
 import type { ProviderConfig } from '../../src/config/types'
@@ -49,8 +49,8 @@ describe('collectModelIds', () => {
   })
 })
 
-describe('collectSelectableModels', () => {
-  function makeSettings(overrides: Partial<PluginSettings> = {}, providersOverride?: Record<string, unknown>) {
+describe('collectSelectableModelGroups', () => {
+  function makeSettings(overrides: Partial<PluginSettings> = {}, providersOverride?: Record<string, unknown>): PluginSettings {
     const settings: PluginSettings = {
       provider: 'ollama',
       maxIterations: 20,
@@ -65,69 +65,59 @@ describe('collectSelectableModels', () => {
     return settings
   }
 
-  it('collects the active model of every enabled provider, sorted', () => {
-    const ids = collectSelectableModels(makeSettings())
-    expect(ids).toEqual(['claude-sonnet-5', 'gpt-5.6-luna', 'qwen3.6-35b-a3b'])
+  it('groups models per enabled provider with the active one first', () => {
+    expect(collectSelectableModelGroups(makeSettings({ provider: 'openai' }))).toEqual([
+      { provider: 'openai', models: ['gpt-5.6-luna'] },
+      { provider: 'anthropic', models: ['claude-sonnet-5'] },
+      { provider: 'ollama', models: ['qwen3.6-35b-a3b'] },
+    ])
   })
 
-  it('includes configured per-model entries from the model parameters section', () => {
-    const ids = collectSelectableModels(makeSettings({}, {
+  it('keeps per-provider model entries inside their own group, sorted', () => {
+    const groups = collectSelectableModelGroups(makeSettings({}, {
       anthropic: { enabled: true, model: 'claude-sonnet-5', baseUrl: '', models: { 'claude-opus-4': {}, 'gpt-x': {} } },
       openai: { enabled: true, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
       ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
     }))
-    expect(ids).toEqual(['claude-opus-4', 'claude-sonnet-5', 'gpt-5.6-luna', 'gpt-x', 'qwen3.6-35b-a3b'])
+    expect(groups.find(g => g.provider === 'anthropic')?.models).toEqual(['claude-opus-4', 'claude-sonnet-5', 'gpt-x'])
   })
 
-  it('de-duplicates ids shared by multiple providers', () => {
-    const ids = collectSelectableModels(makeSettings({}, {
+  it('does not de-duplicate ids shared by multiple providers', () => {
+    const groups = collectSelectableModelGroups(makeSettings({}, {
       anthropic: { enabled: true, model: 'shared-model', baseUrl: '', models: {} },
       openai: { enabled: true, model: 'shared-model', baseUrl: '', models: {} },
       ollama: { enabled: true, model: 'local-1', baseUrl: '', models: {} },
     }))
-    expect(ids).toEqual(['local-1', 'shared-model'])
+    expect(groups.filter(g => g.models.includes('shared-model')).map(g => g.provider)).toEqual(['anthropic', 'openai'])
   })
 
-  it('excludes models of disabled providers', () => {
-    const ids = collectSelectableModels(makeSettings({}, {
+  it('omits disabled providers entirely', () => {
+    const groups = collectSelectableModelGroups(makeSettings({}, {
       anthropic: { enabled: false, model: 'claude-sonnet-5', baseUrl: '', models: { 'claude-opus-4': {} } },
       openai: { enabled: true, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
-      ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
+      ollama: { enabled: false, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
     }))
-    expect(ids).toEqual(['gpt-5.6-luna', 'qwen3.6-35b-a3b'])
+    expect(groups).toEqual([{ provider: 'openai', models: ['gpt-5.6-luna'] }])
   })
 
-  it('keeps the active provider model selectable even without a per-model entry', () => {
-    const ids = collectSelectableModels(makeSettings({ provider: 'openai' }))
-    expect(ids).toContain('gpt-5.6-luna')
-  })
-
-  it('drops an empty active-provider model instead of adding ""', () => {
-    const ids = collectSelectableModels(makeSettings({}, {
+  it('drops providers with no resolvable model and returns [] when none qualify', () => {
+    const groups = collectSelectableModelGroups(makeSettings({}, {
       anthropic: { enabled: true, model: '', baseUrl: '', models: {} },
-      openai: { enabled: true, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
-      ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
-    }))
-    expect(ids).toEqual(['gpt-5.6-luna', 'qwen3.6-35b-a3b'])
-  })
-
-  it('returns an empty list when every provider is disabled or unconfigured', () => {
-    const ids = collectSelectableModels(makeSettings({}, {
-      anthropic: { enabled: false, model: '', baseUrl: '', models: {} },
-      openai: { enabled: false, model: '', baseUrl: '', models: {} },
+      openai: { enabled: false, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
       ollama: { enabled: false, model: '', baseUrl: '', models: {} },
     }))
-    expect(ids).toEqual([])
+    expect(groups).toEqual([])
   })
 
-  it('includes configured custom providers', () => {
-    const ids = collectSelectableModels(makeSettings({ provider: 'my-api' }, {
+  it('includes a custom provider group and keeps the active one first', () => {
+    const groups = collectSelectableModelGroups(makeSettings({ provider: 'my-api' }, {
       anthropic: { enabled: true, model: 'claude-sonnet-5', baseUrl: '', models: {} },
       openai: { enabled: false, model: 'gpt-5.6-luna', baseUrl: '', models: {} },
       ollama: { enabled: true, model: 'qwen3.6-35b-a3b', baseUrl: '', models: {} },
       'my-api': { enabled: true, model: 'custom-model', baseUrl: '', models: { 'custom-extra': {} } },
     }))
-    expect(ids).toEqual(['claude-sonnet-5', 'custom-extra', 'custom-model', 'qwen3.6-35b-a3b'])
+    expect(groups.map(g => g.provider)).toEqual(['my-api', 'anthropic', 'ollama'])
+    expect(groups[0].models).toEqual(['custom-extra', 'custom-model'])
   })
 })
 

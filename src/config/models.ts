@@ -34,28 +34,37 @@ export function collectModelIds(model: string | undefined, models?: Record<strin
   return [active, ...rest]
 }
 
+/** One provider's share of the chat model select. */
+export interface SelectableModelGroup {
+  /** Provider id the models belong to (selecting one may switch the active provider). */
+  provider: string
+  /** Model ids for this provider, sorted with `localeCompare`. */
+  models: string[]
+}
+
 /**
- * Build the model-id list shown in the chat sidebar's model select.
+ * Build the provider-grouped model list shown in the chat sidebar's model select.
  *
- * Collects every model listed in the "Model parameters" section of all enabled
- * providers (the active provider first), de-duplicated and sorted with
- * `localeCompare`. The active provider's current model is always included —
- * even when it has no per-model entry yet — so it stays selectable. Disabled
- * providers contribute nothing.
+ * One group per enabled provider (the active provider first), each holding that
+ * provider's own models from its "Model parameters" section plus its current
+ * model — never de-duplicated across providers, since a shared id is only
+ * ambiguous once grouped by provider. Disabled or unconfigured providers are
+ * omitted entirely; groups with no models are dropped too.
  */
-export function collectSelectableModels(settings: PluginSettings): string[] {
+export function collectSelectableModelGroups(settings: PluginSettings): SelectableModelGroup[] {
   const enabledIds = collectProviderIds(settings.providers)
     .filter(id => isProviderEnabled(settings.providers[id]))
-  // The active provider (when enabled) comes first so its models lead the list.
+  // The active provider (when enabled) comes first so its group leads the list.
   const ordered = [settings.provider, ...enabledIds]
     .filter((id, index, arr) => arr.indexOf(id) === index)
-  const ids: string[] = []
+  const groups: SelectableModelGroup[] = []
   for (const providerId of ordered) {
     if (!providerId || !settings.providers[providerId]) continue
+    // `ordered` may lead with the active id even when it is disabled; skip it.
+    if (!isProviderEnabled(settings.providers[providerId])) continue
     const config = settings.providers[providerId]
-    for (const id of collectModelIds(config.model, config.models)) {
-      if (!ids.includes(id)) ids.push(id)
-    }
+    const models = [...new Set(collectModelIds(config.model, config.models))].sort((a, b) => a.localeCompare(b))
+    if (models.length) groups.push({ provider: providerId, models })
   }
-  return ids.sort((a, b) => a.localeCompare(b))
+  return groups
 }

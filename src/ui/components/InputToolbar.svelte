@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { AgentMode } from '@/config/types'
+  import type { AgentMode, BuiltinProvider } from '@/config/types'
   import { listModes } from '@/agent/modes'
+  import { isBuiltinProvider } from '@/config/providers'
   import { t } from '@/i18n'
 
   const modes = listModes()
@@ -8,12 +9,20 @@
   function label(key: string): string {
     return (t.chat as Record<string, unknown>)[key] as string ?? key
   }
+
+  /** Display label for a provider group: localized for built-ins, raw id for customs. */
+  function providerLabel(id: string): string {
+    if (isBuiltinProvider(id)) return t.settings.providers[id as BuiltinProvider]
+    return id
+  }
   import ContextUsageRing from './ContextUsageRing.svelte'
+
+  import type { SelectableModelGroup } from '@/config/models'
 
   let {
     enabled,
     model = '',
-    models = [],
+    modelGroups = [],
     modelSelectDisabled = false,
     mode = 'workspace-write' as AgentMode,
     canSend = false,
@@ -25,7 +34,7 @@
     /** Whether the agent is idle (send button shown) or running (stop button). */
     enabled: boolean
     model?: string
-    models?: string[]
+    modelGroups?: SelectableModelGroup[]
     /** Disables the model dropdown (e.g. active provider is disabled). */
     modelSelectDisabled?: boolean
     mode?: AgentMode
@@ -69,11 +78,15 @@
     {#if !model}
       <option value="" disabled>{t.chat.selectModel}</option>
     {/if}
-    {#if model && !models.includes(model)}
+    {#if modelGroups.length === 0 && model}
       <option value={model}>{model}</option>
     {/if}
-    {#each models as m (m)}
-      <option value={m}>{m}</option>
+    {#each modelGroups as group (group.provider)}
+      <optgroup label={providerLabel(group.provider)}>
+        {#each group.models as m (m)}
+          <option value={m}>{m}</option>
+        {/each}
+      </optgroup>
     {/each}
   </select>
 
@@ -117,6 +130,10 @@
       &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+      }
+
+      optgroup {
+        font-weight: 600;
       }
     }
 

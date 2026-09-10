@@ -8,6 +8,7 @@
   import { computeSuggestions, shouldCompleteSubcommand, suggestionsShouldBeOpen } from '@/slash-commands'
   import type { SkillRef, Suggestion } from '@/slash-commands/types'
   import type { SessionSummary } from '@/store/session-store'
+  import type { SelectableModelGroup } from '@/config/models'
 
   let {
     onSend,
@@ -16,7 +17,7 @@
     enabled = true,
     textAreaEl = null,
     model = '',
-    models = [],
+    modelGroups = [],
     modelSelectDisabled = false,
     skills = [],
     onModelChange = null,
@@ -34,7 +35,8 @@
     enabled?: boolean
     textAreaEl?: ((el: HTMLTextAreaElement | null) => void) | null
     model?: string
-    models?: string[]
+    /** Provider-grouped models for the select dropdown. */
+    modelGroups?: SelectableModelGroup[]
     /** Disables the model dropdown (e.g. active provider is disabled). */
     modelSelectDisabled?: boolean
     skills?: SkillRef[]
@@ -256,7 +258,7 @@
     <InputToolbar
       {enabled}
       {model}
-      {models}
+      {modelGroups}
       modelSelectDisabled={modelSelectDisabled}
       {mode}
       canSend={!!value.trim()}

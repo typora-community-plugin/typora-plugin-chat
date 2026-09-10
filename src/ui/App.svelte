@@ -24,19 +24,32 @@
   import { getAgentHistory, setAgentHistory } from '@/agent/history'
   import { refreshContextUsage } from '@/store/context-usage-store'
   import { settings, settingsManager } from '@/config/settings'
-  import { isProviderEnabled } from '@/config/providers'
   import { getActiveConfig } from '@/config/types'
   import { writable } from 'svelte/store'
-  import { collectSelectableModels } from '@/config/models'
+  import { collectSelectableModelGroups } from '@/config/models'
   import { updateActiveConfig } from '@/store/config-store'
   import { skills as skillStore } from '@/agent/skills/store'
 
-  // A disabled provider exposes no model in the selector and the select is off-limits.
-  const providerUsable = $derived(isProviderEnabled($settings.providers[$settings.provider]))
   // The model select only lists models from the "Model parameters" section of
-  // every enabled provider — never the raw /models endpoint list.
-  const selectableModels = $derived(providerUsable ? collectSelectableModels($settings) : [])
-  const activeModel = $derived(selectableModels.includes(getActiveConfig($settings).model) ? getActiveConfig($settings).model : '')
+  // every enabled provider — never the raw /models endpoint list. Groups are
+  // keyed by provider so shared ids stay unambiguous; disabled providers (and
+  // providers without any model) contribute no group, and with none left the
+  // select is off-limits.
+  const modelGroups = $derived(collectSelectableModelGroups($settings))
+  const activeModel = $derived(modelGroups.some(g => g.models.includes(getActiveConfig($settings).model)) ? getActiveConfig($settings).model : '')
+
+  // Picking a model from another provider's group switches the active provider to it.
+  function handleSelectModel(model: string) {
+    const group = modelGroups.find(g => g.models.includes(model)) ?? null
+    if (group && group.provider !== $settings.provider) {
+      void settingsManager.save({
+        provider: group.provider,
+        providers: { ...$settings.providers, [group.provider]: { ...$settings.providers[group.provider], model } },
+      })
+    } else {
+      updateActiveConfig({ model })
+    }
+  }
 
   import { undoStore } from '@/store/undo-store'
   import { executeSlashCommand } from '@/slash-commands/executor'
@@ -134,14 +147,14 @@
     placeholder={$inputPlaceholder}
     enabled={$inputEnabled}
     model={activeModel}
-    models={selectableModels}
-    modelSelectDisabled={!providerUsable}
+    modelGroups={modelGroups}
+    modelSelectDisabled={modelGroups.length === 0}
     skills={$skillStore}
     sessions={sessionList}
     activeSessionId={activeSessionId}
     onSwitchSession={handleSwitchSession}
     onDeleteSession={handleDeleteSession}
-    onModelChange={(model) => updateActiveConfig({ model })}
+    onModelChange={handleSelectModel}
     mode={$settings.mode ?? 'workspace-write'}
     onModeChange={(mode) => settingsManager.save({ mode })}
     onSend={handleMainSend}
