@@ -14,6 +14,7 @@
     enabled,
     model = '',
     models = [],
+    modelSelectDisabled = false,
     mode = 'workspace-write' as AgentMode,
     canSend = false,
     onModelChange = null,
@@ -26,6 +27,8 @@
     enabled: boolean
     model?: string
     models?: string[]
+    /** Disables the model dropdown (e.g. active provider is disabled). */
+    modelSelectDisabled?: boolean
     mode?: AgentMode
     /** True when the current draft text would submit. */
     canSend?: boolean
@@ -68,7 +71,7 @@
     onchange={handleModelChange}
     onclick={handleModelClick}
     title={t.chat.selectModelTitle}
-    disabled={!enabled}
+    disabled={!enabled || modelSelectDisabled}
   >
     {#if !model}
       <option value="" disabled>{t.chat.selectModel}</option>

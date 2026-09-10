@@ -1,3 +1,4 @@
+import './provider-sidebar.scss'
 import { SettingTab, SettingItem } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
 import { get } from 'svelte/store'
@@ -6,8 +7,8 @@ import { availableModels, modelRefreshMessage, refreshModels } from '@/store/mod
 import { globalSkillsDir, vaultSkillsDir } from '@/agent/skills/paths'
 import { rescanSkills } from '@/agent/skills/store'
 import { collectModelIds } from '@/config/models'
-import { collectProviderIds, isBuiltinProvider } from '@/config/providers'
-import type { ApiProvider, BuiltinProvider, ModelConfig, ProviderConfig } from '@/config/types'
+import { collectEnabledProviderIds, collectProviderIds, isBuiltinProvider, isProviderEnabled } from '@/config/providers'
+import type { ApiProvider, BuiltinProvider, ModelConfig, PluginSettings, ProviderConfig } from '@/config/types'
 import { t } from '@/i18n'
 
 
@@ -20,15 +21,23 @@ function providerLabel(value: string): string {
   return value
 }
 
-/** Provider ids (+ their labels) to list in the provider sidebar. */
+/** All configured provider ids (+ their labels) to list in the provider sidebar. */
 function getProviders(): Array<{ value: string; label: string }> {
   const current = settingsManager.get()
   return collectProviderIds(current.providers).map(id => ({ value: id, label: providerLabel(id) }))
 }
 
-/** Full provider sidebar item list (labels + the ADD sentinel). */
+/** Full provider sidebar item list (all labels + the ADD sentinel). */
 function getSidebarItems(): string[] {
   return [...getProviders().map(p => p.label), ADD]
+}
+
+/** First enabled provider in stable order; `undefined` when none are enabled. */
+function pickFallbackProvider(settings: PluginSettings): ApiProvider | undefined {
+  const ids = collectEnabledProviderIds(settings.providers)
+  return settings.provider && isProviderEnabled(settings.providers[settings.provider])
+    ? settings.provider
+    : (ids[0] as ApiProvider | undefined)
 }
 
 /** Placeholder base URL hint for a provider (empty for custom providers). */
@@ -42,6 +51,8 @@ export class ChatSettingTab extends SettingTab {
   private sidebarLayout: { setItems(items: string[]): void } | null = null
   private lastSidebarItems: string[] | null = null
   private sidebarUnsub: (() => void) | null = null
+  private applySidebarDots: (() => void) | null = null
+  private sidebarObserver: MutationObserver | null = null
   private providerPanelEl: HTMLElement | null = null
   private providerUnsubs: Array<() => void> = []
 
@@ -60,12 +71,15 @@ export class ChatSettingTab extends SettingTab {
   onunload() {
     this.sidebarUnsub?.()
     this.sidebarUnsub = null
+    this.applySidebarDots = null
+    this.sidebarObserver?.disconnect()
+    this.sidebarObserver = null
     this.providerUnsubs.forEach(u => u())
     this.providerUnsubs = []
   }
 
   private render() {
-    this.addSettingTitle(t.settings.title)
+    this.addSettingTitle(t.settings.sectionProviders)
 
     // Provider sidebar + per-provider config panel.
     const active = settingsManager.get().provider
@@ -75,7 +89,7 @@ export class ChatSettingTab extends SettingTab {
     this.lastSidebarItems = [...items]
 
     this.addSetting((setting) => {
-      this.sidebarLayout = setting.addSidebarLayout(
+      const layout = setting.addSidebarLayout(
         { items: [...items], initialActive: initial },
         ({ item, panelEl }) => {
           if (item === ADD) {
@@ -87,19 +101,55 @@ export class ChatSettingTab extends SettingTab {
             this.renderProviderPanel(ADD, panelEl)
             return
           }
-          void settingsManager.save({ provider })
+          // Disabled providers are browsable but never become the active one.
+          if (isProviderEnabled(settingsManager.get().providers[provider])) {
+            void settingsManager.save({ provider })
+          }
           this.renderProviderPanel(provider, panelEl)
         },
       )
+      this.sidebarLayout = layout
+
+      // Decorate sidebar items with an enabled/disabled state. Core rebuilds
+      // the item list on every render (replaceChildren), so a MutationObserver
+      // keeps the green dots in sync instead of re-applying them manually.
+      const settingEl = setting.containerEl as HTMLElement
+      const aside = settingEl.querySelector<HTMLElement>('.typ-setting-sidebar')
+      if (!aside) return
+      aside.classList.add('typ-provider-sidebar')
+
+      this.applySidebarDots = () => {
+        const providers = settingsManager.get().providers
+        for (const el of aside.querySelectorAll<HTMLElement>('.typ-nav__item')) {
+          const isAdd = el.textContent === ADD
+          if (!isAdd) {
+            const provider = getProviders().find(p => p.label === el.textContent)?.value
+            const enabled = !!provider && isProviderEnabled(providers[provider])
+            el.classList.toggle('is-enabled', enabled)
+            el.classList.toggle('is-disabled', !enabled)
+          } else {
+            el.classList.remove('is-enabled', 'is-disabled')
+          }
+        }
+      }
+      this.applySidebarDots()
+
+      this.sidebarObserver = new MutationObserver(() => this.applySidebarDots?.())
+      this.sidebarObserver.observe(aside, { childList: true })
     })
 
     // Keep the sidebar items in sync with settings changes (i18n relabel or a
-    // custom provider being added/removed).
+    // custom provider being added/removed). The dots are refreshed by the
+    // MutationObserver whenever core re-renders the list.
     this.sidebarUnsub = settings.subscribe(() => {
       const nextItems = getSidebarItems()
-      if (JSON.stringify(nextItems) === JSON.stringify(this.lastSidebarItems)) return
-      this.lastSidebarItems = [...nextItems]
-      this.sidebarLayout?.setItems([...nextItems])
+      if (JSON.stringify(nextItems) !== JSON.stringify(this.lastSidebarItems)) {
+        this.lastSidebarItems = [...nextItems]
+        this.sidebarLayout?.setItems([...nextItems])
+      } else {
+        // The list is unchanged but an enabled flag may have been toggled.
+        this.applySidebarDots?.()
+      }
     })
 
     // Global fields below the provider block.
@@ -191,9 +241,30 @@ export class ChatSettingTab extends SettingTab {
   private buildProviderBlock(provider: ApiProvider) {
     const config = settingsManager.get().providers[provider]
 
-    // Provider title.
+    // Provider title + enable switch — enabled providers get a green dot in the
+    // sidebar; disabled ones stay listed but are not selectable as the active
+    // provider. Disabling the active provider falls back to the first other
+    // enabled one.
     const titleItem = new SettingItem()
-    titleItem.addTitle(`${t.settings.providerConfig} · ${providerLabel(provider)}`)
+    const providerName = providerLabel(provider)
+    const statusText = (enabled: boolean) =>
+      `${providerName} (${enabled ? t.settings.enabled : t.settings.disabled})`
+    titleItem.addTitle(statusText(isProviderEnabled(config)))
+    const titleEl = titleItem.containerEl.querySelector('h3.typ-setting-title')
+    titleItem.addCheckbox((checkbox) => {
+      checkbox.checked = isProviderEnabled(config)
+      checkbox.onchange = () => {
+        this.saveProvider(provider, { enabled: checkbox.checked })
+        if (titleEl) titleEl.textContent = statusText(checkbox.checked)
+        const current = settingsManager.get()
+        if (!checkbox.checked && current.provider === provider) {
+          // saveProvider already synced the flag into `current`, so a disabled
+          // active provider is skipped by the fallback lookup.
+          const fallback = pickFallbackProvider(current)
+          if (fallback) void settingsManager.save({ provider: fallback })
+        }
+      }
+    })
     this.providerPanelEl?.append(titleItem.containerEl)
 
     // Base URL.

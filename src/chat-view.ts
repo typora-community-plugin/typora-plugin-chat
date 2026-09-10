@@ -5,6 +5,8 @@ import App from './ui/App.svelte'
 import { chatStore } from './store/chat-store'
 import { refreshContextUsage, setApiInputTokens } from './store/context-usage-store'
 import { settingsManager } from './config/settings'
+import { isProviderEnabled } from './config/providers'
+import { t } from './i18n'
 import { abortAgentLoop, executeAgentLoop } from './agent/loop'
 import { getAgentHistory, resetAgentHistory } from './agent/history'
 import { getActiveSession, saveActiveSession, updateSessionTitle } from './store/session-store'
@@ -103,6 +105,15 @@ export class ChatView extends WorkspaceView {
   }
 
   private async runTurn(options: { displayText: string; expandedMessage: string | null }) {
+    // A disabled provider's models must never be used. The settings UI already
+    // prevents selecting one as the active provider, but this is the last line
+    // of defense (e.g. all providers disabled at once).
+    const current = settingsManager.get()
+    if (!isProviderEnabled(current.providers[current.provider])) {
+      chatStore.addError(t.chat.activeProviderDisabled)
+      return
+    }
+
     const selection = chatStore.getSelection()
     let userMessage = options.expandedMessage ?? options.displayText
     if (selection) {

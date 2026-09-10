@@ -1,0 +1,36 @@
+/*
+ * Provider sidebar decoration (see ChatSettingTab.decorateProviderSidebar).
+ * Enabled providers get a green dot on the right; disabled ones are muted and
+ * stay visible so they can be re-enabled from their panel.
+ */
+
+.typ-provider-sidebar {
+  .typ-nav__item {
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 0.4rem;
+      width: 8px;
+      height: 8px;
+      transform: translateY(-50%);
+      border-radius: 50%;
+    }
+
+    &.is-enabled::after {
+      background: rgb(52, 199, 89);
+    }
+
+    &.is-disabled {
+      opacity: 0.5;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      &.is-enabled::after {
+        background: rgb(63, 185, 80);
+      }
+    }
+  }
+}

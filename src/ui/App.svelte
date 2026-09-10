@@ -24,13 +24,16 @@
   import { getAgentHistory, setAgentHistory } from '@/agent/history'
   import { refreshContextUsage } from '@/store/context-usage-store'
   import { settings, settingsManager } from '@/config/settings'
+  import { isProviderEnabled } from '@/config/providers'
   import { getActiveConfig } from '@/config/types'
   import { writable } from 'svelte/store'
   import { availableModels, refreshModels } from '@/store/models-store'
   import { updateActiveConfig } from '@/store/config-store'
   import { skills as skillStore } from '@/agent/skills/store'
 
-  const activeModel = $derived(getActiveConfig($settings).model)
+  // A disabled provider exposes no model in the selector and the select is off-limits.
+  const providerUsable = $derived(isProviderEnabled($settings.providers[$settings.provider]))
+  const activeModel = $derived(providerUsable ? getActiveConfig($settings).model : '')
 
   import { undoStore } from '@/store/undo-store'
   import { executeSlashCommand } from '@/slash-commands/executor'
@@ -129,6 +132,7 @@
     enabled={$inputEnabled}
     model={activeModel}
     models={$availableModels}
+    modelSelectDisabled={!providerUsable}
     skills={$skillStore}
     sessions={sessionList}
     activeSessionId={activeSessionId}

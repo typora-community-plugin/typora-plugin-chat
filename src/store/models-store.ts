@@ -2,6 +2,7 @@ import { get, writable } from 'svelte/store'
 import { settings, settingsManager } from '@/config/settings'
 import type { ApiProvider } from '@/config/types'
 import { getActiveConfig } from '@/config/types'
+import { isProviderEnabled } from '@/config/providers'
 import { format, t } from '@/i18n'
 
 
@@ -21,6 +22,16 @@ export const availableModels = writable<string[]>([])
 
 /** Human-readable status/error message for the last model refresh. */
 export const modelRefreshMessage = writable('')
+
+/**
+ * Message shown while a provider is disabled. The store's subscription fires at
+ * module load — possibly before `initI18n()` has run (e.g. on plugin startup),
+ * where `t.models` is still undefined. Fall back to the raw key in that case.
+ */
+function disabledMessage(): string {
+  const msg = t?.models?.disabled
+  return typeof msg === 'string' && msg ? msg : 'Provider is disabled'
+}
 
 /** Whether a model list refresh is currently in progress. */
 export const modelRefreshLoading = writable(false)
@@ -61,6 +72,14 @@ export async function refreshModels(): Promise<ModelRefreshResult> {
 
   const current = settingsManager.get()
   const provider = current.provider
+
+  // A disabled provider never exposes its models.
+  if (!isProviderEnabled(current.providers[provider])) {
+    availableModels.set([])
+    modelRefreshMessage.set(disabledMessage())
+    return { models: [], message: disabledMessage(), ok: false }
+  }
+
   const config = getActiveConfig(current)
   const baseUrl = (config.baseUrl || '').replace(/\/+$/, '')
   const endpoint = `${baseUrl}/models`
@@ -102,13 +121,15 @@ export async function refreshModels(): Promise<ModelRefreshResult> {
 }
 
 // Keep the shared list aligned with the active provider. There is no fallback
-// list, so a provider switch clears the options until the user refreshes.
+// list, so a provider switch clears the options until the user refreshes. A
+// disabled provider keeps its option list empty at all times (even when it
+// remains the active one).
 let lastProvider: ApiProvider | null = null
 settings.subscribe(($settings) => {
-  if (lastProvider !== $settings.provider) {
-    lastProvider = $settings.provider
-    availableModels.set([])
-    modelRefreshMessage.set('')
-    modelRefreshLoading.set(false)
-  }
+  const providerChanged = lastProvider !== $settings.provider
+  lastProvider = $settings.provider
+  if (!providerChanged && isProviderEnabled($settings.providers[$settings.provider])) return
+  availableModels.set([])
+  modelRefreshMessage.set(isProviderEnabled($settings.providers[$settings.provider]) ? '' : disabledMessage())
+  modelRefreshLoading.set(false)
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectProviderIds, isBuiltinProvider } from '../../src/config/providers'
+import { collectEnabledProviderIds, collectProviderIds, isBuiltinProvider, isProviderEnabled } from '../../src/config/providers'
 import { mergeStoredSettings } from '../../src/config/settings'
 import type { ApiProvider } from '../../src/config/types'
 
@@ -29,6 +29,38 @@ describe('collectProviderIds', () => {
   })
 })
 
+describe('isProviderEnabled', () => {
+  it('defaults to enabled when the flag is absent or undefined', () => {
+    expect(isProviderEnabled(undefined)).toBe(true)
+    expect(isProviderEnabled(null)).toBe(true)
+    expect(isProviderEnabled({ model: 'm', baseUrl: '', models: {} })).toBe(true)
+    expect(isProviderEnabled({ model: 'm', baseUrl: '', models: {}, enabled: undefined })).toBe(true)
+  })
+
+  it('honors explicit true/false values', () => {
+    expect(isProviderEnabled({ model: 'm', baseUrl: '', models: {}, enabled: true })).toBe(true)
+    expect(isProviderEnabled({ model: 'm', baseUrl: '', models: {}, enabled: false })).toBe(false)
+  })
+})
+
+describe('collectEnabledProviderIds', () => {
+  it('keeps the builtin-then-customs order while dropping disabled entries', () => {
+    const ids = collectEnabledProviderIds({
+      anthropic: { model: 'a', baseUrl: '', models: {} },
+      openai: { model: 'o', baseUrl: '', models: {}, enabled: false },
+      ollama: { model: 'l', baseUrl: '', models: {} },
+      zebra: { model: 'z', baseUrl: '', models: {} },
+      alpha: { model: 'a2', baseUrl: '', models: {}, enabled: false },
+    } as Record<string, unknown>)
+    expect(ids).toEqual(['anthropic', 'ollama', 'zebra'])
+  })
+
+  it('treats a missing config (e.g. legacy map) as enabled and still lists built-ins', () => {
+    const ids = collectEnabledProviderIds({})
+    expect(ids).toEqual(['anthropic', 'openai', 'ollama'])
+  })
+})
+
 describe('mergeStoredSettings: dynamic custom providers', () => {
   it('preserves a stored custom provider and merges its fields over blanks', () => {
     const raw = {
@@ -42,6 +74,19 @@ describe('mergeStoredSettings: dynamic custom providers', () => {
     expect(merged.providers['my-llm'].model).toBe('gpt-4o')
     expect(merged.providers['my-llm'].models).toEqual({})
     expect(merged.provider).toBe('my-llm')
+  })
+
+  it('preserves an explicit enabled flag on the stored provider', () => {
+    const raw = {
+      provider: 'ollama' as ApiProvider,
+      providers: {
+        'my-llm': { baseUrl: 'https://x.example.com/v1', model: 'gpt-4o', enabled: false },
+      },
+    }
+    const merged = mergeStoredSettings(raw)
+    expect(merged.providers['my-llm'].enabled).toBe(false)
+    // Built-ins keep their default-enabled config.
+    expect(merged.providers.ollama.enabled).toBe(true)
   })
 
   it('migrates a custom provider legacy contextWindows into models', () => {

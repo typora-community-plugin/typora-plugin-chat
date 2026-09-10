@@ -12,17 +12,20 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   forbiddenPaths: '',
   providers: {
     anthropic: {
+      enabled: true,
       model: 'claude-sonnet-4-20250514',
       baseUrl: 'https://api.anthropic.com',
       models: {},
     },
     openai: {
+      enabled: true,
       model: 'gpt-4o-mini',
       baseUrl: 'https://api.openai.com/v1',
       openaiApiMode: 'responses',
       models: {},
     },
     ollama: {
+      enabled: true,
       model: 'qwen3.6-35b-a3b',
       baseUrl: 'http://localhost:11431/v1',
       contextWindow: 128000,
@@ -37,7 +40,7 @@ const API_KEY_FILE = 'typora-plugin-chat.apikey'
 const SALT = 'typora-plugin-chat@v1'
 
 /** Defaults for a newly added custom provider (before its own fields are set). */
-const CUSTOM_DEFAULT: ProviderConfig = { model: '', baseUrl: '', models: {} }
+const CUSTOM_DEFAULT: ProviderConfig = { enabled: true, model: '', baseUrl: '', models: {} }
 
 /** All provider ids that must be merged: built-ins + stored custom ids + the active provider. */
 function allProviderIds(raw?: Partial<PluginSettings>): string[] {

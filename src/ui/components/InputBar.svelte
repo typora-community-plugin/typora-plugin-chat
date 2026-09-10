@@ -17,6 +17,7 @@
     textAreaEl = null,
     model = '',
     models = [],
+    modelSelectDisabled = false,
     skills = [],
     onModelChange = null,
     onModelRefresh = null,
@@ -35,6 +36,8 @@
     textAreaEl?: ((el: HTMLTextAreaElement | null) => void) | null
     model?: string
     models?: string[]
+    /** Disables the model dropdown (e.g. active provider is disabled). */
+    modelSelectDisabled?: boolean
     skills?: SkillRef[]
     onModelChange?: ((model: string) => void) | null
     onModelRefresh?: (() => void) | null
@@ -256,6 +259,7 @@
       {enabled}
       {model}
       {models}
+      modelSelectDisabled={modelSelectDisabled}
       {mode}
       canSend={!!value.trim()}
       {onModelChange}

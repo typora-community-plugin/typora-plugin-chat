@@ -26,6 +26,8 @@ export interface ModelConfig {
 export interface ProviderConfig {
   /** Optional API key; omitted when empty to keep persisted settings clean. */
   apiKey?: string
+  /** Whether the provider is usable/selectable. Defaults to `true` when unset. */
+  enabled?: boolean
   model: string
   baseUrl: string
   /** OpenAI adapter mode: `responses` (default) or `chat` fallback. Only meaningful for the `openai` provider. */

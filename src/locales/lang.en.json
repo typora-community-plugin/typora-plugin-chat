@@ -10,6 +10,7 @@
     "title": "Chat",
     "inputPlaceholder": "Type a message...",
     "typeYourAnswer": "Type your answer...",
+    "activeProviderDisabled": "You can't send messages while the current provider is disabled. Enable it in Settings (Providers).",
     "askUserSubmit": "Submit",
     "compressedHistory": "*(Earlier conversation was compressed to keep the context window manageable.)*",
     "summarizeNote": "Summarize this note: {file}",
@@ -71,8 +72,8 @@
   },
   "settings": {
     "title": "Chat",
+    "sectionProviders": "Providers",
     "provider": "Provider",
-    "providerConfig": "Provider configuration",
     "providerDesc": "API provider used by the chat plugin.",
     "providers": {
       "anthropic": "Anthropic",
@@ -84,6 +85,8 @@
     "providerIdPlaceholder": "e.g. my-llm",
     "addProvider": "Add provider",
     "removeProvider": "Remove provider",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
     "openaiApiMode": "OpenAI API mode",
     "openaiApiModeDesc": "Only used for OpenAI-compatible providers.",
     "openaiApiModeResponses": "Responses API (primary)",
@@ -118,7 +121,8 @@
   "models": {
     "loading": "Loading models...",
     "loaded": "Loaded {count} models",
-    "failed": "Failed to fetch models: {message}"
+    "failed": "Failed to fetch models: {message}",
+    "disabled": "Provider is disabled — model list hidden. Enable it in Settings (Providers)."
   },
   "transcript": {
     "question": "Q",
