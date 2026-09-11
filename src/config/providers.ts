@@ -6,7 +6,7 @@ import type { BuiltinProvider, ProviderConfig } from './types'
  */
 
 /** Built-in providers always present in the settings map. */
-export const BUILTIN_PROVIDERS: readonly BuiltinProvider[] = ['anthropic', 'openai', 'ollama']
+export const BUILTIN_PROVIDERS: readonly BuiltinProvider[] = ['alibaba', 'anthropic', 'deepseek', 'google', 'minimax', 'moonshot', 'openai', 'spacexai', 'xiaomi', 'z.ai', 'openrouter', 'lmstudio', 'ollama']
 
 /** True when `id` is one of the built-in providers. */
 export function isBuiltinProvider(id: string): id is BuiltinProvider {

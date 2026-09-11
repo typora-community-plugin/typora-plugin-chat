@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { collectEnabledProviderIds, collectProviderIds, isBuiltinProvider, isProviderEnabled } from '../../src/config/providers'
+import { BUILTIN_PROVIDERS, collectEnabledProviderIds, collectProviderIds, isBuiltinProvider, isProviderEnabled } from '../../src/config/providers'
 import { mergeStoredSettings } from '../../src/config/settings'
 import type { ApiProvider } from '../../src/config/types'
 
 
 describe('isBuiltinProvider', () => {
-  it('recognizes the three built-in ids', () => {
-    expect(isBuiltinProvider('anthropic')).toBe(true)
-    expect(isBuiltinProvider('openai')).toBe(true)
-    expect(isBuiltinProvider('ollama')).toBe(true)
+  it('recognizes every built-in id', () => {
+    for (const id of BUILTIN_PROVIDERS) expect(isBuiltinProvider(id)).toBe(true)
   })
 
   it('treats arbitrary ids (including legacy `custom`) as custom', () => {
@@ -21,11 +19,11 @@ describe('isBuiltinProvider', () => {
 describe('collectProviderIds', () => {
   it('lists built-ins in stable order followed by sorted customs', () => {
     const ids = collectProviderIds({ zebra: {}, anthropic: {}, alpha: {}, openai: {}, ollama: {} })
-    expect(ids).toEqual(['anthropic', 'openai', 'ollama', 'alpha', 'zebra'])
+    expect(ids).toEqual([...BUILTIN_PROVIDERS, 'alpha', 'zebra'])
   })
 
   it('handles an empty map and ignores non-string keys', () => {
-    expect(collectProviderIds({})).toEqual(['anthropic', 'openai', 'ollama'])
+    expect(collectProviderIds({})).toEqual([...BUILTIN_PROVIDERS])
   })
 })
 
@@ -52,12 +50,12 @@ describe('collectEnabledProviderIds', () => {
       zebra: { model: 'z', baseUrl: '', models: {} },
       alpha: { model: 'a2', baseUrl: '', models: {}, enabled: false },
     } as Record<string, unknown>)
-    expect(ids).toEqual(['anthropic', 'ollama', 'zebra'])
+    expect(ids).toEqual([...BUILTIN_PROVIDERS.filter(id => id !== 'openai'), 'zebra'])
   })
 
   it('treats a missing config (e.g. legacy map) as enabled and still lists built-ins', () => {
     const ids = collectEnabledProviderIds({})
-    expect(ids).toEqual(['anthropic', 'openai', 'ollama'])
+    expect(ids).toEqual([...BUILTIN_PROVIDERS])
   })
 })
 
@@ -85,8 +83,8 @@ describe('mergeStoredSettings: dynamic custom providers', () => {
     }
     const merged = mergeStoredSettings(raw)
     expect(merged.providers['my-llm'].enabled).toBe(false)
-    // Built-ins keep their default-enabled config.
-    expect(merged.providers.ollama.enabled).toBe(true)
+    // Built-ins that ship disabled by default keep their disabled flag.
+    expect(merged.providers.deepseek.enabled).toBe(false)
   })
 
   it('migrates a custom provider legacy contextWindows into models', () => {

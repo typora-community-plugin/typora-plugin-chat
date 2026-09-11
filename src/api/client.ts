@@ -7,7 +7,7 @@ import type {
 import { getActiveConfig } from '@/config/types'
 import { backoffDelay, sleep } from '@/utils/helpers'
 import { sendAnthropic } from './anthropic-adapter'
-import { sendOpenAI } from './openai-adapter'
+import { sendOpenAI, sendOpenAIChat } from './openai-adapter'
 import { sendOllama } from './ollama-adapter'
 
 
@@ -25,6 +25,17 @@ function dispatch(
       return sendAnthropic(config, messages, tools, signal)
     case 'openai':
       return sendOpenAI(config, messages, tools, signal)
+    case 'alibaba':
+    case 'google':
+    case 'spacexai':
+    case 'openrouter':
+    case 'deepseek':
+    case 'z.ai':
+    case 'moonshot':
+    case 'xiaomi':
+    case 'minimax':
+    case 'lmstudio':
+      return sendOpenAIChat(config, messages, tools, signal)
     case 'ollama':
     default:
       return sendOllama(config, messages, tools, signal)
