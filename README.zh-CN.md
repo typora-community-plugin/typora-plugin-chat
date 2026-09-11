@@ -40,15 +40,17 @@
 - **list_files 返回目录** — 非递归模式下 `list_files` 同时返回文件和目录列表
 
 ### AI 提供商支持
-- **Anthropic** — `/v1/messages` 端点，支持工具调用、思考块和 token 统计
-- **OpenAI** — Responses API（默认）或 Chat Completions 备用模式
-- **Ollama / OpenAI 兼容** — 标准 `/v1/chat/completions` 格式
+- **Anthropic (Claude)** — `/v1/messages` 端点，支持工具调用、思考块和 token 统计
+- **OpenAI (GPT)** — Responses API（默认）或 Chat Completions 备用模式
+- **阿里 (千问) / DeepSeek / Google (Gemini) / MiniMax / Moonshot (Kimi) / SpaceXAI (Grok) / 小米 (MiMo) / Z.AI (GLM) / OpenRouter** — 通过标准 `/v1/chat/completions`（OpenAI 兼容）接入
+- **Ollama / LM Studio** — 本地模型，标准 `/v1/chat/completions` 格式
 
 ## 设置项
 
 | 设置项 | 说明 |
 |--------|------|
-| **提供商配置** | Anthropic、OpenAI、Ollama/OpenAI 兼容；支持添加/移除自定义提供商，每个提供商独立配置 API Key、Base URL、模型和上下文窗口 |
+| **提供商配置** | 内置 Anthropic、OpenAI、阿里 (千问)、DeepSeek、Google (Gemini)、MiniMax、Moonshot (Kimi)、SpaceXAI (Grok)、小米 (MiMo)、Z.AI (GLM)、OpenRouter、Ollama、LM Studio；支持添加/移除自定义提供商。每个提供商可启用/禁用，并独立配置 API Key、Base URL 和模型 |
+| **模型参数** | 按模型配置上下文窗口等参数；只有添加到列表中的模型才会显示在侧边栏的模型选择下拉框中 |
 | **禁止路径** | Glob 模式（每行一条），阻止 Agent 访问指定笔记库路径（`.git`、`node_modules`、`*.apikey` 始终禁止） |
 | **最大工具迭代次数** | 单次 Agent 循环中工具调用的最大轮数（默认 20，范围 1-100） |
 | **技能（Skills）** | 从指定目录自动加载 SKILL.md；在聊天中使用 `/skill:<名称>` 显式调用，或让模型自动匹配 |
