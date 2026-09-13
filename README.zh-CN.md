@@ -13,6 +13,7 @@
 ## Preview
 
 ![](./docs/assets/base.gif)
+![](./docs/assets/setting-tab.jpg)
 
 ## 功能特性
 

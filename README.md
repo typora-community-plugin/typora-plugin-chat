@@ -13,6 +13,7 @@ Embedded in Typora, the AI chat assistant can access your vault: read, edit, cre
 ## Preview
 
 ![](./docs/assets/base.gif)
+![](./docs/assets/setting-tab.jpg)
 
 ## Features
 
