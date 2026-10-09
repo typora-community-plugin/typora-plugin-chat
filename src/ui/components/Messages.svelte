@@ -1,5 +1,6 @@
 <script lang="ts">
   import MessageBubble from './MessageBubble.svelte'
+  import ChatTips from './ChatTips.svelte'
   import { t } from '@/i18n'
 
   let {
@@ -38,14 +39,17 @@
 
 <div class="typ-chat-messages" bind:this={messagesEl}>
   {#if !messages.length && !thinking}
-    <pre class="typ-placeholder-art">
+    <div class="typ-placeholder">
+      <pre class="typ-placeholder-art">
     ██████╗██╗  ██╗ █████╗ ████████╗
    ██╔════╝██║  ██║██╔══██╗╚══██╔══╝
 ██║     ███████║███████║   ██║
 ██║     ██╔══██║██╔══██║   ██║
 ╚██████╗██║  ██║██║  ██║   ██║
  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝
-    </pre>
+      </pre>
+      <ChatTips />
+    </div>
   {/if}
 
   {#each messages as message (message.id)}
@@ -73,11 +77,20 @@
       scroll-behavior: auto;
     }
 
+    .typ-placeholder {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 16px 0;
+    }
+
     .typ-placeholder-art {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: stretch;
       font-family: var(--font-mono, Consolas, monospace);
       font-size: 10px;
       line-height: 1.2;
