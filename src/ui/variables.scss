@@ -9,34 +9,8 @@
  */
 
 :root {
-  /* Red scale (RGB-only, Ant Design based) */
-  --typ-color-red-1: 255, 204, 199;
-  --typ-color-red-2: 255, 120, 117;
-  --typ-color-red-3: 245, 34, 45;
-  --typ-color-red-4: 168, 7, 26;
-  --typ-color-red-5: 92, 0, 17;
-
-  /* Gray scale (RGB-only) */
-  --typ-color-gray-1: 230, 230, 230;
-  --typ-color-gray-2: 200, 200, 200;
-  --typ-color-gray-3: 150, 150, 150;
-  --typ-color-gray-4: 100, 100, 100;
-  --typ-color-gray-5: 50, 50, 50;
-
-  /* Semantic variables */
-  --typ-text-color: var(--typ-color-gray-5);
-  --typ-light-bg-color: var(--typ-color-gray-2);
-  --typ-border-color: var(--typ-color-gray-1);
-
   /* Layout & shape */
-  --typ-radius-s: 0.25rem;
-  --typ-radius-m: 0.5rem;
-  --typ-radius-capsule: 22px;
-}
-
-body {
-  @media (prefers-color-scheme: dark) {
-    --typ-text-color: var(--typ-color-gray-2);
-    --typ-light-bg-color: var(--typ-color-gray-5);
-  }
+  --typ-chat-radius-s: 0.25rem;
+  --typ-chat-radius-m: 0.5rem;
+  --typ-chat-radius-capsule: 22px;
 }

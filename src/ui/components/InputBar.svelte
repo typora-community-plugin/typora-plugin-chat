@@ -286,7 +286,7 @@
         display: flex;
         flex-direction: column;
         border: 1px solid rgb(var(--typ-border-color));
-        border-radius: var(--typ-radius-m);
+        border-radius: var(--typ-chat-radius-m);
         background-color: var(--bg-color, #fff);
 
         &:focus-within {

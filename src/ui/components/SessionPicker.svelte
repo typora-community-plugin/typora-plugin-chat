@@ -81,7 +81,7 @@
       overflow-y: auto;
       padding: 6px;
       border: 1px solid rgb(var(--typ-border-color));
-      border-radius: var(--typ-radius-m);
+      border-radius: var(--typ-chat-radius-m);
       background-color: var(--bg-color, #fff);
       box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.12);
       z-index: 20;

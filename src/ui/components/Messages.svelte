@@ -121,7 +121,7 @@
       max-width: 92%;
       width: 92%;
       border: 1px solid rgb(var(--typ-border-color));
-      border-radius: var(--typ-radius-m);
+      border-radius: var(--typ-chat-radius-m);
       background-color: var(--bg-color, #fff);
       font-size: 12px;
 

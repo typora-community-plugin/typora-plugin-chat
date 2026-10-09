@@ -26,7 +26,7 @@
       margin: 0 16px 8px;
       padding: 8px 10px;
       border: 1px solid rgb(var(--typ-border-color));
-      border-radius: var(--typ-radius-m);
+      border-radius: var(--typ-chat-radius-m);
       background-color: var(--bg-color, #fff);
       display: flex;
       align-items: center;

@@ -96,7 +96,7 @@
       padding: 12px 14px;
       border: 1px solid rgb(var(--typ-border-color));
       border-left: 3px solid var(--primary-color, rgb(30, 136, 229));
-      border-radius: 0 var(--typ-radius-m) var(--typ-radius-m) 0;
+      border-radius: 0 var(--typ-chat-radius-m) var(--typ-chat-radius-m) 0;
       background-color: var(--bg-color, #fff);
       display: flex;
       flex-direction: column;
@@ -125,7 +125,7 @@
         align-items: center;
         gap: 8px;
         padding: 6px 10px;
-        border-radius: var(--typ-radius-s, 4px);
+        border-radius: var(--typ-chat-radius-s, 4px);
         cursor: pointer;
         font-size: 13px;
         color: var(--text-color, rgb(var(--typ-text-color)));
@@ -146,7 +146,7 @@
         height: 32px;
         padding: 0 12px;
         border: 1px solid rgb(var(--typ-border-color));
-        border-radius: var(--typ-radius-capsule);
+        border-radius: var(--typ-chat-radius-capsule);
         font-size: 13px;
         outline: none;
         background-color: var(--bg-color, #fff);
@@ -161,7 +161,7 @@
         align-self: flex-end;
         padding: 6px 18px;
         border: none;
-        border-radius: var(--typ-radius-capsule);
+        border-radius: var(--typ-chat-radius-capsule);
         background-color: var(--primary-color, rgb(30, 136, 229));
         color: #fff;
         font-size: 13px;

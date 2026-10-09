@@ -144,7 +144,7 @@
       align-self: flex-start;
       max-width: 92%;
       padding: 8px 14px;
-      border-radius: 0 var(--typ-radius-m) var(--typ-radius-m);
+      border-radius: 0 var(--typ-chat-radius-m) var(--typ-chat-radius-m);
       background-color: rgba(var(--typ-color-red-1), 0.25);
       color: rgb(var(--typ-color-red-3));
       font-size: 13px;
