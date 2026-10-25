@@ -23,6 +23,7 @@ const mockFs = {
 }
 
 const mockApp = {
+  config: { configDir: '/vault/.typora', dataDir: '/vault/.typora/data', isUsingGlobalConfig: false },
   vault: { path: '/vault', configDir: '/vault/.typora', dataDir: '/vault/.typora' },
   i18n: { locale: 'en' },
   workspace: {

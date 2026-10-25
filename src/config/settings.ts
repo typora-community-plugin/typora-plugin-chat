@@ -259,9 +259,19 @@ function parseApiKeyMap(deobfuscated: string): Partial<Record<ApiProvider, strin
   return null
 }
 
+/**
+ * Data dir following the active config scope of the core: the global config
+ * data dir when plugins use the global config, the vault's `.typora` data dir
+ * otherwise. Using `app.vault.dataDir` unconditionally would create a `.typora`
+ * folder next to every opened Markdown file, even in global mode.
+ */
+function apiKeyDataDir(): string {
+  return app.config.dataDir
+}
+
 function apiKeyFilePath(): string {
-  const dir = app.vault.dataDir
-  return `${dir.replace(/[\\/]+$/, '')}/${API_KEY_FILE}`
+  const dir = apiKeyDataDir().replace(/[\\/]+$/, '')
+  return `${dir}/${API_KEY_FILE}`
 }
 
 /** Read the per-provider API-key map, merging file + localStorage sources. */
@@ -313,7 +323,7 @@ function writeApiKeyMap(map: Partial<Record<ApiProvider, string>>): void {
   const encoded = obfuscate(JSON.stringify(clean))
 
   fs.access(apiKeyFilePath())
-    .catch(() => fs.mkdir(app.vault.dataDir))
+    .catch(() => fs.mkdir(apiKeyDataDir()))
     .then(() => fs.writeText(apiKeyFilePath(), encoded))
     .catch(() => {/* fall back to localStorage below */ })
 
