@@ -1,8 +1,8 @@
 import { get, writable } from 'svelte/store'
 import { settings, settingsManager } from '@/config/settings'
 import type { ApiProvider } from '@/config/types'
-import { getActiveConfig } from '@/config/types'
 import { isProviderEnabled } from '@/config/providers'
+import { ANTHROPIC_BROWSER_HEADERS, normalizeAnthropicBaseUrl, normalizeOpenAIBaseUrl } from '@/api/base-url'
 import { format, t } from '@/i18n'
 
 
@@ -33,6 +33,12 @@ function disabledMessage(): string {
   return typeof msg === 'string' && msg ? msg : 'Provider is disabled'
 }
 
+/** Localized `t.models[key]`, or `fallback` before i18n is initialized. */
+function modelsText(key: 'loading' | 'loaded' | 'failed', fallback: string): string {
+  const msg = (t?.models as Record<string, unknown> | undefined)?.[key]
+  return typeof msg === 'string' && msg ? msg : fallback
+}
+
 /** Whether a model list refresh is currently in progress. */
 export const modelRefreshLoading = writable(false)
 
@@ -56,12 +62,48 @@ export function filterModels(rawList: unknown[], provider: ApiProvider): string[
 }
 
 /**
- * Fetches the current provider's `/models` endpoint and updates
- * `availableModels`. There is no fallback list: if the request fails the
- * shared list is cleared and the error is surfaced through
+ * Fetches `provider`'s `/models` endpoint and returns the filtered model ids.
+ * Throws on network/HTTP errors and when the provider is disabled. Used by the
+ * settings tab for the provider being edited, which is not necessarily the
+ * active one.
+ */
+export async function fetchProviderModels(provider: ApiProvider): Promise<string[]> {
+  const current = settingsManager.get()
+  const config = current.providers[provider]
+  if (!isProviderEnabled(config)) throw new Error(disabledMessage())
+
+  // Use the same base URL rules as the chat adapters so "Refresh models" hits
+  // the same API root as chat requests (e.g. Anthropic's /v1, Z.ai's /v4).
+  const baseUrl = provider === 'anthropic'
+    ? normalizeAnthropicBaseUrl(config?.baseUrl)
+    : normalizeOpenAIBaseUrl(config?.baseUrl, provider === 'ollama' ? 'http://localhost:11434' : 'https://api.openai.com')
+  const endpoint = `${baseUrl}/models`
+
+  const headers: Record<string, string> = {}
+  if (provider === 'anthropic') {
+    headers['x-api-key'] = config.apiKey ?? ''
+    headers['anthropic-version'] = '2023-06-01'
+    Object.assign(headers, ANTHROPIC_BROWSER_HEADERS)
+  } else if (config.apiKey) {
+    headers['Authorization'] = `Bearer ${config.apiKey}`
+  }
+
+  const response = await fetch(endpoint, { headers })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const data: unknown = await response.json()
+  const rawList: unknown[] = Array.isArray(data)
+    ? data
+    : ((data as { data?: unknown[] }).data ?? [])
+  return filterModels(rawList, provider).slice(0, 100)
+}
+
+/**
+ * Fetches a provider's `/models` endpoint (the active one by default) and
+ * updates `availableModels`. There is no fallback list: if the request fails
+ * the shared list is cleared and the error is surfaced through
  * `modelRefreshMessage`.
  */
-export async function refreshModels(): Promise<ModelRefreshResult> {
+export async function refreshModels(provider?: ApiProvider): Promise<ModelRefreshResult> {
   if (get(modelRefreshLoading)) {
     return {
       models: get(availableModels),
@@ -71,46 +113,27 @@ export async function refreshModels(): Promise<ModelRefreshResult> {
   }
 
   const current = settingsManager.get()
-  const provider = current.provider
+  const target = provider ?? current.provider
 
   // A disabled provider never exposes its models.
-  if (!isProviderEnabled(current.providers[provider])) {
+  if (!isProviderEnabled(current.providers[target])) {
     availableModels.set([])
     modelRefreshMessage.set(disabledMessage())
     return { models: [], message: disabledMessage(), ok: false }
   }
 
-  const config = getActiveConfig(current)
-  const baseUrl = (config.baseUrl || '').replace(/\/+$/, '')
-  const endpoint = `${baseUrl}/models`
-
   modelRefreshLoading.set(true)
-  modelRefreshMessage.set(t.models.loading)
-
-  const headers: Record<string, string> = {}
-  if (provider === 'anthropic') {
-    headers['x-api-key'] = config.apiKey ?? ''
-    headers['anthropic-version'] = '2023-06-01'
-  } else if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`
-  }
+  modelRefreshMessage.set(modelsText('loading', 'Loading models...'))
 
   try {
-    const response = await fetch(endpoint, { headers })
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const data: unknown = await response.json()
-    const rawList: unknown[] = Array.isArray(data)
-      ? data
-      : ((data as { data?: unknown[] }).data ?? [])
-    const filtered = filterModels(rawList, provider).slice(0, 100)
-
+    const filtered = await fetchProviderModels(target)
     availableModels.set(filtered)
-    const message = format(t.models.loaded, { count: filtered.length })
+    const message = format(modelsText('loaded', 'Loaded {count} models'), { count: filtered.length })
     modelRefreshMessage.set(message)
     return { models: filtered, message, ok: true }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
-    const status = format(t.models.failed, { message })
+    const status = format(modelsText('failed', 'Failed to fetch models: {message}'), { message })
 
     availableModels.set([])
     modelRefreshMessage.set(status)

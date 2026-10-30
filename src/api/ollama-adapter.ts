@@ -6,11 +6,11 @@ import type {
   UnifiedResponse,
 } from '@/config/types'
 import { extractReasoningContent, httpError } from '@/utils/helpers'
+import { normalizeOpenAIBaseUrl } from './base-url'
 
 
 function normalizeBaseUrl(baseUrl: string): string {
-  const trimmed = (baseUrl || 'http://192.168.137.1:11431/v1').replace(/\/+$/, '')
-  return /\/v1$/i.test(trimmed) ? trimmed : `${trimmed}/v1`
+  return normalizeOpenAIBaseUrl(baseUrl, 'http://localhost:11434')
 }
 
 function toChatMessages(messages: ApiMessage[]) {

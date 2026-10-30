@@ -7,11 +7,11 @@ import type {
   UnifiedResponse,
 } from '@/config/types'
 import { httpError } from '@/utils/helpers'
+import { ANTHROPIC_BROWSER_HEADERS, normalizeAnthropicBaseUrl } from './base-url'
 
 
 function normalizeBaseUrl(baseUrl: string): string {
-  const trimmed = (baseUrl || 'https://api.anthropic.com').replace(/\/+$/, '')
-  return /\/v1$/i.test(trimmed) ? trimmed : `${trimmed}/v1`
+  return normalizeAnthropicBaseUrl(baseUrl)
 }
 
 function convertMessages(messages: ApiMessage[]): Record<string, unknown>[] {
@@ -22,7 +22,9 @@ function convertMessages(messages: ApiMessage[]): Record<string, unknown>[] {
       result.push({ role: msg.role, content: msg.content })
       continue
     }
-    const blocks = (msg.content as ContentBlock[]).map(block => {
+    // Unsigned `thinking` blocks (kept for OpenAI-compatible replay) cannot be
+    // sent to Anthropic, which requires a signature; drop them.
+    const blocks = (msg.content as ContentBlock[]).filter(block => block.type !== 'thinking').map(block => {
       if (block.type === 'text') return { type: 'text', text: block.text ?? '' }
       if (block.type === 'tool_use') {
         return { type: 'tool_use', id: block.id, name: block.name, input: block.input ?? {} }
@@ -83,6 +85,7 @@ export async function sendAnthropic(
       'content-type': 'application/json',
       'x-api-key': config.apiKey ?? '',
       'anthropic-version': '2023-06-01',
+      ...ANTHROPIC_BROWSER_HEADERS,
     },
     body: JSON.stringify(body),
     signal,

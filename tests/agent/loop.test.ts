@@ -142,7 +142,7 @@ describe('agent loop', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
-  it('surfaces thinking via onThinking without echoing it into history', async () => {
+  it('surfaces thinking via onThinking and keeps it in history for replay', async () => {
     vi.mocked(sendMessage)
       .mockResolvedValueOnce({
         content: [
@@ -162,13 +162,14 @@ describe('agent loop', () => {
     expect(onThinking).toHaveBeenCalledWith('Let me think.')
     expect(result.text).toBe('Done.')
 
-    // The assistant history sent to the API must not include the thinking block.
+    // Thinking-mode providers (DeepSeek) require the reasoning to be sent back
+    // with later requests that carry tools; adapters decide how to replay it.
     const secondCall = vi.mocked(sendMessage).mock.calls[1]
     const history = secondCall[1] as ApiMessage[]
     const assistantMsg = history.find(m => m.role === 'assistant')
     expect(assistantMsg).toBeDefined()
     const blocks = assistantMsg!.content as ContentBlock[]
-    expect(blocks.some(b => b.type === 'thinking')).toBe(false)
+    expect(blocks[0]).toEqual({ type: 'thinking', text: 'Let me think.' })
     expect(blocks.some(b => b.type === 'tool_use')).toBe(true)
   })
 

@@ -62,3 +62,34 @@
     line-height: 1;
   }
 }
+
+/*
+ * Narrow settings windows: the per-model panel sits inside two nested sidebar
+ * layouts, so its controls (model id input + "Refresh models") used to
+ * overflow and get clipped. Let them shrink and wrap instead.
+ */
+.typ-chat-provider-panel {
+  min-width: 0;
+
+  .typ-setting-panel {
+    min-width: 0;
+  }
+
+  .typ-setting-controls.postfix {
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+    max-width: 100%;
+
+    > * {
+      margin-left: 0;
+    }
+
+    input[type='text'],
+    input[list] {
+      min-width: 8rem;
+      flex: 1 1 10rem;
+    }
+  }
+}

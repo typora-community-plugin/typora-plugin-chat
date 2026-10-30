@@ -3,7 +3,7 @@ import { SettingTab, SettingItem } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
 import { get } from 'svelte/store'
 import { DEFAULT_SETTINGS, settings, settingsManager } from '@/config/settings'
-import { availableModels, modelRefreshMessage, refreshModels } from '@/store/models-store'
+import { availableModels, modelRefreshLoading, modelRefreshMessage, refreshModels } from '@/store/models-store'
 import { globalSkillsDir, vaultSkillsDir } from '@/agent/skills/paths'
 import { rescanSkills } from '@/agent/skills/store'
 import { collectModelIds } from '@/config/models'
@@ -230,6 +230,7 @@ export class ChatSettingTab extends SettingTab {
     this.providerUnsubs.forEach(u => u())
     this.providerUnsubs = []
     this.providerPanelEl = panelEl
+    panelEl.classList.add('typ-chat-provider-panel')
     panelEl.replaceChildren()
     if (provider === ADD) {
       this.renderAddProviderPanel(panelEl)
@@ -256,6 +257,7 @@ export class ChatSettingTab extends SettingTab {
       checkbox.onchange = () => {
         this.saveProvider(provider, { enabled: checkbox.checked })
         if (titleEl) titleEl.textContent = statusText(checkbox.checked)
+        if (checkbox.checked) this.autoRefreshModels(provider)
         const current = settingsManager.get()
         if (!checkbox.checked && current.provider === provider) {
           // saveProvider already synced the flag into `current`, so a disabled
@@ -308,6 +310,7 @@ export class ChatSettingTab extends SettingTab {
       input.value = config.apiKey ?? ''
       input.onchange = () => {
         this.saveProvider(provider, { apiKey: input.value.trim() || undefined })
+        this.autoRefreshModels(provider)
       }
     })
     this.providerPanelEl?.append(apiKeyItem.containerEl)
@@ -336,20 +339,15 @@ export class ChatSettingTab extends SettingTab {
     let statusEl: HTMLElement | null = null
     modelParamsItem.addDescription((el) => { statusEl = el })
 
-    // The add-model panel's model-id dropdown lives inside the sidebar; keep a
-    // shared reference so a refresh (which happens there) can repopulate it.
-    const modelSelectRef: { el: HTMLSelectElement | null } = { el: null }
+    // The add-model panel's model-id suggestions live inside the sidebar; keep
+    // a shared reference so a refresh (which happens there) can repopulate it.
+    // A free-text input + <datalist> (instead of a <select>) lets users type a
+    // model id when the provider has no usable `/models` endpoint.
+    const modelSelectRef: { el: HTMLDataListElement | null } = { el: null }
 
     const renderOptions = (models: string[]) => {
       if (!modelSelectRef.el) return
-      const previous = modelSelectRef.el.value
-      modelSelectRef.el.replaceChildren()
-      const placeholder = new Option(t.settings.modelIdPlaceholder, '')
-      placeholder.disabled = true
-      placeholder.selected = true
-      modelSelectRef.el.append(placeholder)
-      for (const id of models) modelSelectRef.el.append(new Option(id, id))
-      modelSelectRef.el.value = previous
+      modelSelectRef.el.replaceChildren(...models.map(id => new Option(id, id)))
     }
 
     this.providerUnsubs.push(availableModels.subscribe(renderOptions))
@@ -384,6 +382,15 @@ export class ChatSettingTab extends SettingTab {
     )
 
     this.providerPanelEl?.append(modelParamsItem.containerEl)
+  }
+
+  /** Fetch `provider`'s model list once it is enabled and has credentials. */
+  private autoRefreshModels(provider: ApiProvider) {
+    const config = settingsManager.get().providers[provider]
+    if (!isProviderEnabled(config)) return
+    if (!config?.apiKey && provider !== 'ollama' && provider !== 'lmstudio') return
+    if (get(modelRefreshLoading)) return
+    void refreshModels(provider)
   }
 
   private renderAddProviderPanel(panelEl: HTMLElement) {
@@ -494,29 +501,35 @@ export class ChatSettingTab extends SettingTab {
   private renderAddModelPanel(
     provider: ApiProvider,
     panelEl: HTMLElement,
-    selectRef: { el: HTMLSelectElement | null },
+    selectRef: { el: HTMLDataListElement | null },
     onAdded: (id: string, models: Record<string, ModelConfig>) => void,
   ) {
-    let input: HTMLSelectElement | null = null
+    let input: HTMLInputElement | null = null
 
     const idItem = new SettingItem()
     idItem.addName(t.settings.modelId)
-    idItem.addSelect((select) => {
-      input = select
-      selectRef.el = select
-      const placeholder = new Option(t.settings.modelIdPlaceholder, '')
-      placeholder.disabled = true
-      placeholder.selected = true
-      select.append(placeholder)
-      for (const id of get(availableModels)) select.append(new Option(id, id))
+    idItem.addText((el) => {
+      input = el
+      el.placeholder = t.settings.modelIdPlaceholder
+      const datalist = document.createElement('datalist')
+      datalist.id = `typ-chat-models-${String(provider).replace(/[^\w-]/g, '_')}`
+      el.setAttribute('list', datalist.id)
+      el.after(datalist)
+      selectRef.el = datalist
+      datalist.replaceChildren(...get(availableModels).map(id => new Option(id, id)))
     })
     idItem.addButton((button) => {
       button.textContent = t.settings.refreshModels
       button.onclick = () => {
-        void refreshModels()
+        // Refresh the provider being edited, not the active one.
+        void refreshModels(provider)
       }
     })
     panelEl.append(idItem.containerEl)
+
+    // Load the list automatically when the provider looks usable, so users do
+    // not have to discover the refresh button first.
+    if (!get(availableModels).length) this.autoRefreshModels(provider)
 
     let ctxInput: HTMLInputElement | null = null
     const ctxItem = new SettingItem()

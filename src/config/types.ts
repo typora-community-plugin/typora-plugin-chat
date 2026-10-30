@@ -108,6 +108,8 @@ export interface ContentBlock {
   tool_use_id?: string
   content?: string
   is_error?: boolean
+  /** Provider-specific fields replayed verbatim (e.g. Gemini thought signatures). */
+  extra?: Record<string, unknown>
 }
 
 export type StopReason = 'end_turn' | 'tool_use' | 'max_tokens' | 'stop'

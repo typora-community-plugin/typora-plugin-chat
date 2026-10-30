@@ -54,3 +54,35 @@ describe('models-store: disabled active provider', () => {
     expect(getList()).toEqual([])
   })
 })
+
+describe('models-store: refresh a specific provider', () => {
+  it('fetches the provider being edited, not the active one', async () => {
+    initI18n('/vault/.typora/plugins/typora-community-plugin.chat')
+    const providers = settingsManager.get().providers
+    await settingsManager.save({
+      provider: 'ollama',
+      providers: {
+        ...providers,
+        deepseek: { ...providers.deepseek, enabled: true, baseUrl: 'https://api.deepseek.com/', apiKey: 'sk-test' },
+      },
+    })
+
+    const calls: Array<{ url: string; auth?: string }> = []
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (url: string, init?: { headers?: Record<string, string> }) => {
+      calls.push({ url, auth: init?.headers?.Authorization })
+      return { ok: true, json: async () => ({ data: [{ id: 'deepseek-flash' }, { id: 'deepseek-v4-pro' }] }) }
+    }) as unknown as typeof fetch
+    try {
+      const result = await refreshModels('deepseek')
+      expect(result.ok).toBe(true)
+      expect(result.models).toEqual(['deepseek-flash', 'deepseek-v4-pro'])
+      expect(calls).toEqual([{ url: 'https://api.deepseek.com/v1/models', auth: 'Bearer sk-test' }])
+      expect(getList()).toEqual(['deepseek-flash', 'deepseek-v4-pro'])
+      // The active provider is left untouched.
+      expect(settingsManager.get().provider).toBe('ollama')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+})

@@ -34,7 +34,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     google: {
       enabled: false,
       model: '',
-      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       openaiApiMode: 'chat',
       models: {},
     },
