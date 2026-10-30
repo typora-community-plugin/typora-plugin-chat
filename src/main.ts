@@ -5,7 +5,8 @@ import { ChatView } from './chat-view'
 import { ChatSettingTab } from './ui/settings/chat-setting-tab'
 import { chatStore } from './store/chat-store'
 import { getActiveSession, initSessionStore, reloadSessionStore, saveActiveSession, setSessionTitle, setVaultScope } from './store/session-store'
-import { getSelection } from './adapter/editor'
+import { captureSelection, getSelection } from './adapter/editor'
+import { InlineAssistant } from './inline/inline-assistant'
 import { getCurrentFilePath } from './adapter/vault'
 import { copyTranscript } from './utils/export'
 import { basename } from './utils/helpers'
@@ -81,6 +82,43 @@ export default class extends Plugin {
         if (current) saveActiveSession([], [])
       }
     })
+
+    // Inline assistant: ask AI at the caret (tables, Mermaid diagrams,
+    // rewrites…) without leaving the editor.
+    const inline = new InlineAssistant()
+    this.register(() => inline.close())
+    const isMac = /mac/i.test(navigator.platform || navigator.userAgent)
+    this.registerCommand({
+      id: 'typora-community-plugin.chat.inline',
+      title: t.command.askAIHere ?? 'Ask AI here',
+      scope: 'global',
+      // macOS: core matches hotkeys on `keyup`, but WebKit does not deliver
+      // keyup for keys pressed while ⌘ is held, so a ⌘ hotkey registered
+      // through core never fires there. ⌘J is handled on keydown below.
+      hotkey: isMac ? null : 'Ctrl+J',
+      callback: () => inline.toggle(captureSelection()),
+    })
+    if (isMac) {
+      const onKeydown = (event: KeyboardEvent) => {
+        if (!event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+        if (event.key.toLowerCase() !== 'j' || event.isComposing) return
+        event.preventDefault()
+        event.stopPropagation()
+        inline.toggle(captureSelection())
+      }
+      document.addEventListener('keydown', onKeydown, true)
+      this.register(() => document.removeEventListener('keydown', onKeydown, true))
+    }
+    this.register(
+      app.workspace.on('editor-menu', ({ menu }) => {
+        // Capture now: by the time the item is clicked focus may have moved.
+        const snapshot = captureSelection()
+        menu.addItem(item => item
+          .setKey('typ-chat-inline')
+          .setTitle(t.command.askAIHere ?? 'Ask AI here')
+          .onClick(() => inline.open(snapshot)))
+      })
+    )
 
     // File explorer context menu: right-click a note → chat about it.
     this.register(

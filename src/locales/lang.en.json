@@ -4,7 +4,8 @@
     "chatAboutNote": "Chat about this note",
     "sendSelectionToChat": "Send selection to Chat",
     "copyTranscript": "Copy chat transcript",
-    "clearConversation": "Clear conversation"
+    "clearConversation": "Clear conversation",
+    "askAIHere": "Ask AI here"
   },
   "chat": {
     "title": "Chat",
@@ -152,5 +153,36 @@
     "toolCall": "Tool call: {name}",
     "toolResult": "Tool result: {name}",
     "error": "Error"
+  },
+  "inline": {
+    "askPlaceholder": "Ask AI to write something here…",
+    "askSelectionPlaceholder": "What should AI do with the selection?",
+    "selected": "Selected {count} chars",
+    "thinking": "Generating…",
+    "replace": "Replace",
+    "insert": "Insert",
+    "insertAfter": "Insert below",
+    "copy": "Copy",
+    "copied": "Copied",
+    "retry": "Retry",
+    "close": "Close",
+    "stop": "Stop",
+    "noModel": "No model selected. Pick one in the Chat sidebar or in Settings → Chat.",
+    "providerDisabled": "The active provider is disabled. Enable it in Settings → Chat.",
+    "emptyReply": "The model returned no content.",
+    "error": "Error: {message}",
+    "insertFailed": "Could not insert; the text was copied to the clipboard.",
+    "actions": {
+      "table": "Table",
+      "diagram": "Diagram",
+      "continue": "Continue",
+      "outline": "Outline",
+      "polish": "Polish",
+      "shorten": "Shorten",
+      "expand": "Expand",
+      "translateEn": "To English",
+      "translateZh": "To Chinese",
+      "explain": "Explain"
+    }
   }
 }

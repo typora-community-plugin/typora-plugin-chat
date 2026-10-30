@@ -4,7 +4,8 @@
     "chatAboutNote": "关于当前笔记提问",
     "sendSelectionToChat": "发送选中内容到 Chat",
     "copyTranscript": "复制聊天记录",
-    "clearConversation": "清空对话"
+    "clearConversation": "清空对话",
+    "askAIHere": "在此处询问 AI"
   },
   "chat": {
     "title": "Chat",
@@ -152,5 +153,36 @@
     "toolCall": "工具调用：{name}",
     "toolResult": "工具结果：{name}",
     "error": "错误"
+  },
+  "inline": {
+    "askPlaceholder": "让 AI 在这里写点什么…",
+    "askSelectionPlaceholder": "让 AI 怎么处理选中的文字？",
+    "selected": "已选中 {count} 字",
+    "thinking": "生成中…",
+    "replace": "替换",
+    "insert": "插入",
+    "insertAfter": "插入到下方",
+    "copy": "复制",
+    "copied": "已复制",
+    "retry": "重试",
+    "close": "关闭",
+    "stop": "停止",
+    "noModel": "还没有选择模型。请在 Chat 侧栏或 设置 → Chat 中选择。",
+    "providerDisabled": "当前服务商已停用，请在 设置 → Chat 中启用。",
+    "emptyReply": "模型没有返回内容。",
+    "error": "出错了：{message}",
+    "insertFailed": "插入失败，内容已复制到剪贴板。",
+    "actions": {
+      "table": "表格",
+      "diagram": "示意图",
+      "continue": "续写",
+      "outline": "提纲",
+      "polish": "润色",
+      "shorten": "精简",
+      "expand": "扩写",
+      "translateEn": "译成英文",
+      "translateZh": "译成中文",
+      "explain": "解释"
+    }
   }
 }
