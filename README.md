@@ -22,6 +22,7 @@ Embedded in Typora, the AI chat assistant can access your vault: read, edit, cre
 - **Multi-session Management** — Create, switch between, and delete independent chat sessions; transcripts persist across restarts; sessions are scoped per vault
 - **"Chat About This Note"** — Send the current note's content to the AI for summarization or discussion (also available via right-click in file explorer)
 - **"Send Selection to Chat"** — Send selected text into the chat with a scope constraint ("work only within this selection")
+- **Ask AI Here (inline)** — Press `⌘J` (macOS) / `Ctrl+J`, or right-click → *Ask AI here*, to open a small popup at the cursor: generate a table, a Mermaid diagram, continue writing or outline; or polish / shorten / expand / translate / explain the selection. The result is previewed, then inserted or replaces the selection as native Markdown. The hotkey can be changed in Settings → Hotkey
 
 ### Agent Capabilities
 - **3 Access Modes**: Workspace Write (full access), Read Only, Chat Only (no file tools)

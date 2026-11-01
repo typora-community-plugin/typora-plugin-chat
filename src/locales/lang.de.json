@@ -4,7 +4,8 @@
     "chatAboutNote": "Chat über diese Notiz",
     "sendSelectionToChat": "Auswahl an Chat senden",
     "copyTranscript": "Chat-Verlauf kopieren",
-    "clearConversation": "Unterhaltung löschen"
+    "clearConversation": "Unterhaltung löschen",
+    "askAIHere": "KI hier fragen"
   },
   "chat": {
     "title": "Chat",
@@ -151,5 +152,39 @@
     "toolCall": "Tool-Aufruf: {name}",
     "toolResult": "Tool-Ergebnis: {name}",
     "error": "Fehler"
+  },
+  "inline": {
+    "askPlaceholder": "KI hier etwas schreiben lassen…",
+    "askSelectionPlaceholder": "Was soll die KI mit der Auswahl tun?",
+    "selected": "{count} Zeichen ausgewählt",
+    "thinking": "Wird erzeugt…",
+    "stopped": "Gestoppt.",
+    "replace": "Ersetzen",
+    "insert": "Einfügen",
+    "insertAfter": "Darunter einfügen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "retry": "Erneut",
+    "close": "Schließen",
+    "stop": "Stopp",
+    "noModel": "Kein Modell ausgewählt. Wähle eines in der Chat-Seitenleiste oder unter Einstellungen → Chat.",
+    "providerDisabled": "Der aktive Anbieter ist deaktiviert. Aktiviere ihn unter Einstellungen → Chat.",
+    "emptyReply": "Das Modell hat keinen Inhalt geliefert.",
+    "error": "Fehler: {message}",
+    "insertFailed": "Einfügen fehlgeschlagen; der Text wurde in die Zwischenablage kopiert.",
+    "copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen.",
+    "insertNoAnchor": "Keine Cursorposition in der Notiz (oder die Notiz wurde geändert); der Text wurde in die Zwischenablage kopiert.",
+    "actions": {
+      "table": "Tabelle",
+      "diagram": "Diagramm",
+      "continue": "Weiterschreiben",
+      "outline": "Gliederung",
+      "polish": "Überarbeiten",
+      "shorten": "Kürzen",
+      "expand": "Erweitern",
+      "translateEn": "Ins Englische",
+      "translateZh": "Ins Chinesische",
+      "explain": "Erklären"
+    }
   }
 }
