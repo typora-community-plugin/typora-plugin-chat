@@ -4,15 +4,19 @@ import { sendMessage } from '@/api/client'
 import { settingsManager } from '@/config/settings'
 import { getActiveConfig } from '@/config/types'
 import { isProviderEnabled } from '@/config/providers'
-import { captureSelection, insertMarkdownAt, snapshotRect } from '@/adapter/editor'
-import type { SelectionSnapshot } from '@/adapter/editor'
+import { resolveContextWindow } from '@/agent/context-size'
+import { isEditingNote } from '@/adapter/editor'
+import type { EditorAnchor } from '@/adapter/editor'
 import { renderMarkdown } from '@/utils/markdown-renderer'
-import { t } from '@/i18n'
+import { basename } from '@/utils/helpers'
+import { format, t } from '@/i18n'
 import {
-  ACTION_INSTRUCTIONS, CARET_ACTIONS, SELECTION_ACTIONS,
-  buildInlineMessages, cleanInlineOutput,
+  ACTION_INSTRUCTIONS, ACTION_NEEDS_NOTE, CARET_ACTIONS, SELECTION_ACTIONS,
+  buildInlineMessages, isBlockMarkdown, locateAnchor, noteCharBudget, windowNote,
 } from './inline-prompts'
 import type { InlineActionId } from './inline-prompts'
+import { InlineSession } from './inline-session'
+import type { InlineState, InsertMode } from './inline-session'
 
 /** English fallbacks, used before i18n is initialized (and in tests). */
 const FALLBACK = {
@@ -20,11 +24,13 @@ const FALLBACK = {
   askSelectionPlaceholder: 'What should AI do with the selection?',
   selected: 'Selected {count} chars',
   thinking: 'Generating…',
+  stopped: 'Stopped.',
   replace: 'Replace',
   insert: 'Insert',
   insertAfter: 'Insert below',
   copy: 'Copy',
   copied: 'Copied',
+  copyFailed: 'Could not copy to the clipboard.',
   retry: 'Retry',
   close: 'Close',
   stop: 'Stop',
@@ -33,6 +39,7 @@ const FALLBACK = {
   emptyReply: 'The model returned no content.',
   error: 'Error: {message}',
   insertFailed: 'Could not insert; the text was copied to the clipboard.',
+  insertNoAnchor: 'No cursor position in the note (or the note changed); the text was copied to the clipboard.',
   actions: {
     table: 'Table', diagram: 'Diagram', continue: 'Continue', outline: 'Outline',
     polish: 'Polish', shorten: 'Shorten', expand: 'Expand',
@@ -47,10 +54,6 @@ function texts(): InlineTexts {
   return { ...FALLBACK, ...loc, actions: { ...FALLBACK.actions, ...(loc.actions ?? {}) } }
 }
 
-function fmt(template: string, params: Record<string, unknown>): string {
-  return template.replace(/\{(\w+)\}/g, (m, k: string) => (params[k] === undefined ? m : String(params[k])))
-}
-
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag)
   if (cls) node.className = cls
@@ -58,37 +61,43 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return node
 }
 
-function textBeforeCaret(snapshot: SelectionSnapshot | null): string {
-  const range = snapshot?.range
-  const write = document.querySelector('#write')
-  if (!range || !write) return ''
+async function writeClipboard(text: string): Promise<boolean> {
   try {
-    const before = document.createRange()
-    before.setStart(write, 0)
-    before.setEnd(range.startContainer, range.startOffset)
-    return before.toString()
+    if (!navigator.clipboard?.writeText) return false
+    await navigator.clipboard.writeText(text)
+    return true
   } catch {
-    return ''
+    return false
   }
+}
+
+function notify(message: string) {
+  try { Notice.warning(message, 4000) } catch { console.warn('[chat]', message) }
 }
 
 /**
  * A small popup anchored at the editor caret: one-shot generation (no tools)
  * with the active provider/model, previewed and then inserted via Typora's
- * paste pipeline so tables and Mermaid diagrams render natively.
+ * paste pipeline so tables and Mermaid diagrams render natively. The request
+ * lifecycle lives in `InlineSession`; this class only renders it.
  */
 export class InlineAssistant {
   private root: HTMLElement | null = null
   private input!: HTMLTextAreaElement
   private output!: HTMLElement
   private bar!: HTMLElement
-  private snapshot: SelectionSnapshot | null = null
-  private controller: AbortController | null = null
-  private result = ''
-  private lastInstruction = ''
+  private anchor: EditorAnchor | null = null
+  private session: InlineSession | null = null
 
   private readonly onKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && this.root) {
+    if (e.key !== 'Escape' || !this.root || e.isComposing) return
+    // Only when focus is in the popup or back in the note: Esc in a dialog
+    // opened on top (Settings, command panel…) belongs to that dialog.
+    const modalOpen = Array.from(document.querySelectorAll<HTMLElement>('.typ-modal, .modal.in'))
+      .some(el => !this.root!.contains(el) && el.getClientRects().length > 0)
+    if (modalOpen) return
+    const active = document.activeElement
+    if ((active && this.root.contains(active)) || isEditingNote()) {
       e.preventDefault()
       e.stopPropagation()
       this.close()
@@ -98,7 +107,8 @@ export class InlineAssistant {
   private readonly onMousedown = (e: MouseEvent) => {
     // Click outside closes only while idle with no result, so a stray click
     // never discards a generated answer.
-    if (this.root && !this.root.contains(e.target as Node) && !this.controller && !this.result) this.close()
+    const phase = this.session?.state.phase
+    if (this.root && !this.root.contains(e.target as Node) && (phase === 'idle' || phase === 'aborted')) this.close()
   }
 
   private readonly onReposition = () => this.position()
@@ -107,22 +117,32 @@ export class InlineAssistant {
     return !!this.root
   }
 
-  toggle(snapshot?: SelectionSnapshot | null) {
+  toggle(anchor: EditorAnchor | null) {
     if (this.root) this.close()
-    else this.open(snapshot)
+    else this.open(anchor)
   }
 
-  open(snapshot: SelectionSnapshot | null = captureSelection()) {
+  open(anchor: EditorAnchor | null) {
     this.close()
-    this.snapshot = snapshot
-    this.result = ''
+    this.anchor = anchor
     const tx = texts()
-    const selected = snapshot?.text ?? ''
+    this.session = new InlineSession({
+      send: async (messages, signal) => {
+        const response = await sendMessage(settingsManager.get(), messages, [], signal)
+        return response.content.filter(b => b.type === 'text').map(b => b.text ?? '').join('')
+      },
+      canInsert: () => !!this.anchor && !this.anchor.isStale(),
+      insert: (markdown, mode) => !!this.anchor?.insert(markdown, mode, isBlockMarkdown(markdown)),
+      copy: writeClipboard,
+      notify,
+    }, { insertNoAnchor: tx.insertNoAnchor, insertFailed: tx.insertFailed, copyFailed: tx.copyFailed })
+    this.session.onChange(state => this.render(state))
 
+    const selected = anchor?.text ?? ''
     const root = el('div', 'typ-inline-ai')
     if (selected) {
       const preview = selected.length > 60 ? selected.slice(0, 60) + '…' : selected
-      root.append(el('div', 'typ-inline-ai__selection', `${fmt(tx.selected, { count: selected.length })}: ${preview}`))
+      root.append(el('div', 'typ-inline-ai__selection', `${format(tx.selected, { count: selected.length })}: ${preview}`))
     }
 
     const row = el('div', 'typ-inline-ai__row')
@@ -132,7 +152,7 @@ export class InlineAssistant {
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
         e.preventDefault()
-        void this.run(this.input.value)
+        this.run(this.input.value, null)
       }
     })
     this.input.addEventListener('input', () => {
@@ -140,13 +160,13 @@ export class InlineAssistant {
       this.input.style.height = `${Math.min(this.input.scrollHeight, 120)}px`
     })
     const send = el('button', 'typ-inline-ai__send', '↵')
-    send.addEventListener('click', () => void this.run(this.input.value))
+    send.addEventListener('click', () => this.run(this.input.value, null))
     row.append(this.input, send)
 
     const actions = el('div', 'typ-inline-ai__actions')
     for (const id of selected ? SELECTION_ACTIONS : CARET_ACTIONS) {
       const btn = el('button', 'typ-inline-ai__pill', tx.actions[id])
-      btn.addEventListener('click', () => void this.run(ACTION_INSTRUCTIONS[id]))
+      btn.addEventListener('click', () => this.run(ACTION_INSTRUCTIONS[id], id))
       actions.append(btn)
     }
 
@@ -164,12 +184,14 @@ export class InlineAssistant {
     document.addEventListener('scroll', this.onReposition, true)
     document.addEventListener('keydown', this.onKeydown, true)
     document.addEventListener('mousedown', this.onMousedown, true)
-    setTimeout(() => this.input.focus(), 0)
+    setTimeout(() => this.input?.focus(), 0)
   }
 
   close() {
-    this.controller?.abort()
-    this.controller = null
+    this.session?.dispose()
+    this.session = null
+    this.anchor?.dispose()
+    this.anchor = null
     if (!this.root) return
     this.root.remove()
     this.root = null
@@ -190,7 +212,7 @@ export class InlineAssistant {
     root.style.width = `${width}px`
     root.style.maxHeight = `${vh - margin * 2}px`
 
-    const rect = snapshotRect(this.snapshot) ?? document.querySelector('#write')?.getBoundingClientRect() ?? null
+    const rect = this.anchor?.rect() ?? document.querySelector('#write')?.getBoundingClientRect() ?? null
     const height = root.offsetHeight || 160
     let left = rect ? rect.left : (vw - width) / 2
     left = Math.max(margin, Math.min(left, vw - width - margin))
@@ -206,107 +228,110 @@ export class InlineAssistant {
     this.output.replaceChildren(el('div', 'typ-inline-ai__error', message))
   }
 
-  async run(instruction: string) {
+  /** Build the request for an instruction (quick action id, or null for free text). */
+  private run(instruction: string, action: InlineActionId | null) {
     instruction = instruction.trim()
-    if (!instruction || this.controller || !this.root) return
+    const session = this.session
+    if (!instruction || !session || session.running || !this.root) return
     const tx = texts()
     const settings = settingsManager.get()
     if (!isProviderEnabled(settings.providers[settings.provider])) return this.showError(tx.providerDisabled)
-    if (!getActiveConfig(settings).model) return this.showError(tx.noModel)
+    const config = getActiveConfig(settings)
+    if (!config.model) return this.showError(tx.noModel)
 
-    this.lastInstruction = instruction
-    this.result = ''
-    this.output.hidden = false
-    this.output.replaceChildren(el('div', 'typ-inline-ai__pending', tx.thinking))
-    this.bar.hidden = false
-    const stop = el('button', 'typ-inline-ai__ghost', tx.stop)
-    stop.addEventListener('click', () => this.controller?.abort())
-    this.bar.replaceChildren(stop)
-    this.position()
-
+    const anchor = this.anchor
+    const selection = anchor?.markdown ?? ''
     let note = ''
-    try { note = app.workspace.activeEditor.getMarkdown() } catch { note = '' }
-    const messages = buildInlineMessages({
-      instruction,
-      selection: this.snapshot?.text ?? '',
-      note,
-      title: app.workspace.activeFile ?? undefined,
-      before: this.snapshot?.text ? '' : textBeforeCaret(this.snapshot),
-    })
-
-    const controller = new AbortController()
-    this.controller = controller
-    let failed = false
-    try {
-      const response = await sendMessage(settings, messages, [], controller.signal)
-      const text = response.content
-        .filter(b => b.type === 'text')
-        .map(b => b.text ?? '')
-        .join('')
-      this.result = cleanInlineOutput(text)
-      if (!this.result) {
-        failed = true
-        this.showError(tx.emptyReply)
-      } else {
-        this.output.replaceChildren()
-        renderMarkdown(this.result, this.output)
-        // Typora's renderer leaves some blocks (e.g. ```mermaid) empty in a
-        // detached preview; they render fine once inserted. Show the source
-        // instead of a blank box.
-        if (!this.output.textContent?.trim()) {
-          this.output.replaceChildren(el('pre', 'typ-inline-ai__source', this.result))
-        }
-      }
-    } catch (error) {
-      failed = true
-      if (controller.signal.aborted) {
-        this.output.replaceChildren(el('div', 'typ-inline-ai__pending', '—'))
-      } else {
-        this.showError(fmt(tx.error, { message: error instanceof Error ? error.message : String(error) }))
-      }
-    } finally {
-      if (this.controller === controller) this.controller = null
+    if (action === null || ACTION_NEEDS_NOTE[action]) {
+      let full = ''
+      try { full = app.workspace.activeEditor.getMarkdown() } catch { full = '' }
+      const at = locateAnchor(full, { selection, before: anchor?.before, caretRatio: anchor?.caretRatio ?? undefined })
+      note = windowNote(full, at, noteCharBudget(resolveContextWindow(config.model, config)))
     }
-    if (this.root) this.renderBar(failed)
+    const file = app.workspace.activeFile
+    void session.run(buildInlineMessages({
+      instruction,
+      selection,
+      note,
+      title: file ? basename(file) : undefined,
+      before: selection ? '' : anchor?.before,
+    }))
   }
 
-  private renderBar(failed: boolean) {
+  /** Render the session state into the output area and the action bar. */
+  private render(state: InlineState) {
+    if (!this.root) return
     const tx = texts()
+    this.output.hidden = false
+    this.bar.hidden = false
     const buttons: HTMLElement[] = []
     const add = (label: string, cls: string, onClick: (btn: HTMLButtonElement) => void) => {
       const btn = el('button', cls, label)
       btn.addEventListener('click', () => onClick(btn))
       buttons.push(btn)
     }
-    if (!failed && this.result) {
-      if (this.snapshot?.text) {
-        add(tx.replace, 'typ-inline-ai__primary', () => this.apply('replace'))
-        add(tx.insertAfter, 'typ-inline-ai__ghost', () => this.apply('after'))
-      } else {
-        add(tx.insert, 'typ-inline-ai__primary', () => this.apply('replace'))
+
+    switch (state.phase) {
+      case 'running':
+        this.output.replaceChildren(el('div', 'typ-inline-ai__pending', tx.thinking))
+        add(tx.stop, 'typ-inline-ai__ghost', () => this.session?.abort())
+        break
+      case 'done': {
+        this.output.replaceChildren()
+        renderMarkdown(state.result, this.output)
+        // Typora's renderer leaves some blocks (e.g. ```mermaid) empty in a
+        // detached preview; they render fine once inserted. Show the source
+        // instead of a blank box.
+        if (!this.output.textContent?.trim()) {
+          this.output.replaceChildren(el('pre', 'typ-inline-ai__source', state.result))
+        }
+        const canInsert = !!this.anchor && !this.anchor.isStale()
+        if (canInsert && this.anchor?.text) {
+          add(tx.replace, 'typ-inline-ai__primary', () => this.apply('replace'))
+          add(tx.insertAfter, 'typ-inline-ai__ghost', () => this.apply('after'))
+        } else if (canInsert) {
+          add(tx.insert, 'typ-inline-ai__primary', () => this.apply('replace'))
+        }
+        add(tx.copy, canInsert ? 'typ-inline-ai__ghost' : 'typ-inline-ai__primary', (btn) => {
+          void this.session?.copy().then(ok => {
+            btn.textContent = ok ? tx.copied : tx.copyFailed
+          })
+        })
+        break
       }
-      add(tx.copy, 'typ-inline-ai__ghost', (btn) => {
-        void navigator.clipboard?.writeText(this.result)
-        btn.textContent = tx.copied
-      })
+      case 'empty':
+        this.showError(tx.emptyReply)
+        break
+      case 'error':
+        this.showError(format(tx.error, { message: state.error }))
+        break
+      case 'aborted':
+        this.output.replaceChildren(el('div', 'typ-inline-ai__pending', tx.stopped))
+        break
+      default:
+        this.output.hidden = true
+        this.bar.hidden = true
+        return
     }
-    add(tx.retry, 'typ-inline-ai__ghost', () => void this.run(this.lastInstruction))
-    add(tx.close, 'typ-inline-ai__ghost', () => this.close())
+    if (state.phase !== 'running') {
+      add(tx.retry, 'typ-inline-ai__ghost', () => void this.session?.retry())
+      add(tx.close, 'typ-inline-ai__ghost', () => this.close())
+    }
     this.bar.replaceChildren(...buttons)
     this.position()
   }
 
-  private apply(mode: 'replace' | 'after') {
-    const text = this.result
-    const snapshot = this.snapshot
-    this.close()
-    // Let the popup's focus release before restoring the editor selection.
+  private apply(mode: InsertMode) {
+    const session = this.session
+    if (!session) return
+    // Hide the popup first so focus can return to the editor, then insert.
+    const root = this.root
+    if (root) root.style.visibility = 'hidden'
     setTimeout(() => {
-      if (!insertMarkdownAt(snapshot, text, mode)) {
-        void navigator.clipboard?.writeText(text)
-        const message = texts().insertFailed
-        try { Notice.warning(message, 4000) } catch { console.warn('[chat]', message) }
-      }
+      void session.apply(mode).then(outcome => {
+        if (outcome === 'inserted' || outcome === 'copied') this.close()
+        else if (root) root.style.visibility = ''
+      })
     }, 0)
   }
 }

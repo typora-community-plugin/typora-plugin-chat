@@ -159,6 +159,7 @@
     "askSelectionPlaceholder": "What should AI do with the selection?",
     "selected": "Selected {count} chars",
     "thinking": "Generating…",
+    "stopped": "Stopped.",
     "replace": "Replace",
     "insert": "Insert",
     "insertAfter": "Insert below",
@@ -172,6 +173,8 @@
     "emptyReply": "The model returned no content.",
     "error": "Error: {message}",
     "insertFailed": "Could not insert; the text was copied to the clipboard.",
+    "copyFailed": "Could not copy to the clipboard.",
+    "insertNoAnchor": "No cursor position in the note (or the note changed); the text was copied to the clipboard.",
     "actions": {
       "table": "Table",
       "diagram": "Diagram",

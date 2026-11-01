@@ -158,6 +158,7 @@
     "askSelectionPlaceholder": "Was soll die KI mit der Auswahl tun?",
     "selected": "{count} Zeichen ausgewählt",
     "thinking": "Wird erzeugt…",
+    "stopped": "Gestoppt.",
     "replace": "Ersetzen",
     "insert": "Einfügen",
     "insertAfter": "Darunter einfügen",
@@ -171,6 +172,8 @@
     "emptyReply": "Das Modell hat keinen Inhalt geliefert.",
     "error": "Fehler: {message}",
     "insertFailed": "Einfügen fehlgeschlagen; der Text wurde in die Zwischenablage kopiert.",
+    "copyFailed": "Kopieren in die Zwischenablage fehlgeschlagen.",
+    "insertNoAnchor": "Keine Cursorposition in der Notiz (oder die Notiz wurde geändert); der Text wurde in die Zwischenablage kopiert.",
     "actions": {
       "table": "Tabelle",
       "diagram": "Diagramm",

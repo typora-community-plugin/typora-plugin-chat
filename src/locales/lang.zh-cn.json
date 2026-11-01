@@ -159,6 +159,7 @@
     "askSelectionPlaceholder": "让 AI 怎么处理选中的文字？",
     "selected": "已选中 {count} 字",
     "thinking": "生成中…",
+    "stopped": "已停止。",
     "replace": "替换",
     "insert": "插入",
     "insertAfter": "插入到下方",
@@ -172,6 +173,8 @@
     "emptyReply": "模型没有返回内容。",
     "error": "出错了：{message}",
     "insertFailed": "插入失败，内容已复制到剪贴板。",
+    "copyFailed": "复制到剪贴板失败。",
+    "insertNoAnchor": "笔记中没有可用的光标位置（或笔记已被修改），内容已复制到剪贴板。",
     "actions": {
       "table": "表格",
       "diagram": "示意图",
