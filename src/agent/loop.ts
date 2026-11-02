@@ -26,6 +26,23 @@ export function abortAgentLoop(): void {
   abortController?.abort()
 }
 
+/** Resolve with `promise`, or reject as soon as `signal` aborts. */
+function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(new Error('Aborted'))
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new Error('Aborted'))
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(
+      value => { signal.removeEventListener('abort', onAbort); resolve(value) },
+      error => { signal.removeEventListener('abort', onAbort); reject(error) },
+    )
+  })
+}
+
+function abortedBeforeRequest(settings: ReturnType<typeof settingsManager.get>): AgentResult {
+  return { text: '', iterations: 0, aborted: true, usage: { inputTokens: 0, outputTokens: 0 }, model: getActiveConfig(settings).model, apiDurationMs: 0 }
+}
+
 /**
  * Run the agentic loop: call the API, execute tool_use blocks, feed tool
  * results back, until the model ends its turn or `maxIterations` is reached.
@@ -42,19 +59,31 @@ export async function executeAgentLoop(
   // Re-discover skills on every turn so a freshly added SKILL.md is picked up
   // without a plugin restart; with no skills this yields an empty catalog and
   // the system prompt stays byte-identical to the pre-skills version.
+  // The preparation below does filesystem I/O (skill discovery, vault
+  // context). Race it against the abort signal so the stop button works
+  // even before the API request is sent.
   let skillsCatalog = ''
   try {
-    skillsCatalog = buildSkillsCatalog(await discoverSkills())
+    skillsCatalog = buildSkillsCatalog(await abortable(discoverSkills(), signal))
   } catch {
+    if (aborted) return abortedBeforeRequest(settings)
     skillsCatalog = ''
   }
   const history = getAgentHistory()
+  let parts: Awaited<ReturnType<typeof buildRequestParts>>
+  try {
+    parts = await abortable(buildRequestParts(userMessage, trimForApi(history), skillsCatalog, currentAgentMode()), signal)
+  } catch (error) {
+    if (aborted) return abortedBeforeRequest(settings)
+    callbacks.onError?.(error instanceof Error ? error.message : String(error))
+    return { text: '', iterations: 0, aborted: false, usage: { inputTokens: 0, outputTokens: 0 }, model: getActiveConfig(settings).model, apiDurationMs: 0 }
+  }
   const {
     systemMessage,
     contextMessage,
     conversation,
     tools: allowedTools,
-  } = await buildRequestParts(userMessage, trimForApi(history), skillsCatalog, currentAgentMode())
+  } = parts
 
   // One turnId per user turn (i.e. one executeAgentLoop call). All write tool
   // calls made during this loop share it so /undo can roll the whole turn back.
@@ -102,7 +131,7 @@ export async function executeAgentLoop(
 
     for (const block of response.content) {
       if (block.type === 'thinking') {
-        // Reasoning is shown to the user but never echoed back to the API.
+        // Reasoning is shown to the user; see below for when it is replayed.
         const text = (block.text ?? '').trim()
         if (text) thinkingText += (thinkingText ? '\n\n' : '') + text
         continue
@@ -125,6 +154,13 @@ export async function executeAgentLoop(
       callbacks.onText?.(responseText.trim())
     }
 
+    // Keep the reasoning in history: with `tools` in the request, thinking-mode
+    // providers (DeepSeek, Kimi…) require every earlier assistant message's
+    // reasoning_content to be sent back, or they reply 400. Adapters that
+    // cannot replay it (Anthropic needs signed blocks) drop it.
+    if (thinkingText) {
+      assistantBlocks.unshift({ type: 'thinking', text: thinkingText })
+    }
     conversation.push({ role: 'assistant', content: assistantBlocks })
 
     if (toolUses.length && response.stopReason === 'tool_use') {

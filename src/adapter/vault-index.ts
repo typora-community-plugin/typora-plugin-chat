@@ -1,4 +1,4 @@
-import { app, fs, path } from '@typora-community-plugin/core'
+import { app, fs, os, path } from '@typora-community-plugin/core'
 import { LRUCache } from '@/utils/lru'
 import { basename, isMarkdownFile } from '@/utils/helpers'
 import { isPathForbidden } from '@/agent/tools/path-policy'
@@ -20,6 +20,28 @@ const CONTENT_LRU_SIZE = 100
 const MAX_CONTENT_BYTES = 512 * 1024
 /** Stale-cache TTL: re-walk the vault if it is older than this (ms). */
 const STALE_TTL_MS = 30_000
+
+/**
+ * Whether `root` is safe to walk recursively as a vault.
+ *
+ * When Typora has no folder open (e.g. an untitled document), the reported
+ * mount folder can be the filesystem root (`/` on macOS) or the user's home
+ * directory. Walking those recursively — via one shell `ls` per directory on
+ * macOS — effectively never finishes and used to block every chat request.
+ */
+export function isIndexableRoot(root: string | null | undefined): boolean {
+  if (!root) return false
+  const norm = root.replace(/\\/g, '/').replace(/\/+$/, '')
+  if (norm === '' || /^[A-Za-z]:$/.test(norm)) return false
+  let home = ''
+  try {
+    home = (os?.homedir?.() ?? '').replace(/\\/g, '/').replace(/\/+$/, '')
+  } catch {
+    home = ''
+  }
+  if (home && norm.toLowerCase() === home.toLowerCase()) return false
+  return true
+}
 
 interface FileEntry {
   nameLower: string
@@ -66,7 +88,9 @@ class VaultIndex {
   /** Build (or rebuild if stale) the index. Coalesces concurrent callers. */
   async ensureFresh(): Promise<void> {
     const now = Date.now()
-    if (this.fileMap.size > 0 && now - this.builtAt < STALE_TTL_MS) return
+    // `builtAt > 0` (not `fileMap.size > 0`) so an empty or unindexable vault
+    // is not re-walked on every call.
+    if (this.builtAt > 0 && now - this.builtAt < STALE_TTL_MS) return
     if (!this.buildPromise) {
       this.buildPromise = this.rebuild().finally(() => { this.buildPromise = null })
     }
@@ -180,6 +204,12 @@ class VaultIndex {
 
   private async rebuild(): Promise<void> {
     const root = app.vault.path
+    if (!isIndexableRoot(root)) {
+      this.fileMap.clear()
+      this.backlinks.clear()
+      this.builtAt = Date.now()
+      return
+    }
     let files: string[]
     try {
       files = await fs.listFiles(root, { recursive: true })

@@ -7,19 +7,36 @@ import type {
   UnifiedResponse,
 } from '@/config/types'
 import { extractReasoningContent, httpError } from '@/utils/helpers'
+import { normalizeOpenAIBaseUrl } from './base-url'
 
 
 function normalizeBaseUrl(baseUrl: string): string {
-  const trimmed = (baseUrl || 'https://api.openai.com').replace(/\/+$/, '')
-  return /\/v1$/i.test(trimmed) ? trimmed : `${trimmed}/v1`
+  return normalizeOpenAIBaseUrl(baseUrl, 'https://api.openai.com')
 }
 
+/** Tool definitions for the Responses API (flat shape). */
 function toOpenAITools(tools: ToolDefinition[]) {
   return tools.map(tool => ({
     type: 'function',
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters,
+  }))
+}
+
+/**
+ * Tool definitions for the Chat Completions API, which nests them under
+ * `function`. Sending the Responses shape here is rejected by strict
+ * OpenAI-compatible servers (e.g. DeepSeek: "tools[0]: missing field `function`").
+ */
+function toOpenAIChatTools(tools: ToolDefinition[]) {
+  return tools.map(tool => ({
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    },
   }))
 }
 
@@ -36,13 +53,16 @@ function toOpenAIMessages(messages: ApiMessage[]): Record<string, unknown>[] {
     }
     const toolCalls: Record<string, unknown>[] = []
     let text = ''
+    let reasoning = ''
     for (const block of msg.content as ContentBlock[]) {
-      if (block.type === 'text') text += block.text ?? ''
+      if (block.type === 'thinking') reasoning += block.text ?? ''
+      else if (block.type === 'text') text += block.text ?? ''
       else if (block.type === 'tool_use') {
         toolCalls.push({
           id: block.id,
           type: 'function',
           function: { name: block.name, arguments: JSON.stringify(block.input ?? {}) },
+          ...(block.extra ?? {}),
         })
       } else if (block.type === 'tool_result') {
         result.push({
@@ -52,9 +72,13 @@ function toOpenAIMessages(messages: ApiMessage[]): Record<string, unknown>[] {
         })
       }
     }
-    if (text || toolCalls.length) {
+    if (text || toolCalls.length || (reasoning && msg.role === 'assistant')) {
       const entry: Record<string, unknown> = { role: msg.role, content: text || null }
       if (toolCalls.length) entry.tool_calls = toolCalls
+      // Thinking-mode providers (DeepSeek, Kimi…) require earlier assistant
+      // reasoning to be echoed back whenever the request carries `tools`
+      // (https://api-docs.deepseek.com/guides/thinking_mode/). Others ignore it.
+      if (reasoning && msg.role === 'assistant') entry.reasoning_content = reasoning
       result.push(entry)
     }
   }
@@ -70,7 +94,13 @@ function parseToolCalls(toolCalls: Record<string, unknown>[] = []): ContentBlock
     } catch {
       input = {}
     }
-    return { type: 'tool_use', id: call.id as string, name: fn.name as string, input }
+    const block: ContentBlock = { type: 'tool_use', id: call.id as string, name: fn.name as string, input }
+    // Provider-specific data that must be replayed verbatim, e.g. Gemini 3's
+    // `extra_content.google.thought_signature` (400 if missing on follow-up).
+    if (call.extra_content && typeof call.extra_content === 'object') {
+      block.extra = { extra_content: call.extra_content as Record<string, unknown> }
+    }
+    return block
   })
 }
 
@@ -192,7 +222,7 @@ export async function sendOpenAIChat(
     messages: toOpenAIMessages(messages),
   }
   if (tools.length) {
-    body.tools = toOpenAITools(tools)
+    body.tools = toOpenAIChatTools(tools)
     body.tool_choice = 'auto'
   }
 
@@ -215,7 +245,8 @@ export async function sendOpenAIChat(
   const content: ContentBlock[] = []
 
   // Reasoning-capable models (DeepSeek, Qwen, o-series…) expose their chain of
-  // thought here. It is rendered for the user but never sent back to the API.
+  // thought here. It is rendered for the user and kept in history so it can be
+  // echoed back as `reasoning_content` (required by DeepSeek with tools).
   const reasoning = extractReasoningContent(message)
   if (reasoning) content.push({ type: 'thinking', text: reasoning })
 
