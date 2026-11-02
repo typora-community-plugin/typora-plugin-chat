@@ -278,13 +278,7 @@ export class InlineAssistant {
         break
       case 'done': {
         this.output.replaceChildren()
-        renderMarkdown(state.result, this.output)
-        // Typora's renderer leaves some blocks (e.g. ```mermaid) empty in a
-        // detached preview; they render fine once inserted. Show the source
-        // instead of a blank box.
-        if (!this.output.textContent?.trim()) {
-          this.output.replaceChildren(el('pre', 'typ-inline-ai__source', state.result))
-        }
+        void renderMarkdown(state.result, this.output)
         const canInsert = !!this.anchor && !this.anchor.isStale()
         if (canInsert && this.anchor?.text) {
           add(tx.replace, 'typ-inline-ai__primary', () => this.apply('replace'))

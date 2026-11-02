@@ -14,10 +14,10 @@ interface MarkdownAction {
  * <div class="typ-message-content" use:markdown={message.text}></div>
  */
 export function markdown(container: Element, text: string): MarkdownAction {
-  renderMarkdown(text || '', container as HTMLElement)
+  void renderMarkdown(text || '', container as HTMLElement)
   return {
     update(next: string) {
-      renderMarkdown(next || '', container as HTMLElement)
+      void renderMarkdown(next || '', container as HTMLElement)
     },
     destroy() {
       ;(container as HTMLElement).innerHTML = ''

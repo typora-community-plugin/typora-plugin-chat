@@ -109,13 +109,6 @@
     overflow-wrap: anywhere;
   }
 
-  &__source {
-    margin: 0;
-    white-space: pre-wrap;
-    font-family: var(--monospace, Menlo, monospace);
-    font-size: 12px;
-  }
-
   &__pending { opacity: 0.6; }
   &__error { color: #d33; white-space: pre-wrap; }
 }

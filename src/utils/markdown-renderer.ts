@@ -3,16 +3,16 @@ import { app } from '@typora-community-plugin/core'
 
 /**
  * Render markdown into a DOM element using Typora's own renderer.
- * Keeps all rendering consistent with the host editor (code blocks, links, etc.).
+ * Waits for asynchronous blocks (Mermaid, diagrams, math) to finish.
  */
-export function renderMarkdown(markdown: string, targetEl: HTMLElement): void {
+export async function renderMarkdown(markdown: string, targetEl: HTMLElement): Promise<void> {
   if (!markdown) {
     targetEl.innerHTML = ''
     return
   }
   try {
-    app.features.markdownRenderer.renderTo(markdown, targetEl)
-  } catch {
-    targetEl.textContent = markdown
+    await app.features.markdownRenderer.renderTo(markdown, targetEl, { async: true })
+  } catch (error) {
+    console.error('[chat] markdown render failed', error)
   }
 }
