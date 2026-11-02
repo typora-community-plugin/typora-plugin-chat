@@ -2,6 +2,7 @@ import { app, fs, os, path } from '@typora-community-plugin/core'
 import { LRUCache } from '@/utils/lru'
 import { basename, isMarkdownFile } from '@/utils/helpers'
 import { isPathForbidden } from '@/agent/tools/path-policy'
+import { abortable, abortError, throwIfAborted } from '@/utils/abort'
 
 
 /**
@@ -24,10 +25,11 @@ const STALE_TTL_MS = 30_000
 /**
  * Whether `root` is safe to walk recursively as a vault.
  *
- * When Typora has no folder open (e.g. an untitled document), the reported
- * mount folder can be the filesystem root (`/` on macOS) or the user's home
- * directory. Walking those recursively — via one shell `ls` per directory on
- * macOS — effectively never finishes and used to block every chat request.
+ * Core now reports '' when no folder/document is mounted, but this index walks
+ * independently of core's metadata indexer. A deliberately mounted filesystem
+ * root (`/` on macOS) or the user's home directory must never be walked
+ * recursively: that effectively never finishes and used to block every chat
+ * request.
  */
 export function isIndexableRoot(root: string | null | undefined): boolean {
   if (!root) return false
@@ -58,11 +60,13 @@ async function mapConcurrent<T, R>(
   items: readonly T[],
   limit: number,
   fn: (item: T) => Promise<R>,
+  signal?: AbortSignal,
 ): Promise<R[]> {
   const results = new Array<R>(items.length)
   let next = 0
   async function worker(): Promise<void> {
     while (next < items.length) {
+      if (signal?.aborted) return
       const i = next++
       results[i] = await fn(items[i])
     }
@@ -72,6 +76,7 @@ async function mapConcurrent<T, R>(
     workers.push(worker())
   }
   await Promise.all(workers)
+  throwIfAborted(signal)
   return results
 }
 
@@ -82,19 +87,43 @@ class VaultIndex {
   private contentLRU = new LRUCache<string, string>(CONTENT_LRU_SIZE)
   private builtAt = 0
   private buildPromise: Promise<void> | null = null
+  private buildController: AbortController | null = null
 
   // ── lifecycle ────────────────────────────────────────────────────────
 
-  /** Build (or rebuild if stale) the index. Coalesces concurrent callers. */
-  async ensureFresh(): Promise<void> {
+  /**
+   * Build (or rebuild if stale) the index. Coalesces concurrent callers.
+   *
+   * Passing a signal cancels the filesystem walk when it aborts, so Stop also
+   * stops the I/O instead of only abandoning the wait.
+   */
+  async ensureFresh(signal?: AbortSignal): Promise<void> {
+    throwIfAborted(signal)
     const now = Date.now()
     // `builtAt > 0` (not `fileMap.size > 0`) so an empty or unindexable vault
     // is not re-walked on every call.
     if (this.builtAt > 0 && now - this.builtAt < STALE_TTL_MS) return
     if (!this.buildPromise) {
-      this.buildPromise = this.rebuild().finally(() => { this.buildPromise = null })
+      const controller = new AbortController()
+      this.buildController = controller
+      this.buildPromise = this.rebuild(controller.signal).finally(() => {
+        if (this.buildController === controller) this.buildController = null
+        this.buildPromise = null
+      })
     }
-    await this.buildPromise
+    if (!signal) return this.buildPromise
+
+    if (signal.aborted) {
+      this.buildController?.abort()
+      throw abortError()
+    }
+    const onAbort = () => this.buildController?.abort()
+    signal.addEventListener('abort', onAbort, { once: true })
+    try {
+      await abortable(this.buildPromise, signal)
+    } finally {
+      signal.removeEventListener('abort', onAbort)
+    }
   }
 
   /** Force a full rebuild on the next ensureFresh. */
@@ -202,7 +231,8 @@ class VaultIndex {
 
   // ── internals ────────────────────────────────────────────────────────
 
-  private async rebuild(): Promise<void> {
+  private async rebuild(signal: AbortSignal): Promise<void> {
+    throwIfAborted(signal)
     const root = app.vault.path
     if (!isIndexableRoot(root)) {
       this.fileMap.clear()
@@ -212,14 +242,17 @@ class VaultIndex {
     }
     let files: string[]
     try {
-      files = await fs.listFiles(root, { recursive: true })
-    } catch {
+      files = await fs.listFiles(root, { recursive: true, signal })
+    } catch (error) {
+      if (signal.aborted) throw abortError()
       this.builtAt = Date.now() // avoid tight retry loop on persistent error
       return
     }
+    throwIfAborted(signal)
 
     this.fileMap.clear()
     this.backlinks.clear()
+    this.contentLRU.clear()
 
     const toRel = absToRel(root)
     let mdFiles: string[] = []
@@ -242,20 +275,30 @@ class VaultIndex {
       this.fileMap.set(rel, { nameLower: basename(rel).toLowerCase() })
     }
 
-    // Build backlink graph with bounded concurrency (forbidden files already excluded above).
-    await mapConcurrent(mdFiles, MAX_CONCURRENCY, async rel => {
-      try {
-        const abs = resolveVaultPathLocal(rel)
-        const content = await fs.readText(abs)
-        this.contentLRU.set(rel, content)
-        for (const target of extractLinkTargets(content)) {
-          let set = this.backlinks.get(target)
-          if (!set) { set = new Set(); this.backlinks.set(target, set) }
-          set.add(rel)
-        }
-      } catch { /* skip unreadable */ }
-    })
+    try {
+      // Build backlink graph with bounded concurrency (forbidden files already excluded above).
+      await mapConcurrent(mdFiles, MAX_CONCURRENCY, async rel => {
+        try {
+          const abs = resolveVaultPathLocal(rel)
+          const content = await fs.readText(abs)
+          this.contentLRU.set(rel, content)
+          for (const target of extractLinkTargets(content)) {
+            let set = this.backlinks.get(target)
+            if (!set) { set = new Set(); this.backlinks.set(target, set) }
+            set.add(rel)
+          }
+        } catch { /* skip unreadable */ }
+      }, signal)
+    } catch (error) {
+      if (signal.aborted) {
+        this.fileMap.clear()
+        this.backlinks.clear()
+        this.contentLRU.clear()
+      }
+      throw error
+    }
 
+    throwIfAborted(signal)
     this.builtAt = Date.now()
   }
 

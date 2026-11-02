@@ -35,12 +35,13 @@ export async function buildRequestParts(
   skillsCatalog = '',
   mode: AgentMode = 'workspace-write',
   contextText?: string,
+  signal?: AbortSignal,
 ): Promise<RequestParts> {
   // AGENTS.md is loaded inside buildSystemMessage (TTL-cached, so steady-state
   // turns cost zero I/O); the dynamic vault context stays a user message right
   // after it.
   const systemMessage = await buildSystemMessage(skillsCatalog, mode)
-  const contextMessage: ApiMessage = { role: 'user', content: contextText ?? await buildContextMessage() }
+  const contextMessage: ApiMessage = { role: 'user', content: contextText ?? await buildContextMessage(undefined, signal) }
   const conversation: ApiMessage[] = userMessage
     ? [...history, { role: 'user', content: userMessage }]
     : [...history]

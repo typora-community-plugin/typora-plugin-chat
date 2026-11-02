@@ -14,6 +14,7 @@ import { buildRequestParts } from './request'
 import { getCurrentFilePath } from '@/adapter/vault'
 import { discoverSkills, buildSkillsCatalog } from './skills/index'
 import { getAgentHistory, resetAgentHistory, setAgentHistory, popLastAgentTurn, commitHistory } from './history'
+import { abortable } from '@/utils/abort'
 
 // Re-export history functions so existing imports from loop.ts keep working.
 export { resetAgentHistory, popLastAgentTurn, getAgentHistory, setAgentHistory } from './history'
@@ -24,19 +25,6 @@ let abortController: AbortController | null = null
 export function abortAgentLoop(): void {
   aborted = true
   abortController?.abort()
-}
-
-/** Resolve with `promise`, or reject as soon as `signal` aborts. */
-function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) return Promise.reject(new Error('Aborted'))
-  return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(new Error('Aborted'))
-    signal.addEventListener('abort', onAbort, { once: true })
-    promise.then(
-      value => { signal.removeEventListener('abort', onAbort); resolve(value) },
-      error => { signal.removeEventListener('abort', onAbort); reject(error) },
-    )
-  })
 }
 
 function abortedBeforeRequest(settings: ReturnType<typeof settingsManager.get>): AgentResult {
@@ -72,7 +60,7 @@ export async function executeAgentLoop(
   const history = getAgentHistory()
   let parts: Awaited<ReturnType<typeof buildRequestParts>>
   try {
-    parts = await abortable(buildRequestParts(userMessage, trimForApi(history), skillsCatalog, currentAgentMode()), signal)
+    parts = await abortable(buildRequestParts(userMessage, trimForApi(history), skillsCatalog, currentAgentMode(), undefined, signal), signal)
   } catch (error) {
     if (aborted) return abortedBeforeRequest(settings)
     callbacks.onError?.(error instanceof Error ? error.message : String(error))
