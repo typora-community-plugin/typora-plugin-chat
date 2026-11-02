@@ -1,9 +1,7 @@
 // Inline AI popup anchored at the editor caret (see inline-assistant.ts).
 .typ-inline-ai {
   position: fixed;
-  // Above the editor, below core's modal (900) and notice (1000) layers, so
-  // the command panel, Settings and notices still render on top.
-  z-index: calc(var(--typ-layer-editor, 800) + 50);
+  z-index: var(--typ-layer-popover, 1000);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
