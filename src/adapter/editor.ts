@@ -30,7 +30,6 @@ interface TyporaRangy {
 interface TyporaEditor {
   selection?: { getRangy?(): TyporaRangy | null }
   UserOp?: {
-    pasteHandler?(editor: unknown, content: string, isMarkdown?: boolean): void
     insertParagraph?(before: boolean, editor: unknown): void
     prepMarkHtml?(html: string, editor: unknown): { html(): string }
     getMarkdownSourceFrom?(html: string): string
@@ -83,9 +82,9 @@ function selectionMarkdown(): string | null {
 
 /**
  * A caret/selection captured in the writing area, so it survives focus moving
- * into a popup. Built on core's `activeEditor.selection.save()/restore()`, and
- * marked stale as soon as the note is edited, because a saved range no longer
- * points where the user expects after an edit.
+ * into a popup. Insertion is delegated to core's
+ * `activeEditor.insertMarkdown()`; the anchor only records the selection text,
+ * Markdown, position and whether the note changed meanwhile.
  */
 export interface EditorAnchor {
   /** Selected text (plain); empty for a caret. */
@@ -121,21 +120,18 @@ export function captureAnchor(): EditorAnchor | null {
   if (!write.contains(range.commonAncestorContainer)) return null
 
   const editor = app.workspace.activeEditor
-  try { editor.selection.save() } catch { /* restore() below then falls back to the DOM range */ }
 
   const text = sel.toString().trim()
   const markdown = text ? (selectionMarkdown() ?? text) : ''
   let before = ''
   let caretRatio: number | null = null
   if (!text) {
-    try {
-      const pre = document.createRange()
-      pre.setStart(write, 0)
-      pre.setEnd(range.startContainer, range.startOffset)
-      before = pre.toString()
-      const total = write.textContent?.length ?? 0
-      caretRatio = total ? before.length / total : null
-    } catch { /* leave empty */ }
+    const cursor = editor.selection.getCursor()
+    if (cursor !== null) {
+      const content = write.textContent ?? ''
+      before = content.slice(0, cursor)
+      caretRatio = content.length ? cursor / content.length : null
+    }
   }
 
   const saved = range.cloneRange()
@@ -145,17 +141,6 @@ export function captureAnchor(): EditorAnchor | null {
     const off = editor.on('edit', () => { stale = true })
     offEdit = typeof off === 'function' ? off : null
   } catch { offEdit = null }
-
-  const restore = () => {
-    try {
-      editor.selection.restore()
-      const current = window.getSelection()
-      if (current && current.rangeCount && write.contains(current.getRangeAt(0).commonAncestorContainer)) return
-    } catch { /* fall back */ }
-    const current = window.getSelection()
-    current?.removeAllRanges()
-    current?.addRange(saved)
-  }
 
   return {
     text,
@@ -174,23 +159,23 @@ export function captureAnchor(): EditorAnchor | null {
     },
     isStale: () => stale,
     insert(md, mode, asBlock) {
-      const ed = typoraEditor()
-      if (stale || !ed?.UserOp?.pasteHandler) return false
-      write.focus()
-      restore()
-      const current = window.getSelection()
-      const block = current?.anchorNode
-        ? (current.anchorNode.nodeType === 1 ? current.anchorNode as Element : current.anchorNode.parentElement)?.closest('[cid]')
-        : null
-      const caretInText = !!current?.isCollapsed && !!block?.textContent?.trim()
-      const newBlock = mode === 'after' || (asBlock && caretInText)
+      if (stale || !writingArea()) return false
+      const at = mode === 'after' ? 'cursor' : 'selection'
       try {
+        editor.selection.restoreForInsertion(at)
+        const current = window.getSelection()
+        const block = current?.anchorNode
+          ? (current.anchorNode.nodeType === 1 ? current.anchorNode as Element : current.anchorNode.parentElement)?.closest('[cid]')
+          : null
+        const caretInText = !!current?.isCollapsed && !!block?.textContent?.trim()
+        const newBlock = mode === 'after' || (asBlock && caretInText)
         if (newBlock) {
           current?.collapseToEnd()
-          if (ed.UserOp.insertParagraph) ed.UserOp.insertParagraph(false, ed)
+          const ed = typoraEditor()
+          if (ed?.UserOp?.insertParagraph) ed.UserOp.insertParagraph(false, ed)
           else md = `\n\n${md}\n\n`
         }
-        ed.UserOp.pasteHandler(ed, md, true)
+        editor.insertMarkdown(md, newBlock ? 'cursor' : 'selection')
         return true
       } catch {
         return false
