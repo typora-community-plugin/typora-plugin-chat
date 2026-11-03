@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ACTION_INSTRUCTIONS, ACTION_NEEDS_NOTE, CARET_ACTIONS, INLINE_NOTE_MAX_CHARS, INLINE_NOTE_MIN_CHARS, SELECTION_ACTIONS,
-  buildInlineMessages, cleanInlineOutput, isBlockMarkdown, locateAnchor, noteCharBudget, windowNote,
+  ACTION_NEEDS_NOTE, CARET_ACTIONS, INLINE_NOTE_MAX_CHARS, INLINE_NOTE_MIN_CHARS, SELECTION_ACTIONS,
+  actionInstruction, buildInlineMessages, cleanInlineOutput, isBlockMarkdown, locateAnchor, noteCharBudget, translateUiInstruction, windowNote,
 } from '../../src/inline/inline-prompts'
 
 describe('buildInlineMessages', () => {
@@ -28,8 +28,16 @@ describe('buildInlineMessages', () => {
   })
 
   it('has an instruction for every quick action; the diagram action asks for Mermaid', () => {
-    for (const id of [...CARET_ACTIONS, ...SELECTION_ACTIONS]) expect(ACTION_INSTRUCTIONS[id]).toBeTruthy()
-    expect(ACTION_INSTRUCTIONS.diagram).toContain('```mermaid')
+    for (const id of [...CARET_ACTIONS, ...SELECTION_ACTIONS]) expect(actionInstruction(id)).toBeTruthy()
+    expect(actionInstruction('diagram')).toContain('```mermaid')
+  })
+
+  it('translates to the plugin UI language for the dynamic translate action', () => {
+    expect(translateUiInstruction('zh-cn')).toContain('Simplified Chinese')
+    expect(translateUiInstruction('de')).toContain('German')
+    expect(translateUiInstruction('zh-tw')).toContain('Simplified Chinese')
+    expect(actionInstruction('translateUi', 'de')).toBe(translateUiInstruction('de'))
+    expect(actionInstruction('translateUi', 'fr')).toContain('English')
   })
 
   it('does not send the note for pure selection transforms', () => {

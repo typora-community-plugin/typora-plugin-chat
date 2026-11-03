@@ -9,19 +9,37 @@ export const INLINE_NOTE_HEAD_CHARS = 2_000
 
 export type InlineActionId =
   | 'table' | 'diagram' | 'continue' | 'outline'
-  | 'polish' | 'shorten' | 'expand' | 'translateEn' | 'translateZh' | 'explain'
+  | 'polish' | 'shorten' | 'expand' | 'translateEn' | 'translateUi' | 'explain'
 
 /** Actions shown when nothing is selected (generate at the caret). */
 export const CARET_ACTIONS: InlineActionId[] = ['table', 'diagram', 'continue', 'outline']
-/** Actions shown when text is selected (transform the selection). */
-export const SELECTION_ACTIONS: InlineActionId[] = ['polish', 'shorten', 'expand', 'translateEn', 'translateZh', 'explain']
+/**
+ * Actions shown when text is selected (transform the selection).
+ * `translateUi` targets the plugin's current UI language, so the caller hides
+ * it when that is English (where `translateEn` already covers it).
+ */
+export const SELECTION_ACTIONS: InlineActionId[] = ['polish', 'shorten', 'expand', 'translateEn', 'translateUi', 'explain']
+
+/** Human-readable model target for each plugin locale, keyed by locale or language. */
+const TRANSLATE_TARGETS: Record<string, string> = {
+  en: 'English',
+  zh: 'Simplified Chinese',
+  'zh-cn': 'Simplified Chinese',
+  de: 'German',
+}
+
+/** Instruction for "translate to the plugin's UI language". */
+export function translateUiInstruction(locale: string): string {
+  const target = TRANSLATE_TARGETS[locale] ?? TRANSLATE_TARGETS[locale.split('-')[0]] ?? 'English'
+  return `Translate the selected text into natural ${target}, keeping its Markdown formatting.`
+}
 
 /**
  * The instruction sent to the model for each quick action. Kept in English on
  * purpose (models follow it reliably); the system prompt asks the model to
- * answer in the note's language.
+ * answer in the note's language. `translateUi` depends on the active locale.
  */
-export const ACTION_INSTRUCTIONS: Record<InlineActionId, string> = {
+export const ACTION_INSTRUCTIONS: Record<Exclude<InlineActionId, 'translateUi'>, string> = {
   table: 'Create a Markdown table that fits here, based on the surrounding context. If the context is not enough, make a sensible, clearly structured table on the topic of the note.',
   diagram: 'Draw a diagram that fits here as a Mermaid code block (```mermaid … ```), e.g. a flowchart or sequence diagram, based on the surrounding context. Use only valid Mermaid syntax and quote node labels that contain spaces or punctuation.',
   continue: 'Continue writing naturally from the cursor position, matching the tone and language of the note.',
@@ -30,8 +48,12 @@ export const ACTION_INSTRUCTIONS: Record<InlineActionId, string> = {
   shorten: 'Rewrite the selected text to be more concise, keeping its meaning, language and Markdown formatting.',
   expand: 'Expand the selected text with more detail, keeping its style, language and Markdown formatting.',
   translateEn: 'Translate the selected text into natural English, keeping its Markdown formatting.',
-  translateZh: 'Translate the selected text into natural Simplified Chinese, keeping its Markdown formatting.',
   explain: 'Explain the selected text in plain words.',
+}
+
+/** Instruction for a quick action; resolves the locale-dependent translate action. */
+export function actionInstruction(id: InlineActionId, locale = 'en'): string {
+  return id === 'translateUi' ? translateUiInstruction(locale) : ACTION_INSTRUCTIONS[id]
 }
 
 /**
@@ -40,7 +62,7 @@ export const ACTION_INSTRUCTIONS: Record<InlineActionId, string> = {
  */
 export const ACTION_NEEDS_NOTE: Record<InlineActionId, boolean> = {
   table: true, diagram: true, continue: true, outline: true,
-  polish: false, shorten: false, expand: false, translateEn: false, translateZh: false, explain: false,
+  polish: false, shorten: false, expand: false, translateEn: false, translateUi: false, explain: false,
 }
 
 /**

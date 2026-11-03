@@ -9,10 +9,10 @@ import { isEditingNote } from '@/adapter/editor'
 import type { EditorAnchor } from '@/adapter/editor'
 import { renderMarkdown } from '@/utils/markdown-renderer'
 import { basename } from '@/utils/helpers'
-import { format, t } from '@/i18n'
+import { format, getLocale, t } from '@/i18n'
 import {
-  ACTION_INSTRUCTIONS, ACTION_NEEDS_NOTE, CARET_ACTIONS, SELECTION_ACTIONS,
-  buildInlineMessages, isBlockMarkdown, locateAnchor, noteCharBudget, windowNote,
+  ACTION_NEEDS_NOTE, CARET_ACTIONS, SELECTION_ACTIONS,
+  actionInstruction, buildInlineMessages, isBlockMarkdown, locateAnchor, noteCharBudget, windowNote,
 } from './inline-prompts'
 import type { InlineActionId } from './inline-prompts'
 import { InlineSession } from './inline-session'
@@ -128,9 +128,14 @@ export class InlineAssistant {
     row.append(this.input, send)
 
     const actions = el('div', 'typ-inline-ai__actions')
-    for (const id of selected ? SELECTION_ACTIONS : CARET_ACTIONS) {
+    const locale = getLocale()
+    const ids = selected
+      // English UI: `translateEn` already targets the UI language.
+      ? SELECTION_ACTIONS.filter(id => id !== 'translateUi' || locale.split('-')[0] !== 'en')
+      : CARET_ACTIONS
+    for (const id of ids) {
       const btn = el('button', 'typ-inline-ai__pill', tx.actions[id])
-      btn.addEventListener('click', () => this.run(ACTION_INSTRUCTIONS[id], id))
+      btn.addEventListener('click', () => this.run(actionInstruction(id, locale), id))
       actions.append(btn)
     }
 
