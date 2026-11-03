@@ -124,6 +124,7 @@
     "modelParametersDesc": "Konfiguriere Parameter pro Modell, indem du in der Seitenleiste auf ein Modell klickst. Ein Modell erscheint im Modellauswahlmenü erst nach dem Hinzufügen zu dieser Liste.",
     "modelId": "Modell-ID",
     "modelIdPlaceholder": "z. B. gpt-5.6",
+    "customModelId": "Benutzerdefinierte Modell-ID…",
     "addModel": "Modell hinzufügen",
     "removeModel": "Entfernen",
     "currentModel": "Aktuelles Modell",

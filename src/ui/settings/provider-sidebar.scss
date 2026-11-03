@@ -87,7 +87,8 @@
     }
 
     input[type='text'],
-    input[list] {
+    input[list],
+    select.typ-model-picker {
       min-width: 8rem;
       flex: 1 1 10rem;
     }

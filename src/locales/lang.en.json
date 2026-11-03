@@ -124,6 +124,7 @@
     "modelParametersDesc": "Configure per-model parameters by clicking a model in the sidebar. A model only appears in the sidebar model select after being added to this list.",
     "modelId": "Model id",
     "modelIdPlaceholder": "e.g. gpt-5.6",
+    "customModelId": "Custom model id…",
     "addModel": "Add model",
     "removeModel": "Remove",
     "currentModel": "Current model",

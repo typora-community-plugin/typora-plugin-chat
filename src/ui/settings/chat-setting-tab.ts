@@ -3,7 +3,7 @@ import { SettingTab, SettingItem } from '@typora-community-plugin/core'
 import type { App, Plugin } from '@typora-community-plugin/core'
 import { get } from 'svelte/store'
 import { DEFAULT_SETTINGS, settings, settingsManager } from '@/config/settings'
-import { availableModels, modelRefreshLoading, modelRefreshMessage, refreshModels } from '@/store/models-store'
+import { availableModels, focusModels, modelRefreshLoading, modelRefreshMessage, refreshModels } from '@/store/models-store'
 import { globalSkillsDir, vaultSkillsDir } from '@/agent/skills/paths'
 import { rescanSkills } from '@/agent/skills/store'
 import { collectModelIds } from '@/config/models'
@@ -14,6 +14,9 @@ import { t } from '@/i18n'
 
 /** Sentinel sidebar item that opens the "add a provider / model" panel. */
 const ADD = '+'
+
+/** Sentinel <select> option that switches the model-id field to free-text entry. */
+const CUSTOM_MODEL = '__custom__'
 
 /** Display label for a provider id: localized for built-ins, raw id for customs. */
 function providerLabel(value: string): string {
@@ -236,6 +239,9 @@ export class ChatSettingTab extends SettingTab {
       this.renderAddProviderPanel(panelEl)
       return
     }
+    // Point the shared model list at this provider so its dropdown never shows
+    // the models fetched for a previously opened provider.
+    focusModels(provider)
     this.buildProviderBlock(provider)
   }
 
@@ -339,15 +345,43 @@ export class ChatSettingTab extends SettingTab {
     let statusEl: HTMLElement | null = null
     modelParamsItem.addDescription((el) => { statusEl = el })
 
-    // The add-model panel's model-id suggestions live inside the sidebar; keep
-    // a shared reference so a refresh (which happens there) can repopulate it.
-    // A free-text input + <datalist> (instead of a <select>) lets users type a
-    // model id when the provider has no usable `/models` endpoint.
-    const modelSelectRef: { el: HTMLDataListElement | null } = { el: null }
+    // The add-model panel's model-id dropdown lives inside the sidebar; keep a
+    // shared reference so a refresh (which happens there) can repopulate it.
+    // The dropdown lists the provider's fetched models; a "custom" option
+    // reveals a free-text input for providers without a usable `/models`
+    // endpoint.
+    const modelSelectRef: { el: HTMLSelectElement | null } = { el: null }
+    const modelInputRef: { el: HTMLInputElement | null } = { el: null }
 
     const renderOptions = (models: string[]) => {
-      if (!modelSelectRef.el) return
-      modelSelectRef.el.replaceChildren(...models.map(id => new Option(id, id)))
+      const select = modelSelectRef.el
+      if (!select) return
+      const previous = select.value
+      select.replaceChildren()
+      const placeholder = new Option(t.chat.selectModel, '')
+      placeholder.disabled = true
+      placeholder.selected = true
+      select.append(placeholder)
+      for (const id of models) select.append(new Option(id, id))
+      select.append(new Option(t.settings.customModelId, CUSTOM_MODEL))
+      if (previous && Array.from(select.options).some(o => o.value === previous)) {
+        select.value = previous
+      }
+      // No fetched models: hide the dropdown and let free text take over.
+      // Otherwise the text input only shows while "custom" is selected, and a
+      // value typed while the list was still loading is kept visible.
+      select.hidden = models.length === 0
+      const input = modelInputRef.el
+      if (input) {
+        const typed = input.value.trim()
+        const isCustom = typed !== '' && !models.includes(typed)
+        if (models.length > 0 && (isCustom || select.value === CUSTOM_MODEL)) {
+          select.value = CUSTOM_MODEL
+        } else if (models.length > 0 && typed) {
+          select.value = typed
+        }
+        input.hidden = models.length > 0 && select.value !== CUSTOM_MODEL
+      }
     }
 
     this.providerUnsubs.push(availableModels.subscribe(renderOptions))
@@ -363,7 +397,11 @@ export class ChatSettingTab extends SettingTab {
       { items: [...ids, ADD], initialActive: initial },
       ({ item, panelEl: modelPanelEl }) => {
         if (item === ADD) {
-          this.renderAddModelPanel(provider, modelPanelEl, modelSelectRef, (id, models) => {
+          this.renderAddModelPanel(provider, modelPanelEl, {
+            selectRef: modelSelectRef,
+            inputRef: modelInputRef,
+            renderOptions,
+          }, (id, models) => {
             if (!layout) return
             // Two-step setItems: the first list has no ADD so the active
             // sentinel falls out and core re-selects the new model; the second
@@ -373,6 +411,7 @@ export class ChatSettingTab extends SettingTab {
           })
         } else {
           modelSelectRef.el = null
+          modelInputRef.el = null
           this.renderModelPanel(provider, item, modelPanelEl, (models) => {
             if (!layout) return
             layout.setItems([...collectModelIds(config.model, models), ADD])
@@ -501,22 +540,39 @@ export class ChatSettingTab extends SettingTab {
   private renderAddModelPanel(
     provider: ApiProvider,
     panelEl: HTMLElement,
-    selectRef: { el: HTMLDataListElement | null },
+    refs: {
+      selectRef: { el: HTMLSelectElement | null }
+      inputRef: { el: HTMLInputElement | null }
+      renderOptions: (models: string[]) => void
+    },
     onAdded: (id: string, models: Record<string, ModelConfig>) => void,
   ) {
     let input: HTMLInputElement | null = null
 
     const idItem = new SettingItem()
     idItem.addName(t.settings.modelId)
+    idItem.addSelect((el) => {
+      el.classList.add('typ-model-picker')
+      refs.selectRef.el = el
+      el.onchange = () => {
+        if (!input) return
+        if (el.value === CUSTOM_MODEL) {
+          input.value = ''
+          input.hidden = false
+          input.focus()
+          return
+        }
+        input.value = el.value
+        input.hidden = true
+      }
+    })
     idItem.addText((el) => {
       input = el
+      refs.inputRef.el = el
       el.placeholder = t.settings.modelIdPlaceholder
-      const datalist = document.createElement('datalist')
-      datalist.id = `typ-chat-models-${String(provider).replace(/[^\w-]/g, '_')}`
-      el.setAttribute('list', datalist.id)
-      el.after(datalist)
-      selectRef.el = datalist
-      datalist.replaceChildren(...get(availableModels).map(id => new Option(id, id)))
+      // Populate the dropdown (and the input's visibility) once both controls
+      // exist. The provider-level subscription keeps it in sync afterwards.
+      refs.renderOptions(get(availableModels))
     })
     idItem.addButton((button) => {
       button.textContent = t.settings.refreshModels
@@ -547,8 +603,8 @@ export class ChatSettingTab extends SettingTab {
     addItem.addButton((button) => {
       button.textContent = t.settings.addModel
       button.onclick = () => {
-        const id = input?.value.trim() ?? ''
-        if (!id) return
+        const id = (input?.value ?? '').trim()
+        if (!id || id === CUSTOM_MODEL) return
         const latest = settingsManager.get().providers[provider]
         if (id === latest.model) return
         const models = { ...(latest.models ?? {}) }

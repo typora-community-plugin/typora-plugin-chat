@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { get } from 'svelte/store'
-import { availableModels, modelRefreshMessage, refreshModels } from '../../src/store/models-store'
+import { availableModels, focusModels, modelRefreshMessage, refreshModels } from '../../src/store/models-store'
 import { settingsManager } from '../../src/config/settings'
 import { initI18n } from '../../src/i18n'
 
@@ -81,6 +81,54 @@ describe('models-store: refresh a specific provider', () => {
       expect(getList()).toEqual(['deepseek-flash', 'deepseek-v4-pro'])
       // The active provider is left untouched.
       expect(settingsManager.get().provider).toBe('ollama')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+})
+
+describe('models-store: provider focus', () => {
+  it('clears the list when the settings tab focuses another provider', async () => {
+    initI18n('/vault/.typora/plugins/typora-community-plugin.chat')
+    const providers = settingsManager.get().providers
+    await settingsManager.save({
+      providers: {
+        ...providers,
+        openai: { ...providers.openai, enabled: true },
+        deepseek: { ...providers.deepseek, enabled: true },
+      },
+    })
+
+    focusModels('deepseek')
+    availableModels.set(['deepseek-flash'])
+    focusModels('openai')
+    expect(getList()).toEqual([])
+  })
+
+  it('discards an in-flight refresh result after switching providers', async () => {
+    initI18n('/vault/.typora/plugins/typora-community-plugin.chat')
+    const providers = settingsManager.get().providers
+    await settingsManager.save({
+      providers: {
+        ...providers,
+        openai: { ...providers.openai, enabled: true },
+        deepseek: { ...providers.deepseek, enabled: true },
+      },
+    })
+
+    let resolveFetch: ((value: unknown) => void) | undefined
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (() => new Promise(resolve => { resolveFetch = resolve })) as unknown as typeof fetch
+    try {
+      const pending = refreshModels('deepseek')
+      // The user switches to another provider while the request is in flight.
+      focusModels('openai')
+      resolveFetch?.({ ok: true, json: async () => ({ data: [{ id: 'deepseek-flash' }] }) })
+
+      const result = await pending
+      expect(result.ok).toBe(true)
+      // The late result must not leak into the newly focused provider's list.
+      expect(getList()).toEqual([])
     } finally {
       globalThis.fetch = originalFetch
     }

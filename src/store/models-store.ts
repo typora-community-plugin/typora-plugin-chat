@@ -14,11 +14,19 @@ export interface ModelRefreshResult {
 
 /**
  * Shared model options source for the settings tab's add-model panel: the raw
- * `/models` endpoint list of the active provider, refreshed on demand. The chat
- * sidebar's model select does NOT read from here — it lists the configured
- * per-provider "Model parameters" grouped by provider (see `collectSelectableModelGroups`).
+ * `/models` endpoint list of the provider currently shown in the settings tab,
+ * refreshed on demand. The chat sidebar's model select does NOT read from here
+ * — it lists the configured per-provider "Model parameters" grouped by
+ * provider (see `collectSelectableModelGroups`).
  */
 export const availableModels = writable<string[]>([])
+
+/**
+ * Provider whose fetched models `availableModels` currently holds. Tracked so
+ * switching providers in the settings tab never leaks one provider's list into
+ * another provider's panel.
+ */
+export const modelsProvider = writable<ApiProvider | null>(null)
 
 /** Human-readable status/error message for the last model refresh. */
 export const modelRefreshMessage = writable('')
@@ -41,6 +49,31 @@ function modelsText(key: 'loading' | 'loaded' | 'failed', fallback: string): str
 
 /** Whether a model list refresh is currently in progress. */
 export const modelRefreshLoading = writable(false)
+
+/**
+ * Providers whose `/models` request is in flight. Kept per provider so a
+ * refresh that is still running for a provider the user navigated away from
+ * cannot block or overwrite the freshly focused provider's list.
+ */
+const inFlight = new Set<ApiProvider>()
+
+/**
+ * Point the shared model list at `provider`, clearing whatever another
+ * provider left behind. Called by the settings tab whenever a provider panel is
+ * rendered. No-op when the same provider is already focused.
+ */
+export function focusModels(provider: ApiProvider): void {
+  if (get(modelsProvider) === provider) return
+  modelsProvider.set(provider)
+  availableModels.set([])
+  const loading = inFlight.has(provider)
+  modelRefreshLoading.set(loading)
+  if (loading) {
+    modelRefreshMessage.set(modelsText('loading', 'Loading models...'))
+    return
+  }
+  modelRefreshMessage.set(isProviderEnabled(settingsManager.get().providers[provider]) ? '' : disabledMessage())
+}
 
 export function filterModels(rawList: unknown[], provider: ApiProvider): string[] {
   return rawList
@@ -98,13 +131,21 @@ export async function fetchProviderModels(provider: ApiProvider): Promise<string
 }
 
 /**
- * Fetches a provider's `/models` endpoint (the active one by default) and
+ * Fetches a provider's `/models` endpoint (the focused one by default) and
  * updates `availableModels`. There is no fallback list: if the request fails
  * the shared list is cleared and the error is surfaced through
- * `modelRefreshMessage`.
+ * `modelRefreshMessage`. Results for a provider that is no longer focused (the
+ * user switched panels mid-request) are discarded instead of leaking into the
+ * new provider's dropdown.
  */
 export async function refreshModels(provider?: ApiProvider): Promise<ModelRefreshResult> {
-  if (get(modelRefreshLoading)) {
+  const current = settingsManager.get()
+  const target = provider ?? get(modelsProvider) ?? current.provider
+
+  // Tie the exposed list to the provider being refreshed.
+  focusModels(target)
+
+  if (inFlight.has(target)) {
     return {
       models: get(availableModels),
       message: get(modelRefreshMessage),
@@ -112,8 +153,8 @@ export async function refreshModels(provider?: ApiProvider): Promise<ModelRefres
     }
   }
 
-  const current = settingsManager.get()
-  const target = provider ?? current.provider
+  const isVisible = () => get(modelsProvider) === target
+  const stillEnabled = () => isProviderEnabled(settingsManager.get().providers[target])
 
   // A disabled provider never exposes its models.
   if (!isProviderEnabled(current.providers[target])) {
@@ -122,35 +163,50 @@ export async function refreshModels(provider?: ApiProvider): Promise<ModelRefres
     return { models: [], message: disabledMessage(), ok: false }
   }
 
+  inFlight.add(target)
   modelRefreshLoading.set(true)
   modelRefreshMessage.set(modelsText('loading', 'Loading models...'))
 
   try {
     const filtered = await fetchProviderModels(target)
-    availableModels.set(filtered)
     const message = format(modelsText('loaded', 'Loaded {count} models'), { count: filtered.length })
-    modelRefreshMessage.set(message)
+    if (isVisible() && stillEnabled()) {
+      availableModels.set(filtered)
+      modelRefreshMessage.set(message)
+    }
     return { models: filtered, message, ok: true }
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e)
-    const status = format(modelsText('failed', 'Failed to fetch models: {message}'), { message })
-
-    availableModels.set([])
-    modelRefreshMessage.set(status)
+    const error = e instanceof Error ? e.message : String(e)
+    const status = format(modelsText('failed', 'Failed to fetch models: {message}'), { message: error })
+    if (isVisible() && stillEnabled()) {
+      availableModels.set([])
+      modelRefreshMessage.set(status)
+    }
     return { models: [], message: status, ok: false }
   } finally {
-    modelRefreshLoading.set(false)
+    inFlight.delete(target)
+    if (isVisible()) modelRefreshLoading.set(false)
   }
 }
 
-// Keep the shared list aligned with the active provider. There is no fallback
-// list, so a provider switch clears the options until the user refreshes. A
-// disabled provider keeps its option list empty at all times (even when it
-// remains the active one).
+// Keep the shared list aligned with the focused provider. Changes to the active
+// provider only matter while no settings panel is focused (e.g. tests or
+// startup); once focused, only disabling that provider clears its list — a
+// disabled provider keeps its options empty at all times.
 let lastProvider: ApiProvider | null = null
 settings.subscribe(($settings) => {
   const providerChanged = lastProvider !== $settings.provider
   lastProvider = $settings.provider
+
+  const focused = get(modelsProvider)
+  if (focused) {
+    if (isProviderEnabled($settings.providers[focused])) return
+    availableModels.set([])
+    modelRefreshMessage.set(disabledMessage())
+    modelRefreshLoading.set(false)
+    return
+  }
+
   if (!providerChanged && isProviderEnabled($settings.providers[$settings.provider])) return
   availableModels.set([])
   modelRefreshMessage.set(isProviderEnabled($settings.providers[$settings.provider]) ? '' : disabledMessage())
