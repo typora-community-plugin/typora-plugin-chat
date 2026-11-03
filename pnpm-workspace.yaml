@@ -5,5 +5,5 @@ allowBuilds:
   esbuild: true
   svelte-preprocess: true
 minimumReleaseAgeExclude:
-  - '@typora-community-plugin/core@2.10.6 || 2.10.52'
+  - '@typora-community-plugin/core@2.10.84'
   - '@typora-community-plugin/typora-types@1.0.18'
