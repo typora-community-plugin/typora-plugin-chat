@@ -199,7 +199,7 @@ export class InlineAssistant {
     const margin = 12
     const vw = window.innerWidth
     const vh = window.innerHeight
-    const width = Math.min(555, vw - margin * 2)
+    const width = Math.min(532, vw - margin * 2)
     popup.style.width = `${width}px`
     popup.style.maxHeight = `${vh - margin * 2}px`
 

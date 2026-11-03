@@ -351,7 +351,7 @@
       border: 1px solid rgba(128, 128, 128, 0.35);
       background: transparent;
       color: inherit;
-      font-size: 12px;
+      font-size: 10px;
       cursor: pointer;
 
       &:hover {
