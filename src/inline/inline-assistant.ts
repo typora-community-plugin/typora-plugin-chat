@@ -183,7 +183,7 @@ export class InlineAssistant {
     const margin = 12
     const vw = window.innerWidth
     const vh = window.innerHeight
-    const width = Math.min(520, vw - margin * 2)
+    const width = Math.min(555, vw - margin * 2)
     root.style.width = `${width}px`
     root.style.maxHeight = `${vh - margin * 2}px`
 
