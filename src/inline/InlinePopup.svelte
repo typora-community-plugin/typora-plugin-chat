@@ -106,7 +106,19 @@
       oninput={autosize}
       onkeydown={onKeydown}
     ></textarea>
-    <button class="typ-inline-ai__send" onclick={submit}>↵</button>
+    <button
+      class="typ-inline-ai__send"
+      type="button"
+      title={t.inline.send}
+      aria-label={t.inline.send}
+      onclick={submit}
+    >
+      <!-- An icon instead of the "↵" glyph: font-dependent glyph ink sits off the baseline and never looks centred. -->
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+        <path d="M9 10 4 15l5 5" />
+        <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+      </svg>
+    </button>
   </div>
 
   <div class="typ-inline-ai__actions">
@@ -207,6 +219,31 @@
       color: #fff;
       cursor: pointer;
       white-space: nowrap;
+    }
+
+    /**
+     * Matches one line of the input: line-height (1.5em) + input padding (6px × 2)
+     * + input border (1px × 2). The row aligns items to flex-end, so the button
+     * stays glued to the bottom while the textarea grows.
+     */
+    &__send {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      /* Button font must match the textarea's em so the computed height is identical. */
+      font-size: inherit;
+      height: calc(1.5em + 14px);
+      padding: 0 10px;
+      line-height: 1;
+
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
     }
 
     &__actions,

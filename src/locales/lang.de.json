@@ -154,6 +154,7 @@
     "error": "Fehler"
   },
   "inline": {
+    "send": "Senden (Enter)",
     "askPlaceholder": "KI hier etwas schreiben lassen…",
     "askSelectionPlaceholder": "Was soll die KI mit der Auswahl tun?",
     "selected": "{count} Zeichen ausgewählt",

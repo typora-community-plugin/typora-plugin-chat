@@ -155,6 +155,7 @@
     "error": "错误"
   },
   "inline": {
+    "send": "发送 (Enter)",
     "askPlaceholder": "让 AI 在这里写点什么…",
     "askSelectionPlaceholder": "让 AI 怎么处理选中的文字？",
     "selected": "已选中 {count} 字",
