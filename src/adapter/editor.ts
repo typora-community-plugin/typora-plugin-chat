@@ -1,4 +1,5 @@
 import { app } from '@typora-community-plugin/core'
+import { editor } from 'typora'
 import type { SelectionScope } from '@/config/types'
 import { getCurrentFilePath } from './vault'
 
@@ -22,29 +23,6 @@ export function getSelection(): SelectionScope | null {
 
 // ── Editor anchor (inline assistant) ────────────────────────────────────
 
-interface TyporaRangy {
-  collapsed?: boolean
-  toHtml?(): string
-}
-/** The parts of Typora's internal `File.editor` used here (not in the plugin SDK). */
-interface TyporaEditor {
-  selection?: { getRangy?(): TyporaRangy | null }
-  UserOp?: {
-    insertParagraph?(before: boolean, editor: unknown): void
-    prepMarkHtml?(html: string, editor: unknown): { html(): string }
-    getMarkdownSourceFrom?(html: string): string
-  }
-}
-
-function typoraEditor(): TyporaEditor | null {
-  const w = window as unknown as { File?: { editor?: TyporaEditor }; editor?: TyporaEditor }
-  return w.File?.editor ?? w.editor ?? null
-}
-
-function writingArea(): HTMLElement | null {
-  return document.querySelector<HTMLElement>('#write')
-}
-
 /**
  * Whether the user is currently editing the note: the caret/selection is in
  * the writing area and focus is not in another text field (chat sidebar,
@@ -52,7 +30,7 @@ function writingArea(): HTMLElement | null {
  * this in Typora, so the selection and the active element are checked.
  */
 export function isEditingNote(): boolean {
-  const write = writingArea()
+  const write = editor.writingArea
   const sel = window.getSelection()
   if (!write || !sel?.anchorNode || !write.contains(sel.anchorNode)) return false
   const active = document.activeElement
@@ -69,11 +47,11 @@ export function isEditingNote(): boolean {
  */
 function selectionMarkdown(): string | null {
   try {
-    const ed = typoraEditor()
-    const rangy = ed?.selection?.getRangy?.()
-    if (!ed?.UserOp?.prepMarkHtml || !ed.UserOp.getMarkdownSourceFrom || !rangy || rangy.collapsed || !rangy.toHtml) return null
-    const markElem = ed.UserOp.prepMarkHtml(rangy.toHtml(), ed)
-    const md = ed.UserOp.getMarkdownSourceFrom(markElem.html())
+    const { selection, UserOp } = editor
+    const rangy = selection.getRangy()
+    if (!UserOp?.prepMarkHtml || !UserOp.getMarkdownSourceFrom || !rangy || rangy.collapsed || !rangy.toHtml) return null
+    const markElem = UserOp.prepMarkHtml(rangy.toHtml(), editor)
+    const md = UserOp.getMarkdownSourceFrom(markElem.html())
     return typeof md === 'string' && md.trim() ? md.trim() : null
   } catch {
     return null
@@ -114,19 +92,19 @@ export interface EditorAnchor {
 /** Capture the caret/selection, or null when it is not in the writing area. */
 export function captureAnchor(): EditorAnchor | null {
   const sel = window.getSelection()
-  const write = writingArea()
+  const write = editor.writingArea
   if (!sel || !sel.rangeCount || !write) return null
   const range = sel.getRangeAt(0)
   if (!write.contains(range.commonAncestorContainer)) return null
 
-  const editor = app.workspace.activeEditor
+  const activeEditor = app.workspace.activeEditor
 
   const text = sel.toString().trim()
   const markdown = text ? (selectionMarkdown() ?? text) : ''
   let before = ''
   let caretRatio: number | null = null
   if (!text) {
-    const cursor = editor.selection.getCursor()
+    const cursor = activeEditor.selection.getCursor()
     if (cursor !== null) {
       const content = write.textContent ?? ''
       before = content.slice(0, cursor)
@@ -138,7 +116,7 @@ export function captureAnchor(): EditorAnchor | null {
   let stale = false
   let offEdit: (() => void) | null = null
   try {
-    const off = editor.on('edit', () => { stale = true })
+    const off = activeEditor.on('edit', () => { stale = true })
     offEdit = typeof off === 'function' ? off : null
   } catch { offEdit = null }
 
@@ -159,10 +137,10 @@ export function captureAnchor(): EditorAnchor | null {
     },
     isStale: () => stale,
     insert(md, mode, asBlock) {
-      if (stale || !writingArea()) return false
+      if (stale || !editor.writingArea) return false
       const at = mode === 'after' ? 'cursor' : 'selection'
       try {
-        editor.selection.restoreForInsertion(at)
+        activeEditor.selection.restoreForInsertion(at)
         const current = window.getSelection()
         const block = current?.anchorNode
           ? (current.anchorNode.nodeType === 1 ? current.anchorNode as Element : current.anchorNode.parentElement)?.closest('[cid]')
@@ -171,11 +149,11 @@ export function captureAnchor(): EditorAnchor | null {
         const newBlock = mode === 'after' || (asBlock && caretInText)
         if (newBlock) {
           current?.collapseToEnd()
-          const ed = typoraEditor()
-          if (ed?.UserOp?.insertParagraph) ed.UserOp.insertParagraph(false, ed)
+          const { UserOp } = editor
+          if (UserOp?.insertParagraph) UserOp.insertParagraph(false, editor)
           else md = `\n\n${md}\n\n`
         }
-        editor.insertMarkdown(md, newBlock ? 'cursor' : 'selection')
+        activeEditor.insertMarkdown(md, newBlock ? 'cursor' : 'selection')
         return true
       } catch {
         return false
