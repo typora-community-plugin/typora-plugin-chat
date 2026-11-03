@@ -86,6 +86,8 @@ class VaultIndex {
   private backlinks = new Map<string, Set<string>>()
   private contentLRU = new LRUCache<string, string>(CONTENT_LRU_SIZE)
   private builtAt = 0
+  /** Vault root the current data belongs to ('' when no folder is mounted). */
+  private builtRoot = ''
   private buildPromise: Promise<void> | null = null
   private buildController: AbortController | null = null
 
@@ -99,6 +101,10 @@ class VaultIndex {
    */
   async ensureFresh(signal?: AbortSignal): Promise<void> {
     throwIfAborted(signal)
+    const root = app.vault.path
+    // Mounting or switching a vault: the cached data (and any walk still in
+    // flight) belongs to the previous folder, so it must not be served.
+    if (this.builtRoot !== root) this.invalidateAll()
     const now = Date.now()
     // `builtAt > 0` (not `fileMap.size > 0`) so an empty or unindexable vault
     // is not re-walked on every call.
@@ -106,29 +112,54 @@ class VaultIndex {
     if (!this.buildPromise) {
       const controller = new AbortController()
       this.buildController = controller
-      this.buildPromise = this.rebuild(controller.signal).finally(() => {
-        if (this.buildController === controller) this.buildController = null
+      const build = this.rebuild(controller.signal).finally(() => {
+        // Only the current build may clear the shared slot: an aborted build
+        // can settle after its replacement has already started.
+        if (this.buildController !== controller) return
+        this.buildController = null
         this.buildPromise = null
       })
+      // Callers await `build` and handle its rejection; this guard only keeps
+      // a build that nobody is waiting for (e.g. after invalidateAll) from
+      // surfacing as an unhandled rejection.
+      void build.catch(() => { /* handled by waiters */ })
+      this.buildPromise = build
     }
-    if (!signal) return this.buildPromise
+    const build = this.buildPromise!
+    if (!signal) return build
 
     if (signal.aborted) {
       this.buildController?.abort()
       throw abortError()
     }
-    const onAbort = () => this.buildController?.abort()
+    // Capture the controller: by the time this caller aborts, a new build may
+    // have replaced it, and aborting that one would fail unrelated callers.
+    const controller = this.buildController
+    const onAbort = () => controller?.abort()
     signal.addEventListener('abort', onAbort, { once: true })
     try {
-      await abortable(this.buildPromise, signal)
+      await abortable(build, signal)
     } finally {
       signal.removeEventListener('abort', onAbort)
     }
   }
 
-  /** Force a full rebuild on the next ensureFresh. */
+  /**
+   * Drop all indexed data and cancel any walk in flight. Called when the vault
+   * is mounted/switched, or when the index must be rebuilt from scratch.
+   */
   invalidateAll(): void {
+    const controller = this.buildController
+    this.buildController = null
+    this.buildPromise = null
     this.builtAt = 0
+    this.builtRoot = ''
+    this.fileMap.clear()
+    this.backlinks.clear()
+    this.contentLRU.clear()
+    // Abort last: the build's `finally` then sees `buildController === null`
+    // and leaves the slot alone.
+    controller?.abort()
   }
 
   /**
@@ -237,6 +268,7 @@ class VaultIndex {
     if (!isIndexableRoot(root)) {
       this.fileMap.clear()
       this.backlinks.clear()
+      this.builtRoot = root
       this.builtAt = Date.now()
       return
     }
@@ -245,7 +277,10 @@ class VaultIndex {
       files = await fs.listFiles(root, { recursive: true, signal })
     } catch (error) {
       if (signal.aborted) throw abortError()
-      this.builtAt = Date.now() // avoid tight retry loop on persistent error
+      // Keep the root so a persistent error for this vault is not retried in a
+      // tight loop, but a different root still triggers a rebuild.
+      this.builtRoot = root
+      this.builtAt = Date.now()
       return
     }
     throwIfAborted(signal)
@@ -299,6 +334,7 @@ class VaultIndex {
     }
 
     throwIfAborted(signal)
+    this.builtRoot = root
     this.builtAt = Date.now()
   }
 

@@ -7,6 +7,7 @@ import { getActiveSession, initSessionStore, reloadSessionStore, saveActiveSessi
 import { captureAnchor, getSelection } from './adapter/editor'
 import { InlineAssistant } from './inline/inline-assistant'
 import { getCurrentFilePath } from './adapter/vault'
+import { vaultIndex } from './adapter/vault-index'
 import { copyTranscript } from './utils/export'
 import { basename } from './utils/helpers'
 import { format, initI18n, t } from './i18n'
@@ -29,6 +30,9 @@ export default class extends Plugin {
     // agent loop re-discovers on disk per turn regardless of this cache.
     void rescanSkills()
     this.register(app.vault.on('change', (path) => {
+      // Core emits 'mounted' and 'change' when a folder is mounted or switched:
+      // the cached index (and any walk still in flight) belongs to the old vault.
+      vaultIndex.invalidateAll()
       setVaultScope(path)
       reloadSessionStore()
       void rescanSkills()
