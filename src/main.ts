@@ -114,13 +114,9 @@ export default class extends Plugin {
             menu.close()
           })
 
-        if (menu.containerEl.matches('#context-menu')) {
-          menu
-            .insertSeparatorAfter('.divider[data-group="search"]')
-            .insertItemAfter('.divider[data-group="search"]', build)
-        }
-        else
-          menu.addItem(build)
+        menu
+          .insertSeparatorAfter('.divider[data-group="search"]')
+          .insertItemAfter('.divider[data-group="search"]', build)
       })
     )
 
