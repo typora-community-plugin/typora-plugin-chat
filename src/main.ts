@@ -1,4 +1,5 @@
 import { Plugin } from '@typora-community-plugin/core'
+import type { MenuItem } from '@typora-community-plugin/core/typings/ui/components/menu'
 import './ui/variables.scss'
 import { ChatView } from './chat-view'
 import { ChatSettingTab } from './ui/settings/chat-setting-tab'
@@ -105,12 +106,15 @@ export default class extends Plugin {
       app.workspace.on('editor-menu', ({ menu }) => {
         // Capture now: by the time the item is clicked focus may have moved.
         const anchor = captureAnchor()
-        const build = (item: Parameters<Parameters<typeof menu.addItem>[0]>[0]) => item
+        const build = (item: MenuItem) => item
           .setKey('typ-chat-inline')
           .setTitle(t.command.askAIHere)
-          .onClick(() => (anchor ? inline.open(anchor) : undefined))
+          .onClick(() => {
+            if (anchor) inline.open(anchor)
+            menu.close()
+          })
 
-        if (document.querySelector('#context-menu .divider[data-group="search"]')) {
+        if (menu.containerEl.matches('#context-menu')) {
           menu
             .insertSeparatorAfter('.divider[data-group="search"]')
             .insertItemAfter('.divider[data-group="search"]', build)
