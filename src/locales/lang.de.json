@@ -159,6 +159,7 @@
     "askPlaceholder": "KI hier etwas schreiben lassen…",
     "askSelectionPlaceholder": "Was soll die KI mit der Auswahl tun?",
     "selected": "{count} Zeichen ausgewählt",
+    "noteContext": "Notizkontext: {count} Zeichen",
     "thinking": "Wird erzeugt…",
     "stopped": "Gestoppt.",
     "replace": "Ersetzen",

@@ -12,6 +12,7 @@ vi.mock('@/i18n', () => ({
       askPlaceholder: 'ASK',
       askSelectionPlaceholder: 'ASK_SELECTION',
       selected: 'Selected {count} chars',
+      noteContext: 'Note context {count} chars',
       thinking: 'THINKING',
       stopped: 'STOPPED',
       replace: 'REPLACE',
@@ -85,6 +86,37 @@ describe('InlinePopup', () => {
     await fireEvent.input(input, { target: { value: '  hello  ' } })
     await fireEvent.keyDown(input, { key: 'Enter' })
     expect(onRun).toHaveBeenCalledWith('  hello  ')
+
+    cleanup()
+  })
+
+  it('previews only the head and tail of a long selection', () => {
+    const long = 'HEAD'.repeat(20) + 'MIDDLE' + 'TAIL'.repeat(20)
+    const { container } = render(InlinePopup, { props: props(makeSession(), { selectedText: long }) })
+
+    const line = container.querySelector('.typ-inline-ai__context')?.textContent ?? ''
+    expect(line).toContain(`Selected ${long.length} chars`)
+    expect(line).toContain('HEAD')
+    expect(line).toContain('TAIL')
+    expect(line).toContain('…')
+    expect(line).not.toContain('MIDDLE')
+
+    cleanup()
+  })
+
+  it('previews the note context when nothing is selected', () => {
+    const note = `NOTE-START ${'x'.repeat(200)}\n…(omitted)…\n${'y'.repeat(200)} NOTE-END`
+    const { container } = render(InlinePopup, {
+      props: props(makeSession(), { selectedText: '', hasSelection: false, noteContext: note }),
+    })
+
+    const line = container.querySelector('.typ-inline-ai__context')?.textContent ?? ''
+    expect(line).toContain(`Note context ${note.length} chars`)
+    expect(line).toContain('NOTE-START')
+    expect(line).toContain('NOTE-END')
+    expect(line).toContain('…')
+    expect(line).not.toContain('(omitted)')
+    expect((container.querySelector('textarea') as HTMLTextAreaElement).placeholder).toBe('ASK')
 
     cleanup()
   })

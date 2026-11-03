@@ -114,6 +114,7 @@ export class InlineAssistant {
     this.session = session
 
     const selected = anchor?.text ?? ''
+    const noteContext = selected ? '' : this.noteContext()
     const locale = getLocale()
     // Document-level generation is always offered; the rest depends on whether
     // the user selected text, which decides how the result is inserted.
@@ -132,6 +133,7 @@ export class InlineAssistant {
       props: {
         session,
         selectedText: selected,
+        noteContext,
         actionGroups,
         hasSelection: !!selected,
         canInsert: () => !!this.anchor && !this.anchor.isStale(),
@@ -212,6 +214,23 @@ export class InlineAssistant {
     popup.style.top = `${top}px`
   }
 
+  /**
+   * Note context exactly as the request windows it: same anchor lookup and
+   * character budget, so the popup preview shows what the model receives.
+   */
+  private noteContext(): string {
+    const anchor = this.anchor
+    const config = getActiveConfig(settingsManager.get())
+    let full = ''
+    try { full = app.workspace.activeEditor.getMarkdown() } catch { full = '' }
+    const at = locateAnchor(full, {
+      selection: anchor?.markdown,
+      before: anchor?.before,
+      caretRatio: anchor?.caretRatio ?? undefined,
+    })
+    return windowNote(full, at, noteCharBudget(resolveContextWindow(config.model, config)))
+  }
+
   /** Build the request for an instruction (quick action id, or null for free text). */
   private run(instruction: string, action: InlineActionId | null) {
     instruction = instruction.trim()
@@ -225,13 +244,7 @@ export class InlineAssistant {
 
     const anchor = this.anchor
     const selection = anchor?.markdown ?? ''
-    let note = ''
-    if (action === null || ACTION_NEEDS_NOTE[action]) {
-      let full = ''
-      try { full = app.workspace.activeEditor.getMarkdown() } catch { full = '' }
-      const at = locateAnchor(full, { selection, before: anchor?.before, caretRatio: anchor?.caretRatio ?? undefined })
-      note = windowNote(full, at, noteCharBudget(resolveContextWindow(config.model, config)))
-    }
+    const note = action === null || ACTION_NEEDS_NOTE[action] ? this.noteContext() : ''
     const file = app.workspace.activeFile
     void session.run(buildInlineMessages({
       instruction,

@@ -160,6 +160,7 @@
     "askPlaceholder": "让 AI 在这里写点什么…",
     "askSelectionPlaceholder": "让 AI 怎么处理选中的文字？",
     "selected": "已选中 {count} 字",
+    "noteContext": "笔记上下文 {count} 字",
     "thinking": "生成中…",
     "stopped": "已停止。",
     "replace": "替换",

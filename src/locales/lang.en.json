@@ -160,6 +160,7 @@
     "askPlaceholder": "Ask AI to write something here…",
     "askSelectionPlaceholder": "What should AI do with the selection?",
     "selected": "Selected {count} chars",
+    "noteContext": "Note context {count} chars",
     "thinking": "Generating…",
     "stopped": "Stopped.",
     "replace": "Replace",

@@ -13,6 +13,7 @@
   let {
     session,
     selectedText = '',
+    noteContext = '',
     actionGroups = [],
     hasSelection = false,
     canInsert = () => false,
@@ -27,6 +28,8 @@
   }: {
     session: InlineSession
     selectedText?: string
+    /** Windowed note context sent with the request; shown when nothing is selected. */
+    noteContext?: string
     actionGroups?: InlineActionGroup[][]
     /** Whether the anchor still carries a text selection (frozen at open). */
     hasSelection?: boolean
@@ -47,7 +50,32 @@
   let copyLabel = $state<string | null>(null)
 
   const view = $derived(session.state)
-  const preview = $derived(selectedText.length > 60 ? `${selectedText.slice(0, 60)}…` : selectedText)
+
+  /** Characters kept in the one-line context preview. */
+  const PREVIEW_CHARS = 60
+
+  /**
+   * Split a context block into a head and a tail; the middle is dropped and
+   * rendered as one ellipsis between them. `windowNote` sentinels are stripped
+   * first, otherwise the tail would just be the sentinel itself.
+   */
+  function splitPreview(text: string, limit = PREVIEW_CHARS): { head: string; tail: string } {
+    const flat = text.replace(/…\(omitted\)…/g, ' ').replace(/\s+/g, ' ').trim()
+    if (flat.length <= limit) return { head: flat, tail: '' }
+    const head = Math.ceil(limit / 2)
+    return { head: flat.slice(0, head), tail: flat.slice(-(limit - head)) }
+  }
+
+  /** What the request carries as material: the selection, or the note context. */
+  const contextText = $derived(selectedText || noteContext)
+  const contextLabel = $derived(
+    selectedText
+      ? format(t.inline.selected, { count: selectedText.length })
+      : noteContext
+        ? format(t.inline.noteContext, { count: noteContext.length })
+        : '',
+  )
+  const contextPreview = $derived(splitPreview(contextText))
 
   // A new reply invalidates the previous "Copied" confirmation.
   $effect(() => {
@@ -90,9 +118,16 @@
 </script>
 
 <div class="typ-inline-ai" {@attach attachRoot}>
-  {#if selectedText}
-    <div class="typ-inline-ai__selection">
-      {format(t.inline.selected, { count: selectedText.length })}: {preview}
+  {#if contextText}
+    <div class="typ-inline-ai__context">
+      <span class="typ-inline-ai__context-label">{contextLabel}:</span>
+      <span class="typ-inline-ai__context-body">
+        <span class="typ-inline-ai__context-head">{contextPreview.head}</span>
+        {#if contextPreview.tail}
+          <span class="typ-inline-ai__context-ellipsis">…</span>
+          <span class="typ-inline-ai__context-tail"><span>{contextPreview.tail}</span></span>
+        {/if}
+      </span>
     </div>
   {/if}
 
@@ -176,12 +211,57 @@
 
     * { box-sizing: border-box; }
 
-    &__selection {
+    &__context {
+      display: flex;
+      gap: 4px;
+      min-width: 0;
       font-size: 12px;
       opacity: 0.65;
+    }
+
+    &__context-label {
+      flex: none;
       white-space: nowrap;
+    }
+
+    /**
+     * The head shrinks, the tail never does: the text nearest the caret stays
+     * visible. No `text-overflow: ellipsis` here — the middle ellipsis is the
+     * only truncation cue and a CSS one would add a second at the end.
+     */
+    &__context-body {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    /**
+     * Head and tail share the remaining width. The head is clipped at its end,
+     * the tail at its start (RTL + LTR isolate), so the visible ellipsis sits
+     * between the two kept halves instead of drifting towards the head.
+     */
+    &__context-head,
+    &__context-tail {
+      flex: 0 1 auto;
+      min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__context-tail {
+      direction: rtl;
+
+      /* Keep the logical order and punctuation of the tail intact. */
+      > span {
+        display: inline-block;
+        direction: ltr;
+        unicode-bidi: isolate;
+      }
+    }
+
+    &__context-ellipsis {
+      flex: none;
     }
 
     &__row {
