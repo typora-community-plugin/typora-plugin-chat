@@ -58,6 +58,10 @@ export default defineConfig({
     commonjs(),
     rollupSveltePlugin(),
     typescript({
+      // Runes modules must reach `rollupSveltePlugin` untouched: letting tsc
+      // emit them would leave `$state(...)` as a runtime call. They are still
+      // part of the program (tsconfig `include`), so type errors surface.
+      exclude: ['**/*.svelte.ts', '**/*.svelte.js'],
       compilerOptions: {
         ...compilerOptions,
         ...overrided,

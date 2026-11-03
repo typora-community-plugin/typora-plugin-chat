@@ -1,3 +1,4 @@
+import { format } from '@/i18n'
 import type { ApiMessage } from '@/config/types'
 import { cleanInlineOutput } from './inline-prompts'
 
@@ -28,10 +29,13 @@ export interface InlineDeps {
   notify(message: string): void
 }
 
+/** Localized strings the state machine needs when it acts on the user's behalf. */
 export interface InlineMessages {
   insertNoAnchor: string
   insertFailed: string
   copyFailed: string
+  /** Template with a `{message}` placeholder for request errors. */
+  error: string
 }
 
 export type ApplyOutcome = 'inserted' | 'copied' | 'failed' | 'nothing'
@@ -41,21 +45,19 @@ export type ApplyOutcome = 'inserted' | 'copied' | 'failed' | 'nothing'
  * aborted), retry, apply. Every await is guarded by a request id, so a stale
  * reply (e.g. after Stop, close-and-reopen, or a retry) never touches the
  * current state.
+ *
+ * Reactive (`$state`) because the view reads it directly; it stays free of any
+ * rendering concern, which is what keeps it testable without a component.
  */
 export class InlineSession {
+  state = $state<InlineState>({ phase: 'idle', result: '', error: '' })
+
   private requestId = 0
   private controller: AbortController | null = null
   private lastMessages: ApiMessage[] | null = null
-  private listeners = new Set<(state: InlineState) => void>()
   private disposed = false
-  state: InlineState = { phase: 'idle', result: '', error: '' }
 
   constructor(private deps: InlineDeps, private text: InlineMessages) {}
-
-  onChange(listener: (state: InlineState) => void): () => void {
-    this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
-  }
 
   get running(): boolean {
     return this.state.phase === 'running'
@@ -63,8 +65,7 @@ export class InlineSession {
 
   private set(patch: Partial<InlineState>) {
     if (this.disposed) return
-    this.state = { ...this.state, ...patch }
-    this.listeners.forEach(fn => fn(this.state))
+    Object.assign(this.state, patch)
   }
 
   async run(messages: ApiMessage[]): Promise<void> {
@@ -83,7 +84,10 @@ export class InlineSession {
     } catch (error) {
       if (id !== this.requestId) return
       if (controller.signal.aborted) this.set({ phase: 'aborted' })
-      else this.set({ phase: 'error', error: error instanceof Error ? error.message : String(error) })
+      else this.set({
+        phase: 'error',
+        error: format(this.text.error, { message: error instanceof Error ? error.message : String(error) }),
+      })
     } finally {
       if (id === this.requestId) this.controller = null
     }
@@ -95,6 +99,11 @@ export class InlineSession {
 
   abort() {
     this.controller?.abort()
+  }
+
+  /** Surface a precondition failure (disabled provider, missing model…). */
+  fail(message: string) {
+    this.set({ phase: 'error', result: '', error: message })
   }
 
   /**
@@ -122,6 +131,5 @@ export class InlineSession {
     this.controller?.abort()
     this.controller = null
     this.disposed = true
-    this.listeners.clear()
   }
 }

@@ -28,10 +28,13 @@ await esbuild.build({
     '@': fileURLToPath(new URL('./src', import.meta.url)),
   },
   plugins: [
+    // Must come before `typoraPlugin`: it claims every `.ts`/`.js` file
+    // (filter `/\.[jt]sx?$/`), which would also match `.svelte.ts` and ship
+    // the raw `$state(...)` calls uncompiled.
+    esbuildSveltePlugin({ dev: IS_DEV }),
     typoraPlugin({
       mode: IS_PROD ? 'production' : 'development'
     }),
-    esbuildSveltePlugin({ dev: IS_DEV }),
     sassPlugin(),
   ],
 })

@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import { InlineSession } from '../../src/inline/inline-session'
-import type { InlineDeps } from '../../src/inline/inline-session'
+import { InlineSession } from '../../src/inline/inline-session.svelte'
+import type { InlineDeps } from '../../src/inline/inline-session.svelte'
 
-const TEXT = { insertNoAnchor: 'NO_ANCHOR', insertFailed: 'INSERT_FAILED', copyFailed: 'COPY_FAILED' }
+const TEXT = {
+  insertNoAnchor: 'NO_ANCHOR',
+  insertFailed: 'INSERT_FAILED',
+  copyFailed: 'COPY_FAILED',
+  error: 'Error: {message}',
+}
 const MSGS = [{ role: 'user' as const, content: 'hi' }]
 
 function deferred<T>() {
@@ -26,11 +31,11 @@ function makeDeps(over: Partial<InlineDeps> = {}): InlineDeps {
 describe('InlineSession', () => {
   it('runs, cleans the reply and reaches done', async () => {
     const s = new InlineSession(makeDeps(), TEXT)
-    const phases: string[] = []
-    s.onChange(st => phases.push(st.phase))
-    await s.run(MSGS)
-    expect(phases).toEqual(['running', 'done'])
-    expect(s.state.result).toBe('| a |\n|---|')
+    expect(s.state.phase).toBe('idle')
+    const run = s.run(MSGS)
+    expect(s.state.phase).toBe('running')
+    await run
+    expect(s.state).toMatchObject({ phase: 'done', result: '| a |\n|---|' })
   })
 
   it('reports an empty reply and errors', async () => {
@@ -39,7 +44,13 @@ describe('InlineSession', () => {
     expect(empty.state.phase).toBe('empty')
     const failing = new InlineSession(makeDeps({ send: async () => { throw new Error('HTTP 401') } }), TEXT)
     await failing.run(MSGS)
-    expect(failing.state).toMatchObject({ phase: 'error', error: 'HTTP 401' })
+    expect(failing.state).toMatchObject({ phase: 'error', error: 'Error: HTTP 401' })
+  })
+
+  it('fail() surfaces a precondition error', () => {
+    const s = new InlineSession(makeDeps(), TEXT)
+    s.fail('NO_MODEL')
+    expect(s.state).toMatchObject({ phase: 'error', error: 'NO_MODEL' })
   })
 
   it('abort → aborted, and the request signal is aborted', async () => {
@@ -72,14 +83,11 @@ describe('InlineSession', () => {
   it('ignores replies after dispose (popup closed and reopened)', async () => {
     const d = deferred<string>()
     const s = new InlineSession(makeDeps({ send: () => d.promise }), TEXT)
-    const listener = vi.fn()
-    s.onChange(listener)
     const run = s.run(MSGS)
-    listener.mockClear()
     s.dispose()
     d.resolve('late')
     await run
-    expect(listener).not.toHaveBeenCalled()
+    expect(s.state).toMatchObject({ phase: 'running', result: '' })
   })
 
   it('apply inserts when an anchor is available', async () => {
