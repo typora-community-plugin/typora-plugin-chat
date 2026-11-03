@@ -11,8 +11,14 @@ export type InlineActionId =
   | 'table' | 'diagram' | 'continue' | 'outline'
   | 'polish' | 'shorten' | 'expand' | 'translateEn' | 'translateUi' | 'explain'
 
-/** Actions shown when nothing is selected (generate at the caret). */
-export const CARET_ACTIONS: InlineActionId[] = ['table', 'diagram', 'continue', 'outline']
+/**
+ * Document-level generation: offered whether or not text is selected, since
+ * these read the whole note anyway. With a selection the selected text becomes
+ * the main material (e.g. "turn this paragraph into a table").
+ */
+export const DOC_ACTIONS: InlineActionId[] = ['table', 'diagram', 'outline']
+/** Actions shown only when nothing is selected (continue from the caret). */
+export const CARET_ACTIONS: InlineActionId[] = ['continue']
 /**
  * Actions shown when text is selected (transform the selection).
  * `translateUi` targets the plugin's current UI language, so the caller hides
@@ -40,8 +46,8 @@ export function translateUiInstruction(locale: string): string {
  * answer in the note's language. `translateUi` depends on the active locale.
  */
 export const ACTION_INSTRUCTIONS: Record<Exclude<InlineActionId, 'translateUi'>, string> = {
-  table: 'Create a Markdown table that fits here, based on the surrounding context. If the context is not enough, make a sensible, clearly structured table on the topic of the note.',
-  diagram: 'Draw a diagram that fits here as a Mermaid code block (```mermaid … ```), e.g. a flowchart or sequence diagram, based on the surrounding context. Use only valid Mermaid syntax and quote node labels that contain spaces or punctuation.',
+  table: 'Create a Markdown table that fits here. Base it on the selected text when there is one, otherwise on the surrounding context; if that is not enough, make a sensible, clearly structured table on the topic of the note.',
+  diagram: 'Draw a diagram that fits here as a Mermaid code block (```mermaid … ```), e.g. a flowchart or sequence diagram. Base it on the selected text when there is one, otherwise on the surrounding context. Use only valid Mermaid syntax and quote node labels that contain spaces or punctuation.',
   continue: 'Continue writing naturally from the cursor position, matching the tone and language of the note.',
   outline: 'Write a concise Markdown outline (nested list) for the note.',
   polish: 'Polish the selected text: fix grammar and improve clarity and flow while keeping its meaning, tone, language and Markdown formatting.',

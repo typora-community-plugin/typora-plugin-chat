@@ -11,7 +11,7 @@ import { renderMarkdown } from '@/utils/markdown-renderer'
 import { basename } from '@/utils/helpers'
 import { format, getLocale, t } from '@/i18n'
 import {
-  ACTION_NEEDS_NOTE, CARET_ACTIONS, SELECTION_ACTIONS,
+  ACTION_NEEDS_NOTE, CARET_ACTIONS, DOC_ACTIONS, SELECTION_ACTIONS,
   actionInstruction, buildInlineMessages, isBlockMarkdown, locateAnchor, noteCharBudget, windowNote,
 } from './inline-prompts'
 import type { InlineActionId } from './inline-prompts'
@@ -129,15 +129,21 @@ export class InlineAssistant {
 
     const actions = el('div', 'typ-inline-ai__actions')
     const locale = getLocale()
-    const ids = selected
+    // Document-level generation is always offered; the rest depends on whether
+    // the user selected text, which decides how the result is inserted.
+    const groups: InlineActionId[][] = [DOC_ACTIONS]
+    groups.push(selected
       // English UI: `translateEn` already targets the UI language.
       ? SELECTION_ACTIONS.filter(id => id !== 'translateUi' || locale.split('-')[0] !== 'en')
-      : CARET_ACTIONS
-    for (const id of ids) {
-      const btn = el('button', 'typ-inline-ai__pill', tx.actions[id])
-      btn.addEventListener('click', () => this.run(actionInstruction(id, locale), id))
-      actions.append(btn)
-    }
+      : CARET_ACTIONS)
+    groups.forEach((ids, i) => {
+      if (i > 0) actions.append(el('span', 'typ-inline-ai__sep'))
+      for (const id of ids) {
+        const btn = el('button', 'typ-inline-ai__pill', tx.actions[id])
+        btn.addEventListener('click', () => this.run(actionInstruction(id, locale), id))
+        actions.append(btn)
+      }
+    })
 
     this.output = el('div', 'typ-inline-ai__output')
     this.output.hidden = true

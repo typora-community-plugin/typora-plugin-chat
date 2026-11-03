@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ACTION_NEEDS_NOTE, CARET_ACTIONS, INLINE_NOTE_MAX_CHARS, INLINE_NOTE_MIN_CHARS, SELECTION_ACTIONS,
+  ACTION_NEEDS_NOTE, CARET_ACTIONS, DOC_ACTIONS, INLINE_NOTE_MAX_CHARS, INLINE_NOTE_MIN_CHARS, SELECTION_ACTIONS,
   actionInstruction, buildInlineMessages, cleanInlineOutput, isBlockMarkdown, locateAnchor, noteCharBudget, translateUiInstruction, windowNote,
 } from '../../src/inline/inline-prompts'
+
+const ALL_ACTIONS = [...DOC_ACTIONS, ...CARET_ACTIONS, ...SELECTION_ACTIONS]
 
 describe('buildInlineMessages', () => {
   it('asks for insert-ready Markdown and includes the note as context', () => {
@@ -28,8 +30,16 @@ describe('buildInlineMessages', () => {
   })
 
   it('has an instruction for every quick action; the diagram action asks for Mermaid', () => {
-    for (const id of [...CARET_ACTIONS, ...SELECTION_ACTIONS]) expect(actionInstruction(id)).toBeTruthy()
+    for (const id of ALL_ACTIONS) expect(actionInstruction(id)).toBeTruthy()
     expect(actionInstruction('diagram')).toContain('```mermaid')
+  })
+
+  it('splits the quick actions into non-overlapping groups that cover all of them', () => {
+    expect(new Set(ALL_ACTIONS).size).toBe(ALL_ACTIONS.length)
+    expect(ALL_ACTIONS.length).toBe(10)
+    // Document-level generation is offered in both modes; "continue" needs a cursor.
+    expect(DOC_ACTIONS).toEqual(['table', 'diagram', 'outline'])
+    expect(CARET_ACTIONS).toEqual(['continue'])
   })
 
   it('translates to the plugin UI language for the dynamic translate action', () => {
@@ -42,7 +52,7 @@ describe('buildInlineMessages', () => {
 
   it('does not send the note for pure selection transforms', () => {
     for (const id of SELECTION_ACTIONS) expect(ACTION_NEEDS_NOTE[id]).toBe(false)
-    for (const id of CARET_ACTIONS) expect(ACTION_NEEDS_NOTE[id]).toBe(true)
+    for (const id of [...DOC_ACTIONS, ...CARET_ACTIONS]) expect(ACTION_NEEDS_NOTE[id]).toBe(true)
   })
 })
 

@@ -69,6 +69,16 @@
     gap: 6px;
   }
 
+  &__actions { align-items: center; }
+
+  /** Divider between the always-on document actions and the mode's actions. */
+  &__sep {
+    width: 1px;
+    align-self: stretch;
+    margin: 2px 2px;
+    background: rgba(128, 128, 128, 0.3);
+  }
+
   &__bar { justify-content: flex-end; }
 
   &__pill {
