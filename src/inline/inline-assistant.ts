@@ -18,42 +18,6 @@ import type { InlineActionId } from './inline-prompts'
 import { InlineSession } from './inline-session'
 import type { InlineState, InsertMode } from './inline-session'
 
-/** English fallbacks, used before i18n is initialized (and in tests). */
-const FALLBACK = {
-  askPlaceholder: 'Ask AI to write something here…',
-  askSelectionPlaceholder: 'What should AI do with the selection?',
-  selected: 'Selected {count} chars',
-  thinking: 'Generating…',
-  stopped: 'Stopped.',
-  replace: 'Replace',
-  insert: 'Insert',
-  insertAfter: 'Insert below',
-  copy: 'Copy',
-  copied: 'Copied',
-  copyFailed: 'Could not copy to the clipboard.',
-  retry: 'Retry',
-  close: 'Close',
-  stop: 'Stop',
-  noModel: 'No model selected. Pick one in the Chat sidebar or in Settings → Chat.',
-  providerDisabled: 'The active provider is disabled. Enable it in Settings → Chat.',
-  emptyReply: 'The model returned no content.',
-  error: 'Error: {message}',
-  insertFailed: 'Could not insert; the text was copied to the clipboard.',
-  insertNoAnchor: 'No cursor position in the note (or the note changed); the text was copied to the clipboard.',
-  actions: {
-    table: 'Table', diagram: 'Diagram', continue: 'Continue', outline: 'Outline',
-    polish: 'Polish', shorten: 'Shorten', expand: 'Expand',
-    translateEn: 'To English', translateZh: 'To Chinese', explain: 'Explain',
-  } as Record<InlineActionId, string>,
-}
-
-type InlineTexts = typeof FALLBACK
-
-function texts(): InlineTexts {
-  const loc = (t as unknown as { inline?: Partial<InlineTexts> }).inline ?? {}
-  return { ...FALLBACK, ...loc, actions: { ...FALLBACK.actions, ...(loc.actions ?? {}) } }
-}
-
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag)
   if (cls) node.className = cls
@@ -125,7 +89,7 @@ export class InlineAssistant {
   open(anchor: EditorAnchor | null) {
     this.close()
     this.anchor = anchor
-    const tx = texts()
+    const tx = t.inline
     this.session = new InlineSession({
       send: async (messages, signal) => {
         const response = await sendMessage(settingsManager.get(), messages, [], signal)
@@ -233,7 +197,7 @@ export class InlineAssistant {
     instruction = instruction.trim()
     const session = this.session
     if (!instruction || !session || session.running || !this.root) return
-    const tx = texts()
+    const tx = t.inline
     const settings = settingsManager.get()
     if (!isProviderEnabled(settings.providers[settings.provider])) return this.showError(tx.providerDisabled)
     const config = getActiveConfig(settings)
@@ -261,7 +225,7 @@ export class InlineAssistant {
   /** Render the session state into the output area and the action bar. */
   private render(state: InlineState) {
     if (!this.root) return
-    const tx = texts()
+    const tx = t.inline
     this.output.hidden = false
     this.bar.hidden = false
     const buttons: HTMLElement[] = []
