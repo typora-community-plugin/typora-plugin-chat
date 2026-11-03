@@ -109,9 +109,14 @@ export default class extends Plugin {
           .setKey('typ-chat-inline')
           .setTitle(t.command.askAIHere)
           .onClick(() => (anchor ? inline.open(anchor) : undefined))
-        // Next to Typora's own "Insert" submenu, like the file-menu entry.
-        if (document.querySelector('#context-menu [data-key="insert"]')) menu.insertItemAfter('[data-key="insert"]', build)
-        else menu.addItem(build)
+
+        if (document.querySelector('#context-menu .divider[data-group="search"]')) {
+          menu
+            .insertSeparatorAfter('.divider[data-group="search"]')
+            .insertItemAfter('.divider[data-group="search"]', build)
+        }
+        else
+          menu.addItem(build)
       })
     )
 
