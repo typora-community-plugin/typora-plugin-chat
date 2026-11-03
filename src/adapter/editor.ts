@@ -49,7 +49,7 @@ function selectionMarkdown(): string | null {
   try {
     const { selection, UserOp } = editor
     const rangy = selection.getRangy()
-    if (!UserOp?.prepMarkHtml || !UserOp.getMarkdownSourceFrom || !rangy || rangy.collapsed || !rangy.toHtml) return null
+    if (!rangy || rangy.collapsed) return null
     const markElem = UserOp.prepMarkHtml(rangy.toHtml(), editor)
     const md = UserOp.getMarkdownSourceFrom(markElem.html())
     return typeof md === 'string' && md.trim() ? md.trim() : null
@@ -149,9 +149,7 @@ export function captureAnchor(): EditorAnchor | null {
         const newBlock = mode === 'after' || (asBlock && caretInText)
         if (newBlock) {
           current?.collapseToEnd()
-          const { UserOp } = editor
-          if (UserOp?.insertParagraph) UserOp.insertParagraph(false, editor)
-          else md = `\n\n${md}\n\n`
+          editor.UserOp.insertParagraph(false, editor)
         }
         activeEditor.insertMarkdown(md, newBlock ? 'cursor' : 'selection')
         return true
